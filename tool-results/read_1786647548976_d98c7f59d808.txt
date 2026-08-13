@@ -1,0 +1,711 @@
+     1→'use client';
+     2→
+     3→import React, { useState } from 'react';
+     4→import {
+     5→  QrCode,
+     6→  Smartphone,
+     7→  Palette,
+     8→  BarChart3,
+     9→  MessageSquare,
+    10→  Camera,
+    11→  Sparkles,
+    12→  Menu,
+    13→  ArrowRight,
+    14→  Check,
+    15→  Zap,
+    16→  Star,
+    17→  Globe,
+    18→  ChevronRight,
+    19→  Users,
+    20→  Shield,
+    21→} from 'lucide-react';
+    22→import { Button } from '@/components/ui/button';
+    23→import { Card, CardContent } from '@/components/ui/card';
+    24→import { useAppStore } from '@/lib/store';
+    25→
+    26→const NAV_LINKS = [
+    27→  { label: 'Features', href: '#features' },
+    28→  { label: 'How It Works', href: '#how-it-works' },
+    29→  { label: 'Templates', href: '#templates' },
+    30→  { label: 'Pricing', href: '#pricing' },
+    31→];
+    32→
+    33→const FEATURES = [
+    34→  {
+    35→    icon: Smartphone,
+    36→    title: 'Mobile-Friendly Menus',
+    37→    description:
+    38→      'Beautiful menus that look perfect on any device. Your customers will love the smooth, touch-optimized experience.',
+    39→  },
+    40→  {
+    41→    icon: QrCode,
+    42→    title: 'QR Code Generation',
+    43→    description:
+    44→      'Instantly generate branded QR codes that link directly to your digital menu. Print-ready for tables and flyers.',
+    45→  },
+    46→  {
+    47→    icon: Camera,
+    48→    title: 'AI Menu Scanner',
+    49→    description:
+    50→      'Snap a photo of your physical menu and let AI extract every item, price, and description automatically.',
+    51→  },
+    52→  {
+    53→    icon: Palette,
+    54→    title: 'Beautiful Templates',
+    55→    description:
+    56→      'Choose from 10+ professionally designed templates. Customize colors, fonts, and layouts to match your brand.',
+    57→  },
+    58→  {
+    59→    icon: MessageSquare,
+    60→    title: 'WhatsApp Ordering',
+    61→    description:
+    62→      'Let customers place orders directly through WhatsApp. Seamless integration with your existing workflow.',
+    63→  },
+    64→  {
+    65→    icon: BarChart3,
+    66→    title: 'Analytics Dashboard',
+    67→    description:
+    68→      'Track QR scans, page views, and popular items. Make data-driven decisions to grow your business.',
+    69→  },
+    70→];
+    71→
+    72→const STEPS = [
+    73→  {
+    74→    number: 1,
+    75→    title: 'Create Account',
+    76→    description: 'Sign up for free in seconds. No credit card required to get started.',
+    77→    icon: Users,
+    78→  },
+    79→  {
+    80→    number: 2,
+    81→    title: 'Build Your Menu',
+    82→    description: 'Add items, categories, and photos. Or scan your existing menu with AI.',
+    83→    icon: Menu,
+    84→  },
+    85→  {
+    86→    number: 3,
+    87→    title: 'Share QR Code',
+    88→    description: 'Print your QR code and place it on tables. Customers scan and browse instantly.',
+    89→    icon: QrCode,
+    90→  },
+    91→];
+    92→
+    93→const TEMPLATE_PREVIEWS = [
+    94→  {
+    95→    name: 'Modern',
+    96→    description: 'Clean and contemporary design',
+    97→    colors: ['#10b981', '#059669', '#f0fdf4'],
+    98→    pattern: 'grid',
+    99→  },
+   100→  {
+   101→    name: 'Classic Restaurant',
+   102→    description: 'Traditional elegant styling',
+   103→    colors: ['#78350f', '#92400e', '#fef3c7'],
+   104→    pattern: 'list',
+   105→  },
+   106→  {
+   107→    name: 'Luxury',
+   108→    description: 'Premium gold and dark theme',
+   109→    colors: ['#1f2937', '#d97706', '#fbbf24'],
+   110→    pattern: 'cards',
+   111→  },
+   112→  {
+   113→    name: 'Minimal',
+   114→    description: 'Whitespace-focused simplicity',
+   115→    colors: ['#ffffff', '#f3f4f6', '#111827'],
+   116→    pattern: 'simple',
+   117→  },
+   118→];
+   119→
+   120→const PRICING_TIERS = [
+   121→  {
+   122→    name: 'Free',
+   123→    price: '$0',
+   124→    period: 'forever',
+   125→    description: 'Perfect for getting started',
+   126→    features: [
+   127→      '1 Business',
+   128→      'Up to 25 menu items',
+   129→      '1 QR code',
+   130→      'Basic template',
+   131→      'Mobile-responsive menu',
+   132→    ],
+   133→    cta: 'Get Started Free',
+   134→    highlighted: false,
+   135→  },
+   136→  {
+   137→    name: 'Pro',
+   138→    price: '$19',
+   139→    period: '/month',
+   140→    description: 'For growing restaurants',
+   141→    features: [
+   142→      '5 Businesses',
+   143→      'Unlimited menu items',
+   144→      'Unlimited QR codes',
+   145→      'All premium templates',
+   146→      'WhatsApp ordering',
+   147→      'AI menu scanner',
+   148→      'Analytics dashboard',
+   149→      'Custom domain support',
+   150→    ],
+   151→    cta: 'Start Free Trial',
+   152→    highlighted: true,
+   153→  },
+   154→  {
+   155→    name: 'Enterprise',
+   156→    price: '$49',
+   157→    period: '/month',
+   158→    description: 'For restaurant chains',
+   159→    features: [
+   160→      'Unlimited businesses',
+   161→      'Unlimited everything',
+   162→      'All templates & features',
+   163→      'White-label branding',
+   164→      'API access',
+   165→      'Priority support',
+   166→      'Team collaboration',
+   167→      'Advanced analytics & exports',
+   168→    ],
+   169→    cta: 'Contact Sales',
+   170→    highlighted: false,
+   171→  },
+   172→];
+   173→
+   174→export default function LandingPage() {
+   175→  const navigate = useAppStore((s) => s.navigate);
+   176→  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+   177→
+   178→  const scrollToSection = (href: string) => {
+   179→    const el = document.querySelector(href);
+   180→    if (el) {
+   181→      el.scrollIntoView({ behavior: 'smooth' });
+   182→    }
+   183→    setMobileMenuOpen(false);
+   184→  };
+   185→
+   186→  return (
+   187→    <div className="min-h-screen bg-white">
+   188→      {/* Navigation */}
+   189→      <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-lg">
+   190→        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+   191→          {/* Logo */}
+   192→          <button
+   193→            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+   194→            className="flex items-center gap-2"
+   195→          >
+   196→            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
+   197→              <QrCode className="h-5 w-5 text-white" />
+   198→            </div>
+   199→            <span className="text-xl font-bold text-gray-900">
+   200→              Menu<span className="text-emerald-600">QR</span>
+   201→            </span>
+   202→          </button>
+   203→
+   204→          {/* Desktop nav links */}
+   205→          <div className="hidden items-center gap-8 md:flex">
+   206→            {NAV_LINKS.map((link) => (
+   207→              <button
+   208→                key={link.href}
+   209→                onClick={() => scrollToSection(link.href)}
+   210→                className="text-sm font-medium text-gray-600 transition-colors hover:text-emerald-600"
+   211→              >
+   212→                {link.label}
+   213→              </button>
+   214→            ))}
+   215→          </div>
+   216→
+   217→          {/* Desktop auth buttons */}
+   218→          <div className="hidden items-center gap-3 md:flex">
+   219→            <Button
+   220→              variant="ghost"
+   221→              onClick={() => navigate('/login')}
+   222→              className="text-gray-600 hover:text-emerald-600"
+   223→            >
+   224→              Sign In
+   225→            </Button>
+   226→            <Button
+   227→              onClick={() => navigate('/register')}
+   228→              className="bg-emerald-600 text-white hover:bg-emerald-700"
+   229→            >
+   230→              Get Started
+   231→              <ArrowRight className="h-4 w-4" />
+   232→            </Button>
+   233→          </div>
+   234→
+   235→          {/* Mobile menu button */}
+   236→          <button
+   237→            className="md:hidden rounded-md p-2 text-gray-600 hover:bg-gray-100"
+   238→            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+   239→            aria-label="Toggle menu"
+   240→          >
+   241→            <Menu className="h-5 w-5" />
+   242→          </button>
+   243→        </nav>
+   244→
+   245→        {/* Mobile menu */}
+   246→        {mobileMenuOpen && (
+   247→          <div className="border-t border-gray-100 bg-white px-4 py-4 md:hidden">
+   248→            <div className="flex flex-col gap-3">
+   249→              {NAV_LINKS.map((link) => (
+   250→                <button
+   251→                  key={link.href}
+   252→                  onClick={() => scrollToSection(link.href)}
+   253→                  className="rounded-md px-3 py-2 text-left text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-emerald-600"
+   254→                >
+   255→                  {link.label}
+   256→                </button>
+   257→              ))}
+   258→              <hr className="border-gray-100" />
+   259→              <Button
+   260→                variant="ghost"
+   261→                onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
+   262→                className="justify-start text-gray-600"
+   263→              >
+   264→                Sign In
+   265→              </Button>
+   266→              <Button
+   267→                onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
+   268→                className="bg-emerald-600 text-white hover:bg-emerald-700"
+   269→              >
+   270→                Get Started
+   271→                <ArrowRight className="h-4 w-4" />
+   272→              </Button>
+   273→            </div>
+   274→          </div>
+   275→        )}
+   276→      </header>
+   277→
+   278→      {/* Hero Section */}
+   279→      <section className="relative overflow-hidden">
+   280→        {/* Background decorations */}
+   281→        <div className="pointer-events-none absolute -top-40 right-0 h-[500px] w-[500px] rounded-full bg-emerald-100/60 blur-3xl" />
+   282→        <div className="pointer-events-none absolute -bottom-40 left-0 h-[400px] w-[400px] rounded-full bg-emerald-50/80 blur-3xl" />
+   283→
+   284→        <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-24 lg:px-8 lg:pt-32">
+   285→          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+   286→            {/* Hero text */}
+   287→            <div className="mx-auto max-w-2xl text-center lg:mx-0 lg:text-left">
+   288→              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700">
+   289→                <Sparkles className="h-4 w-4" />
+   290→                AI-Powered Menu Builder
+   291→              </div>
+   292→              <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl">
+   293→                Create Your Digital Menu in{' '}
+   294→                <span className="text-emerald-600">Minutes</span>
+   295→              </h1>
+   296→              <p className="mt-6 text-lg leading-relaxed text-gray-600 sm:text-xl">
+   297→                Build stunning QR code menus for your restaurant. No design skills needed.
+   298→                Scan your existing menu with AI, customize with beautiful templates, and share instantly.
+   299→              </p>
+   300→              <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
+   301→                <Button
+   302→                  size="lg"
+   303→                  onClick={() => navigate('/register')}
+   304→                  className="h-12 bg-emerald-600 px-8 text-base font-semibold text-white hover:bg-emerald-700"
+   305→                >
+   306→                  Sign Up Free
+   307→                  <ArrowRight className="h-5 w-5" />
+   308→                </Button>
+   309→                <Button
+   310→                  size="lg"
+   311→                  variant="outline"
+   312→                  onClick={() => navigate('/login')}
+   313→                  className="h-12 px-8 text-base font-semibold border-gray-300 hover:border-emerald-300 hover:text-emerald-600"
+   314→                >
+   315→                  See Demo
+   316→                </Button>
+   317→              </div>
+   318→              <div className="mt-8 flex items-center justify-center gap-6 text-sm text-gray-500 lg:justify-start">
+   319→                <span className="flex items-center gap-1.5">
+   320→                  <Check className="h-4 w-4 text-emerald-500" />
+   321→                  Free forever plan
+   322→                </span>
+   323→                <span className="flex items-center gap-1.5">
+   324→                  <Check className="h-4 w-4 text-emerald-500" />
+   325→                  No credit card
+   326→                </span>
+   327→              </div>
+   328→            </div>
+   329→
+   330→            {/* Hero visual - Phone mockup */}
+   331→            <div className="relative mx-auto w-full max-w-md lg:mx-0 lg:max-w-none">
+   332→              <div className="relative">
+   333→                {/* Phone frame */}
+   334→                <div className="mx-auto w-[280px] rounded-[2.5rem] border-[8px] border-gray-800 bg-gray-800 p-2 shadow-2xl sm:w-[320px]">
+   335→                  <div className="overflow-hidden rounded-[2rem] bg-white">
+   336→                    {/* Status bar mock */}
+   337→                    <div className="flex items-center justify-between bg-emerald-600 px-5 py-2">
+   338→                      <span className="text-xs font-medium text-white">9:41</span>
+   339→                      <div className="flex gap-1.5">
+   340→                        <div className="h-2.5 w-2.5 rounded-full bg-white/40" />
+   341→                        <div className="h-2.5 w-2.5 rounded-full bg-white/40" />
+   342→                        <div className="h-2.5 w-2.5 rounded-full bg-white/40" />
+   343→                      </div>
+   344→                    </div>
+   345→                    {/* Menu header mock */}
+   346→                    <div className="bg-emerald-600 px-5 pb-6 pt-3">
+   347→                      <h3 className="text-lg font-bold text-white">La Bella Cucina</h3>
+   348→                      <p className="text-xs text-emerald-100">Italian Restaurant</p>
+   349→                    </div>
+   350→                    {/* Menu items mock */}
+   351→                    <div className="space-y-3 bg-gray-50 p-4">
+   352→                      {[1, 2, 3].map((i) => (
+   353→                        <div key={i} className="flex gap-3 rounded-lg bg-white p-3 shadow-sm">
+   354→                          <div className="h-14 w-14 shrink-0 rounded-lg bg-emerald-100" />
+   355→                          <div className="flex-1">
+   356→                            <div className="h-3.5 w-24 rounded bg-gray-200" />
+   357→                            <div className="mt-1.5 h-2.5 w-32 rounded bg-gray-100" />
+   358→                            <div className="mt-2 h-3 w-12 rounded bg-emerald-100" />
+   359→                          </div>
+   360→                        </div>
+   361→                      ))}
+   362→                    </div>
+   363→                  </div>
+   364→                </div>
+   365→                {/* Floating QR code badge */}
+   366→                <div className="absolute -right-4 bottom-20 flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-white bg-white shadow-lg sm:-right-6 sm:h-24 sm:w-24">
+   367→                  <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-emerald-600 sm:h-16 sm:w-16">
+   368→                    <QrCode className="h-8 w-8 text-white sm:h-10 sm:w-10" />
+   369→                  </div>
+   370→                </div>
+   371→                {/* Floating stats badge */}
+   372→                <div className="absolute -left-4 top-24 flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-lg sm:-left-8">
+   373→                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+   374→                    <BarChart3 className="h-5 w-5 text-emerald-600" />
+   375→                  </div>
+   376→                  <div>
+   377→                    <p className="text-sm font-bold text-gray-900">2.4k</p>
+   378→                    <p className="text-xs text-gray-500">QR Scans</p>
+   379→                  </div>
+   380→                </div>
+   381→              </div>
+   382→            </div>
+   383→          </div>
+   384→        </div>
+   385→      </section>
+   386→
+   387→      {/* Features Section */}
+   388→      <section id="features" className="bg-gray-50 py-20 sm:py-28">
+   389→        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+   390→          <div className="mx-auto max-w-2xl text-center">
+   391→            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700">
+   392→              <Zap className="h-4 w-4" />
+   393→              Features
+   394→            </div>
+   395→            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+   396→              Everything You Need to Go Digital
+   397→            </h2>
+   398→            <p className="mt-4 text-lg text-gray-600">
+   399→              Powerful tools to create, manage, and share your digital menu with ease.
+   400→            </p>
+   401→          </div>
+   402→
+   403→          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+   404→            {FEATURES.map((feature) => {
+   405→              const Icon = feature.icon;
+   406→              return (
+   407→                <Card
+   408→                  key={feature.title}
+   409→                  className="group border-gray-200 bg-white py-0 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg"
+   410→                >
+   411→                  <CardContent className="p-6">
+   412→                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
+   413→                      <Icon className="h-6 w-6" />
+   414→                    </div>
+   415→                    <h3 className="mb-2 text-lg font-semibold text-gray-900">
+   416→                      {feature.title}
+   417→                    </h3>
+   418→                    <p className="text-sm leading-relaxed text-gray-600">
+   419→                      {feature.description}
+   420→                    </p>
+   421→                  </CardContent>
+   422→                </Card>
+   423→              );
+   424→            })}
+   425→          </div>
+   426→        </div>
+   427→      </section>
+   428→
+   429→      {/* How It Works Section */}
+   430→      <section id="how-it-works" className="bg-white py-20 sm:py-28">
+   431→        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+   432→          <div className="mx-auto max-w-2xl text-center">
+   433→            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700">
+   434→              <Globe className="h-4 w-4" />
+   435→              How It Works
+   436→            </div>
+   437→            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+   438→              Up and Running in 3 Simple Steps
+   439→            </h2>
+   440→            <p className="mt-4 text-lg text-gray-600">
+   441→              No technical skills required. Get your digital menu live in under 10 minutes.
+   442→            </p>
+   443→          </div>
+   444→
+   445→          <div className="relative mt-16">
+   446→            {/* Connecting line (desktop) */}
+   447→            <div className="absolute left-0 right-0 top-16 hidden h-0.5 bg-gradient-to-r from-emerald-200 via-emerald-400 to-emerald-200 md:block" />
+   448→
+   449→            <div className="grid gap-8 md:grid-cols-3 md:gap-6">
+   450→              {STEPS.map((step) => {
+   451→                const Icon = step.icon;
+   452→                return (
+   453→                  <div key={step.number} className="relative text-center">
+   454→                    <div className="relative z-10 mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-white bg-emerald-600 shadow-lg">
+   455→                      <Icon className="h-7 w-7 text-white" />
+   456→                    </div>
+   457→                    <div className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
+   458→                      {step.number}
+   459→                    </div>
+   460→                    <h3 className="mt-3 text-lg font-semibold text-gray-900">
+   461→                      {step.title}
+   462→                    </h3>
+   463→                    <p className="mt-2 text-sm leading-relaxed text-gray-600">
+   464→                      {step.description}
+   465→                    </p>
+   466→                  </div>
+   467→                );
+   468→              })}
+   469→            </div>
+   470→          </div>
+   471→        </div>
+   472→      </section>
+   473→
+   474→      {/* Templates Preview Section */}
+   475→      <section id="templates" className="bg-gray-50 py-20 sm:py-28">
+   476→        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+   477→          <div className="mx-auto max-w-2xl text-center">
+   478→            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700">
+   479→              <Palette className="h-4 w-4" />
+   480→              Templates
+   481→            </div>
+   482→            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+   483→              Beautiful Templates for Every Style
+   484→            </h2>
+   485→            <p className="mt-4 text-lg text-gray-600">
+   486→              Choose a template that matches your restaurant&#39;s vibe, then make it yours.
+   487→            </p>
+   488→          </div>
+   489→
+   490→          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+   491→            {TEMPLATE_PREVIEWS.map((template) => (
+   492→              <Card
+   493→                key={template.name}
+   494→                className="group cursor-pointer border-gray-200 bg-white py-0 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg"
+   495→              >
+   496→                <CardContent className="p-0">
+   497→                  {/* Template preview */}
+   498→                  <div
+   499→                    className="relative flex h-44 items-end p-4"
+   500→                    style={{
+   501→                      background: `linear-gradient(135deg, ${template.colors[0]} 0%, ${template.colors[1]} 100%)`,
+   502→                    }}
+   503→                  >
+   504→                    {/* Mock menu items */}
+   505→                    <div className="w-full space-y-2">
+   506→                      <div className="h-2.5 w-20 rounded-full bg-white/30" />
+   507→                      <div className="h-2 w-32 rounded-full bg-white/20" />
+   508→                      <div className="mt-3 h-2.5 w-16 rounded-full bg-white/30" />
+   509→                      <div className="h-2 w-28 rounded-full bg-white/20" />
+   510→                    </div>
+   511→                  </div>
+   512→                  {/* Template info */}
+   513→                  <div className="p-4">
+   514→                    <h3 className="font-semibold text-gray-900">{template.name}</h3>
+   515→                    <p className="mt-1 text-sm text-gray-500">{template.description}</p>
+   516→                    <button className="mt-3 flex items-center gap-1 text-sm font-medium text-emerald-600 opacity-0 transition-opacity group-hover:opacity-100">
+   517→                      Preview
+   518→                      <ChevronRight className="h-4 w-4" />
+   519→                    </button>
+   520→                  </div>
+   521→                </CardContent>
+   522→              </Card>
+   523→            ))}
+   524→          </div>
+   525→        </div>
+   526→      </section>
+   527→
+   528→      {/* Pricing Section */}
+   529→      <section id="pricing" className="bg-white py-20 sm:py-28">
+   530→        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+   531→          <div className="mx-auto max-w-2xl text-center">
+   532→            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700">
+   533→              <Star className="h-4 w-4" />
+   534→              Pricing
+   535→            </div>
+   536→            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+   537→              Simple, Transparent Pricing
+   538→            </h2>
+   539→            <p className="mt-4 text-lg text-gray-600">
+   540→              Start free and scale as your business grows. No hidden fees.
+   541→            </p>
+   542→          </div>
+   543→
+   544→          <div className="mt-16 grid gap-8 lg:grid-cols-3">
+   545→            {PRICING_TIERS.map((tier) => (
+   546→              <Card
+   547→                key={tier.name}
+   548→                className={
+   549→                  tier.highlighted
+   550→                    ? 'relative border-emerald-300 bg-white py-0 shadow-xl'
+   551→                    : 'border-gray-200 bg-white py-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg'
+   552→                }
+   553→              >
+   554→                {tier.highlighted && (
+   555→                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-emerald-600 px-4 py-1 text-xs font-semibold text-white">
+   556→                    Most Popular
+   557→                  </div>
+   558→                )}
+   559→                <CardContent className="p-6">
+   560→                  <h3 className="text-lg font-semibold text-gray-900">{tier.name}</h3>
+   561→                  <p className="mt-1 text-sm text-gray-500">{tier.description}</p>
+   562→                  <div className="mt-6 flex items-baseline gap-1">
+   563→                    <span className="text-4xl font-extrabold text-gray-900">{tier.price}</span>
+   564→                    <span className="text-sm text-gray-500">{tier.period}</span>
+   565→                  </div>
+   566→                  <ul className="mt-6 space-y-3">
+   567→                    {tier.features.map((feature) => (
+   568→                      <li key={feature} className="flex items-start gap-3">
+   569→                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+   570→                        <span className="text-sm text-gray-600">{feature}</span>
+   571→                      </li>
+   572→                    ))}
+   573→                  </ul>
+   574→                  <Button
+   575→                    className={
+   576→                      tier.highlighted
+   577→                        ? 'mt-8 w-full bg-emerald-600 text-white hover:bg-emerald-700'
+   578→                        : 'mt-8 w-full'
+   579→                    }
+   580→                    variant={tier.highlighted ? 'default' : 'outline'}
+   581→                    onClick={() => navigate('/register')}
+   582→                  >
+   583→                    {tier.cta}
+   584→                    <ArrowRight className="h-4 w-4" />
+   585→                  </Button>
+   586→                </CardContent>
+   587→              </Card>
+   588→            ))}
+   589→          </div>
+   590→        </div>
+   591→      </section>
+   592→
+   593→      {/* CTA Section */}
+   594→      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 py-20 sm:py-28">
+   595→        <div className="pointer-events-none absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyem0wLTMwVjBoLTEydjRoMTJ6TTI0IDI0aDEydi0ySDI0djJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
+   596→        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+   597→          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
+   598→            Ready to Ditch Your Paper Menu?
+   599→          </h2>
+   600→          <p className="mx-auto mt-6 max-w-2xl text-lg text-emerald-100">
+   601→            Join thousands of restaurants that have gone digital with MenuQR.
+   602→            Start your free account today and see the difference.
+   603→          </p>
+   604→          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+   605→            <Button
+   606→              size="lg"
+   607→              onClick={() => navigate('/register')}
+   608→              className="h-12 bg-white px-8 text-base font-semibold text-emerald-700 hover:bg-emerald-50"
+   609→            >
+   610→              Start Building for Free
+   611→              <ArrowRight className="h-5 w-5" />
+   612→            </Button>
+   613→          </div>
+   614→          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-emerald-200">
+   615→            <span className="flex items-center gap-1.5">
+   616→              <Shield className="h-4 w-4" />
+   617→              SSL Secured
+   618→            </span>
+   619→            <span className="flex items-center gap-1.5">
+   620→              <Check className="h-4 w-4" />
+   621→              No credit card required
+   622→            </span>
+   623→            <span className="flex items-center gap-1.5">
+   624→              <Zap className="h-4 w-4" />
+   625→              Setup in minutes
+   626→            </span>
+   627→          </div>
+   628→        </div>
+   629→      </section>
+   630→
+   631→      {/* Footer */}
+   632→      <footer className="border-t border-gray-100 bg-white">
+   633→        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+   634→          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+   635→            {/* Brand */}
+   636→            <div className="sm:col-span-2 lg:col-span-1">
+   637→              <div className="flex items-center gap-2">
+   638→                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
+   639→                  <QrCode className="h-5 w-5 text-white" />
+   640→                </div>
+   641→                <span className="text-lg font-bold text-gray-900">
+   642→                  Menu<span className="text-emerald-600">QR</span>
+   643→                </span>
+   644→              </div>
+   645→              <p className="mt-4 max-w-xs text-sm leading-relaxed text-gray-500">
+   646→                Create beautiful, scannable digital menus for your restaurant in minutes.
+   647→                Powered by AI.
+   648→              </p>
+   649→            </div>
+   650→
+   651→            {/* Product links */}
+   652→            <div>
+   653→              <h4 className="text-sm font-semibold text-gray-900">Product</h4>
+   654→              <ul className="mt-4 space-y-3">
+   655→                {['Features', 'Templates', 'Pricing', 'AI Scanner'].map((item) => (
+   656→                  <li key={item}>
+   657→                    <button className="text-sm text-gray-500 transition-colors hover:text-emerald-600">
+   658→                      {item}
+   659→                    </button>
+   660→                  </li>
+   661→                ))}
+   662→              </ul>
+   663→            </div>
+   664→
+   665→            {/* Company links */}
+   666→            <div>
+   667→              <h4 className="text-sm font-semibold text-gray-900">Company</h4>
+   668→              <ul className="mt-4 space-y-3">
+   669→                {['About', 'Blog', 'Careers', 'Contact'].map((item) => (
+   670→                  <li key={item}>
+   671→                    <button className="text-sm text-gray-500 transition-colors hover:text-emerald-600">
+   672→                      {item}
+   673→                    </button>
+   674→                  </li>
+   675→                ))}
+   676→              </ul>
+   677→            </div>
+   678→
+   679→            {/* Legal links */}
+   680→            <div>
+   681→              <h4 className="text-sm font-semibold text-gray-900">Legal</h4>
+   682→              <ul className="mt-4 space-y-3">
+   683→                {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((item) => (
+   684→                  <li key={item}>
+   685→                    <button className="text-sm text-gray-500 transition-colors hover:text-emerald-600">
+   686→                      {item}
+   687→                    </button>
+   688→                  </li>
+   689→                ))}
+   690→              </ul>
+   691→            </div>
+   692→          </div>
+   693→
+   694→          <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-gray-100 pt-8 sm:flex-row">
+   695→            <p className="text-sm text-gray-500">
+   696→              &copy; {new Date().getFullYear()} MenuQR. All rights reserved.
+   697→            </p>
+   698→            <div className="flex items-center gap-1 text-sm text-gray-500">
+   699→              Made with
+   700→              <span className="text-emerald-500" aria-label="love">
+   701→                &hearts;
+   702→              </span>{' '}
+   703→              for restaurants everywhere
+   704→            </div>
+   705→          </div>
+   706→        </div>
+   707→      </footer>
+   708→    </div>
+   709→  );
+   710→}
+   711→
