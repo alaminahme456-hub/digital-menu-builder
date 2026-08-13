@@ -70,7 +70,12 @@ const navItems: NavItem[] = [
 ];
 
 function getPageName(route: string): string {
-  const item = navItems.find((n) => route.startsWith(n.href.replace('#', '')));
+  // Normalize: ensure leading /
+  const normalized = route.startsWith('/') ? route : '/' + route;
+  const item = navItems.find((n) => {
+    const target = n.href.replace('#', '');
+    return normalized === target || normalized.startsWith(target + '/');
+  });
   return item?.label || 'Dashboard';
 }
 
@@ -80,65 +85,19 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children, activePage }: DashboardLayoutProps) {
-  const { token, user, logout, setAuth } = useAuthStore();
+  const { token, user, logout } = useAuthStore();
   const {
     currentRoute,
     navigate,
     currentBusiness,
     businesses,
     setCurrentBusiness,
-    setBusinesses,
     sidebarOpen,
     setSidebarOpen,
   } = useAppStore();
   const isMobile = useIsMobile();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
-  const [businessesLoaded, setBusinessesLoaded] = useState(false);
-
-  // Fetch businesses on mount
-  useEffect(() => {
-    if (!token) return;
-    async function fetchBusinesses() {
-      try {
-        const res = await fetch('/api/businesses', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setBusinesses(data.businesses);
-          // Auto-select first business if none selected
-          if (data.businesses.length > 0 && !currentBusiness) {
-            setCurrentBusiness(data.businesses[0]);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch businesses:', err);
-      } finally {
-        setBusinessesLoaded(true);
-      }
-    }
-    fetchBusinesses();
-  }, [token, setBusinesses, setCurrentBusiness, currentBusiness]);
-
-  // Fetch user profile on mount
-  useEffect(() => {
-    if (!token || user) return;
-    async function fetchUser() {
-      try {
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setAuth(token, data.user);
-        }
-      } catch (err) {
-        console.error('Failed to fetch user:', err);
-      }
-    }
-    fetchUser();
-  }, [token, user, setAuth]);
 
   // Sync hash changes to store
   useEffect(() => {
@@ -201,7 +160,7 @@ export default function DashboardLayout({ children, activePage }: DashboardLayou
     return route === target;
   };
 
-  const displayName = activePage || getPageName(currentRoute);
+  const displayName = activePage ? getPageName(activePage) : getPageName(currentRoute);
   const isPublished = currentBusiness?.status === 'published';
 
   const userInitials = user?.name

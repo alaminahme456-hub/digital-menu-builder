@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useAuthStore, useAppStore } from '@/lib/store';
 import { Toaster } from 'sonner';
 
@@ -29,18 +29,20 @@ import PublicMenuView from '@/components/public-menu/public-menu-view';
 import { Loader2 } from 'lucide-react';
 
 export default function Home() {
-  const { isAuthenticated, token, user } = useAuthStore();
-  const {
-    currentRoute,
-    navigate,
-    currentBusiness,
-    businesses,
-    setCurrentBusiness,
-    setBusinesses,
-  } = useAppStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
+
+  const currentRoute = useAppStore((s) => s.currentRoute);
+  const currentBusiness = useAppStore((s) => s.currentBusiness);
+  const businesses = useAppStore((s) => s.businesses);
+  const setCurrentBusiness = useAppStore((s) => s.setCurrentBusiness);
+  const setBusinesses = useAppStore((s) => s.setBusinesses);
+  const navigate = useAppStore((s) => s.navigate);
 
   const [showCreateBusiness, setShowCreateBusiness] = useState(false);
   const [initializing, setInitializing] = useState(true);
+  const initRef = useRef(false);
 
   // Initialize hash-based routing
   useEffect(() => {
@@ -55,57 +57,62 @@ export default function Home() {
   }, [navigate]);
 
   // Fetch user data and businesses on mount if authenticated
+  // Use initRef to prevent duplicate initialization from the login page calling setAuth
   useEffect(() => {
-    if (isAuthenticated && token) {
-      const init = async () => {
-        try {
-          // Fetch user profile
-          const meRes = await fetch('/api/auth/me', {
-            headers: { 'Authorization': `Bearer ${token}` },
-          });
-          if (meRes.ok) {
-            const { user: profile } = await meRes.json();
-            useAuthStore.getState().setAuth(token, profile);
-          }
-
-          // Fetch businesses
-          const bizRes = await fetch('/api/businesses', {
-            headers: { 'Authorization': `Bearer ${token}` },
-          });
-          if (bizRes.ok) {
-            const { businesses: bizList } = await bizRes.json();
-            const bizData = bizList.map((b: { id: string; slug: string; name: string; logo: string | null; status: string }) => ({
-              id: b.id,
-              slug: b.slug,
-              name: b.name,
-              logo: b.logo,
-              status: b.status,
-            }));
-            setBusinesses(bizData);
-
-            // Auto-select first business if none selected
-            if (!currentBusiness && bizData.length > 0) {
-              setCurrentBusiness(bizData[0]);
-            }
-            // Show create business dialog if no businesses
-            if (bizData.length === 0) {
-              const hash = window.location.hash.slice(1);
-              if (!hash.startsWith('/register') && !hash.startsWith('/login')) {
-                setShowCreateBusiness(true);
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Init error:', error);
-        } finally {
-          setInitializing(false);
-        }
-      };
-      init();
-    } else {
-      setInitializing(false);
+    if (!isAuthenticated || !token || initRef.current) {
+      if (!isAuthenticated) setInitializing(false);
+      return;
     }
-  }, [isAuthenticated, token]);
+
+    initRef.current = true;
+
+    const init = async () => {
+      try {
+        // Fetch user profile
+        const meRes = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (meRes.ok) {
+          const { user: profile } = await meRes.json();
+          useAuthStore.getState().setAuth(token, profile);
+        }
+
+        // Fetch businesses
+        const bizRes = await fetch('/api/businesses', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (bizRes.ok) {
+          const { businesses: bizList } = await bizRes.json();
+          const bizData = bizList.map((b: { id: string; slug: string; name: string; logo: string | null; status: string }) => ({
+            id: b.id,
+            slug: b.slug,
+            name: b.name,
+            logo: b.logo,
+            status: b.status,
+          }));
+          setBusinesses(bizData);
+
+          // Auto-select first business using latest state
+          const currentBiz = useAppStore.getState().currentBusiness;
+          if (!currentBiz && bizData.length > 0) {
+            setCurrentBusiness(bizData[0]);
+          }
+          // Show create business dialog if no businesses
+          if (bizData.length === 0) {
+            const hash = window.location.hash.slice(1);
+            if (!hash.startsWith('/register') && !hash.startsWith('/login')) {
+              setShowCreateBusiness(true);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Init error:', error);
+      } finally {
+        setInitializing(false);
+      }
+    };
+    init();
+  }, [isAuthenticated, token]); // Only depend on auth state changes
 
   // Route parser
   const parseRoute = useCallback((route: string) => {
@@ -118,7 +125,7 @@ export default function Home() {
 
   // Determine which view to show
   const renderView = () => {
-    // Public menu routes
+    // Public menu routes (always accessible)
     if (currentRoute.startsWith('/menu/')) {
       const slug = currentRoute.replace('/menu/', '');
       return <PublicMenuView slug={slug} />;
@@ -134,6 +141,11 @@ export default function Home() {
         default:
           return <LandingPage />;
       }
+    }
+
+    // Still initializing — show loading
+    if (initializing) {
+      return null; // The loading state below handles this
     }
 
     // Authenticated routes - show dashboard

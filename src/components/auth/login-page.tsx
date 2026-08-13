@@ -14,6 +14,7 @@ export default function LoginPage() {
   const navigate = useAppStore((s) => s.navigate);
   const setAuth = useAuthStore((s) => s.setAuth);
   const setBusinesses = useAppStore((s) => s.setBusinesses);
+  const setCurrentBusiness = useAppStore((s) => s.setCurrentBusiness);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,14 +52,25 @@ export default function LoginPage() {
       // Store auth state
       setAuth(data.token, data.user);
 
-      // Fetch businesses
+      // Fetch businesses and set current business
       try {
         const bizRes = await fetch('/api/businesses', {
           headers: { Authorization: `Bearer ${data.token}` },
         });
         if (bizRes.ok) {
-          const bizData = await bizRes.json();
-          setBusinesses(bizData);
+          const bizResult = await bizRes.json();
+          const bizList = bizResult.businesses.map((b: { id: string; slug: string; name: string; logo: string | null; status: string }) => ({
+            id: b.id,
+            slug: b.slug,
+            name: b.name,
+            logo: b.logo,
+            status: b.status,
+          }));
+          setBusinesses(bizList);
+          // Auto-select first business
+          if (bizList.length > 0) {
+            setCurrentBusiness(bizList[0]);
+          }
         }
       } catch {
         // Non-critical, continue navigation

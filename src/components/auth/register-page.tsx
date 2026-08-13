@@ -34,6 +34,7 @@ export default function RegisterPage() {
   const navigate = useAppStore((s) => s.navigate);
   const setAuth = useAuthStore((s) => s.setAuth);
   const setBusinesses = useAppStore((s) => s.setBusinesses);
+  const setCurrentBusiness = useAppStore((s) => s.setCurrentBusiness);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -107,14 +108,24 @@ export default function RegisterPage() {
       // Auto-login after registration
       setAuth(data.token, data.user);
 
-      // Fetch businesses
+      // Fetch businesses and set current
       try {
         const bizRes = await fetch('/api/businesses', {
           headers: { Authorization: `Bearer ${data.token}` },
         });
         if (bizRes.ok) {
-          const bizData = await bizRes.json();
-          setBusinesses(bizData);
+          const bizResult = await bizRes.json();
+          const bizList = bizResult.businesses.map((b: { id: string; slug: string; name: string; logo: string | null; status: string }) => ({
+            id: b.id,
+            slug: b.slug,
+            name: b.name,
+            logo: b.logo,
+            status: b.status,
+          }));
+          setBusinesses(bizList);
+          if (bizList.length > 0) {
+            setCurrentBusiness(bizList[0]);
+          }
         }
       } catch {
         // Non-critical
