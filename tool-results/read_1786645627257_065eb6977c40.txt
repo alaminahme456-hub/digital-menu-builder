@@ -1,0 +1,681 @@
+     1→'use client';
+     2→
+     3→import React, { useState, useCallback, useRef } from 'react';
+     4→import {
+     5→  Camera, Upload, Loader2, CheckCircle2, Circle,
+     6→  Pencil, Trash2, Plus, Sparkles, ArrowRight,
+     7→  BrainCircuit, ChevronRight, ScanLine
+     8→} from 'lucide-react';
+     9→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+    10→import { Button } from '@/components/ui/button';
+    11→import { Badge } from '@/components/ui/badge';
+    12→import { Progress } from '@/components/ui/progress';
+    13→import { Input } from '@/components/ui/input';
+    14→import {
+    15→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    16→} from '@/components/ui/table';
+    17→import {
+    18→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    19→} from '@/components/ui/select';
+    20→import { useAuthStore, useAppStore } from '@/lib/store';
+    21→import { formatPrice } from '@/lib/auth';
+    22→import { toast } from 'sonner';
+    23→
+    24→interface ScannedItem {
+    25→  id: string;
+    26→  name: string;
+    27→  description: string;
+    28→  price: number;
+    29→  category: string;
+    30→}
+    31→
+    32→type Step = 'upload' | 'scanning' | 'review' | 'save';
+    33→
+    34→const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    35→const ACCEPTED_IMAGE_EXTENSIONS = '.jpg,.jpeg,.png,.webp';
+    36→
+    37→const STEPS = [
+    38→  { key: 'upload', label: 'Upload', icon: Camera },
+    39→  { key: 'scanning', label: 'Scanning', icon: BrainCircuit },
+    40→  { key: 'review', label: 'Review', icon: Pencil },
+    41→  { key: 'save', label: 'Save', icon: CheckCircle2 },
+    42→] as const;
+    43→
+    44→export default function AIScanner() {
+    45→  const { token } = useAuthStore();
+    46→  const { currentBusiness, navigate } = useAppStore();
+    47→  const fileInputRef = useRef<HTMLInputElement>(null);
+    48→
+    49→  const [step, setStep] = useState<Step>('upload');
+    50→  const [dragOver, setDragOver] = useState(false);
+    51→  const [scanProgress, setScanProgress] = useState(0);
+    52→  const [items, setItems] = useState<ScannedItem[]>([]);
+    53→  const [categories, setCategories] = useState<string[]>([]);
+    54→  const [saving, setSaving] = useState(false);
+    55→  const [newCategory, setNewCategory] = useState('');
+    56→  const [showNewCategory, setShowNewCategory] = useState(false);
+    57→  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+    58→  const [error, setError] = useState<string | null>(null);
+    59→
+    60→  const currentStepIndex = STEPS.findIndex(s => s.key === step);
+    61→
+    62→  const handleDrop = useCallback((e: React.DragEvent) => {
+    63→    e.preventDefault();
+    64→    setDragOver(false);
+    65→    const file = e.dataTransfer.files[0];
+    66→    if (file) processFile(file);
+    67→  }, []);
+    68→
+    69→  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    70→    const file = e.target.files?.[0];
+    71→    if (file) processFile(file);
+    72→    e.target.value = '';
+    73→  }, []);
+    74→
+    75→  const processFile = (file: File) => {
+    76→    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+    77→      toast.error('Please upload a JPG, PNG, or WEBP image.');
+    78→      return;
+    79→    }
+    80→    if (!currentBusiness?.id || !token) {
+    81→      toast.error('Please select a business first.');
+    82→      return;
+    83→    }
+    84→
+    85→    setError(null);
+    86→    const reader = new FileReader();
+    87→    reader.onload = (e) => {
+    88→      const imageData = e.target?.result as string;
+    89→      setUploadedImage(imageData);
+    90→      startScan(imageData);
+    91→    };
+    92→    reader.readAsDataURL(file);
+    93→  };
+    94→
+    95→  const startScan = async (imageData: string) => {
+    96→    setStep('scanning');
+    97→    setScanProgress(0);
+    98→
+    99→    // Simulate scanning progress
+   100→    const progressInterval = setInterval(() => {
+   101→      setScanProgress(prev => {
+   102→        if (prev >= 90) {
+   103→          clearInterval(progressInterval);
+   104→          return 90;
+   105→        }
+   106→        return prev + Math.random() * 12 + 3;
+   107→      });
+   108→    }, 300);
+   109→
+   110→    try {
+   111→      const res = await fetch('/api/menu/scan', {
+   112→        method: 'POST',
+   113→        headers: {
+   114→          Authorization: `Bearer ${token}`,
+   115→          'Content-Type': 'application/json',
+   116→        },
+   117→        body: JSON.stringify({
+   118→          businessId: currentBusiness!.id,
+   119→          imageData,
+   120→        }),
+   121→      });
+   122→
+   123→      clearInterval(progressInterval);
+   124→      setScanProgress(100);
+   125→
+   126→      const data = await res.json();
+   127→
+   128→      if (!res.ok) {
+   129→        setError(data.error || 'Scanning failed');
+   130→        setStep('upload');
+   131→        return;
+   132→      }
+   133→
+   134→      // Wait a moment for progress animation to complete
+   135→      await new Promise(resolve => setTimeout(resolve, 400));
+   136→
+   137→      const scannedItems: ScannedItem[] = data.items.map((item: { name: string; description: string; price: number; category: string }, index: number) => ({
+   138→        id: `scan-${Date.now()}-${index}`,
+   139→        name: item.name,
+   140→        description: item.description,
+   141→        price: item.price,
+   142→        category: item.category,
+   143→      }));
+   144→
+   145→      const extractedCategories = [...new Set(data.items.map((item: { category: string }) => item.category))];
+   146→
+   147→      setItems(scannedItems);
+   148→      setCategories(extractedCategories);
+   149→      setStep('review');
+   150→    } catch {
+   151→      clearInterval(progressInterval);
+   152→      setError('Failed to scan menu. Please try again.');
+   153→      setStep('upload');
+   154→    }
+   155→  };
+   156→
+   157→  const updateItem = (id: string, field: keyof ScannedItem, value: string | number) => {
+   158→    setItems(prev =>
+   159→      prev.map(item => {
+   160→        if (item.id !== id) return item;
+   161→        const updated = { ...item, [field]: value };
+   162→        // If category changed and is new, add to categories list
+   163→        if (field === 'category' && typeof value === 'string' && !categories.includes(value)) {
+   164→          setCategories(prev => [...prev, value]);
+   165→        }
+   166→        return updated;
+   167→      })
+   168→    );
+   169→  };
+   170→
+   171→  const removeItem = (id: string) => {
+   172→    setItems(prev => prev.filter(item => item.id !== id));
+   173→  };
+   174→
+   175→  const addItem = () => {
+   176→    const newItem: ScannedItem = {
+   177→      id: `manual-${Date.now()}`,
+   178→      name: '',
+   179→      description: '',
+   180→      price: 0,
+   181→      category: categories[0] || 'Uncategorized',
+   182→    };
+   183→    setItems(prev => [...prev, newItem]);
+   184→  };
+   185→
+   186→  const addNewCategory = () => {
+   187→    const trimmed = newCategory.trim();
+   188→    if (!trimmed) return;
+   189→    if (categories.includes(trimmed)) {
+   190→      toast.error('Category already exists');
+   191→      return;
+   192→    }
+   193→    setCategories(prev => [...prev, trimmed]);
+   194→    setNewCategory('');
+   195→    setShowNewCategory(false);
+   196→    toast.success(`Category "${trimmed}" added`);
+   197→  };
+   198→
+   199→  const handleSave = async () => {
+   200→    if (!currentBusiness?.id || !token) return;
+   201→
+   202→    const validItems = items.filter(item => item.name.trim());
+   203→    if (validItems.length === 0) {
+   204→      toast.error('No valid items to save');
+   205→      return;
+   206→    }
+   207→
+   208→    setSaving(true);
+   209→    try {
+   210→      // Create categories and collect their IDs
+   211→      const categoryMap: Record<string, string> = {};
+   212→
+   213→      for (const cat of categories) {
+   214→        const itemsInCategory = validItems.filter(i => i.category === cat);
+   215→        if (itemsInCategory.length === 0) continue;
+   216→
+   217→        const res = await fetch('/api/menu/categories', {
+   218→          method: 'POST',
+   219→          headers: {
+   220→            Authorization: `Bearer ${token}`,
+   221→            'Content-Type': 'application/json',
+   222→          },
+   223→          body: JSON.stringify({ businessId: currentBusiness.id, name: cat }),
+   224→        });
+   225→
+   226→        if (res.ok) {
+   227→          const data = await res.json();
+   228→          categoryMap[cat] = data.category.id;
+   229→        }
+   230→      }
+   231→
+   232→      // Create menu items
+   233→      for (const item of validItems) {
+   234→        const categoryId = categoryMap[item.category];
+   235→        if (!categoryId) continue;
+   236→
+   237→        await fetch('/api/menu/items', {
+   238→          method: 'POST',
+   239→          headers: {
+   240→            Authorization: `Bearer ${token}`,
+   241→            'Content-Type': 'application/json',
+   242→          },
+   243→          body: JSON.stringify({
+   244→            businessId: currentBusiness.id,
+   245→            categoryId,
+   246→            name: item.name,
+   247→            description: item.description,
+   248→            price: item.price,
+   249→          }),
+   250→        });
+   251→      }
+   252→
+   253→      setStep('save');
+   254→      toast.success('Menu items saved successfully!');
+   255→    } catch {
+   256→      toast.error('Failed to save menu items. Please try again.');
+   257→    } finally {
+   258→      setSaving(false);
+   259→    }
+   260→  };
+   261→
+   262→  const goToMenuManager = () => {
+   263→    navigate('#/menu-manager');
+   264→  };
+   265→
+   266→  const resetScanner = () => {
+   267→    setStep('upload');
+   268→    setScanProgress(0);
+   269→    setItems([]);
+   270→    setCategories([]);
+   271→    setUploadedImage(null);
+   272→    setError(null);
+   273→  };
+   274→
+   275→  if (!currentBusiness) {
+   276→    return (
+   277→      <Card>
+   278→        <CardContent className="flex flex-col items-center justify-center py-16">
+   279→          <Camera className="h-12 w-12 text-muted-foreground mb-4" />
+   280→          <p className="text-muted-foreground">Please select a business first.</p>
+   281→        </CardContent>
+   282→      </Card>
+   283→    );
+   284→  }
+   285→
+   286→  return (
+   287→    <div className="space-y-6">
+   288→      {/* Step Indicator */}
+   289→      <Card>
+   290→        <CardContent className="pt-6">
+   291→          <div className="flex items-center justify-between">
+   292→            {STEPS.map((s, index) => {
+   293→              const Icon = s.icon;
+   294→              const isActive = s.key === step;
+   295→              const isCompleted = index < currentStepIndex;
+   296→              return (
+   297→                <React.Fragment key={s.key}>
+   298→                  <div className="flex flex-col items-center gap-2">
+   299→                    <div
+   300→                      className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+   301→                        isActive
+   302→                          ? 'border-emerald-500 bg-emerald-500 text-white'
+   303→                          : isCompleted
+   304→                          ? 'border-emerald-500 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+   305→                          : 'border-muted-foreground/25 text-muted-foreground'
+   306→                      }`}
+   307→                    >
+   308→                      {isCompleted ? (
+   309→                        <CheckCircle2 className="h-5 w-5" />
+   310→                      ) : (
+   311→                        <Icon className="h-4 w-4" />
+   312→                      )}
+   313→                    </div>
+   314→                    <span
+   315→                      className={`text-xs font-medium ${
+   316→                        isActive
+   317→                          ? 'text-emerald-600 dark:text-emerald-400'
+   318→                          : isCompleted
+   319→                          ? 'text-emerald-600 dark:text-emerald-400'
+   320→                          : 'text-muted-foreground'
+   321→                      }`}
+   322→                    >
+   323→                      {s.label}
+   324→                    </span>
+   325→                  </div>
+   326→                  {index < STEPS.length - 1 && (
+   327→                    <div
+   328→                      className={`flex-1 h-0.5 mx-2 sm:mx-4 transition-colors duration-300 ${
+   329→                        index < currentStepIndex ? 'bg-emerald-500' : 'bg-muted-foreground/15'
+   330→                      }`}
+   331→                    />
+   332→                  )}
+   333→                </React.Fragment>
+   334→              );
+   335→            })}
+   336→          </div>
+   337→        </CardContent>
+   338→      </Card>
+   339→
+   340→      {/* Step: Upload */}
+   341→      {step === 'upload' && (
+   342→        <Card>
+   343→          <CardHeader>
+   344→            <CardTitle className="flex items-center gap-2">
+   345→              <Camera className="h-5 w-5 text-emerald-500" />
+   346→              Upload Menu Photo
+   347→            </CardTitle>
+   348→            <CardDescription>
+   349→              Take a photo of your physical menu or upload an image. Our AI will read and extract all menu items.
+   350→            </CardDescription>
+   351→          </CardHeader>
+   352→          <CardContent>
+   353→            {error && (
+   354→              <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+   355→                {error}
+   356→              </div>
+   357→            )}
+   358→            <div
+   359→              className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all duration-200 cursor-pointer ${
+   360→                dragOver
+   361→                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20'
+   362→                  : 'border-muted-foreground/25 hover:border-emerald-400 hover:bg-muted/50'
+   363→              }`}
+   364→              onDragOver={(e) => {
+   365→                e.preventDefault();
+   366→                setDragOver(true);
+   367→              }}
+   368→              onDragLeave={(e) => {
+   369→                e.preventDefault();
+   370→                setDragOver(false);
+   371→              }}
+   372→              onDrop={handleDrop}
+   373→              onClick={() => fileInputRef.current?.click()}
+   374→            >
+   375→              <input
+   376→                ref={fileInputRef}
+   377→                type="file"
+   378→                accept={ACCEPTED_IMAGE_EXTENSIONS}
+   379→                onChange={handleFileSelect}
+   380→                className="hidden"
+   381→              />
+   382→              <div className="space-y-4">
+   383→                <div className="mx-auto w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+   384→                  <Camera className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+   385→                </div>
+   386→                <div>
+   387→                  <p className="text-base font-semibold">
+   388→                    {dragOver ? 'Drop your menu photo here' : 'Take a photo of your physical menu'}
+   389→                  </p>
+   390→                  <p className="text-sm text-muted-foreground mt-1">
+   391→                    or <span className="text-emerald-600 dark:text-emerald-400 font-medium underline">browse files</span>
+   392→                  </p>
+   393→                </div>
+   394→                <div className="flex items-center justify-center gap-2">
+   395→                  <Button variant="outline" size="sm" className="gap-2" onClick={(e) => {
+   396→                    e.stopPropagation();
+   397→                    fileInputRef.current?.click();
+   398→                  }}>
+   399→                    <Upload className="h-4 w-4" />
+   400→                    Upload Image
+   401→                  </Button>
+   402→                </div>
+   403→                <p className="text-xs text-muted-foreground">
+   404→                  Supports JPG, PNG, WEBP • Max 10MB
+   405→                </p>
+   406→              </div>
+   407→            </div>
+   408→          </CardContent>
+   409→        </Card>
+   410→      )}
+   411→
+   412→      {/* Step: Scanning */}
+   413→      {step === 'scanning' && (
+   414→        <Card>
+   415→          <CardContent className="py-16">
+   416→            <div className="flex flex-col items-center text-center space-y-6">
+   417→              <div className="relative">
+   418→                <div className="w-24 h-24 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+   419→                  <BrainCircuit className="h-12 w-12 text-emerald-600 dark:text-emerald-400 animate-pulse" />
+   420→                </div>
+   421→                <div className="absolute -top-1 -right-1">
+   422→                  <ScanLine className="h-6 w-6 text-emerald-500 animate-bounce" />
+   423→                </div>
+   424→              </div>
+   425→              <div className="space-y-2">
+   426→                <h3 className="text-lg font-semibold flex items-center justify-center gap-2">
+   427→                  <Sparkles className="h-5 w-5 text-emerald-500" />
+   428→                  AI is reading your menu...
+   429→                </h3>
+   430→                <p className="text-sm text-muted-foreground max-w-md">
+   431→                  Our AI is analyzing your menu photo to detect items, prices, and categories.
+   432→                  This usually takes a few seconds.
+   433→                </p>
+   434→              </div>
+   435→              <div className="w-full max-w-sm space-y-2">
+   436→                <Progress value={scanProgress} className="h-2" />
+   437→                <p className="text-xs text-muted-foreground">Processing... {Math.round(scanProgress)}%</p>
+   438→              </div>
+   439→              {uploadedImage && (
+   440→                <div className="mt-4 w-32 h-32 rounded-lg overflow-hidden border shadow-sm">
+   441→                  <img src={uploadedImage} alt="Scanning" className="w-full h-full object-cover opacity-50" />
+   442→                </div>
+   443→              )}
+   444→            </div>
+   445→          </CardContent>
+   446→        </Card>
+   447→      )}
+   448→
+   449→      {/* Step: Review */}
+   450→      {step === 'review' && (
+   451→        <div className="space-y-4">
+   452→          {/* Detection Banner */}
+   453→          <Card className="border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20">
+   454→            <CardContent className="py-4">
+   455→              <div className="flex items-center justify-between flex-wrap gap-3">
+   456→                <div className="flex items-center gap-3">
+   457→                  <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+   458→                    <Sparkles className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+   459→                  </div>
+   460→                  <div>
+   461→                    <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+   462→                      AI detected {items.length} menu items
+   463→                    </p>
+   464→                    <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">
+   465→                      Review and edit before saving
+   466→                    </p>
+   467→                  </div>
+   468→                </div>
+   469→                <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border-0">
+   470→                  {categories.length} {categories.length === 1 ? 'category' : 'categories'}
+   471→                </Badge>
+   472→              </div>
+   473→            </CardContent>
+   474→          </Card>
+   475→
+   476→          {/* Items Table */}
+   477→          <Card>
+   478→            <CardHeader className="pb-3">
+   479→              <div className="flex items-center justify-between">
+   480→                <div>
+   481→                  <CardTitle className="text-lg">Detected Items</CardTitle>
+   482→                  <CardDescription>Edit any item details before saving</CardDescription>
+   483→                </div>
+   484→                <div className="flex items-center gap-2">
+   485→                  <Button variant="outline" size="sm" className="gap-1.5" onClick={addItem}>
+   486→                    <Plus className="h-4 w-4" />
+   487→                    Add Item
+   488→                  </Button>
+   489→                </div>
+   490→              </div>
+   491→            </CardHeader>
+   492→            <CardContent>
+   493→              <div className="rounded-lg border overflow-hidden max-h-96 overflow-y-auto">
+   494→                <Table>
+   495→                  <TableHeader>
+   496→                    <TableRow className="bg-muted/50">
+   497→                      <TableHead className="w-[180px]">Name</TableHead>
+   498→                      <TableHead className="hidden md:table-cell">Description</TableHead>
+   499→                      <TableHead className="w-[120px]">Price</TableHead>
+   500→                      <TableHead className="w-[150px]">Category</TableHead>
+   501→                      <TableHead className="w-[60px]"></TableHead>
+   502→                    </TableRow>
+   503→                  </TableHeader>
+   504→                  <TableBody>
+   505→                    {items.map((item) => (
+   506→                      <TableRow key={item.id}>
+   507→                        <TableCell>
+   508→                          <Input
+   509→                            value={item.name}
+   510→                            onChange={(e) => updateItem(item.id, 'name', e.target.value)}
+   511→                            placeholder="Item name"
+   512→                            className="h-8 text-sm"
+   513→                          />
+   514→                        </TableCell>
+   515→                        <TableCell className="hidden md:table-cell">
+   516→                          <Input
+   517→                            value={item.description}
+   518→                            onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+   519→                            placeholder="Description"
+   520→                            className="h-8 text-sm"
+   521→                          />
+   522→                        </TableCell>
+   523→                        <TableCell>
+   524→                          <div className="relative">
+   525→                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">₦</span>
+   526→                            <Input
+   527→                              type="number"
+   528→                              value={item.price}
+   529→                              onChange={(e) => updateItem(item.id, 'price', Number(e.target.value))}
+   530→                              className="h-8 text-sm pl-6"
+   531→                              min={0}
+   532→                            />
+   533→                          </div>
+   534→                        </TableCell>
+   535→                        <TableCell>
+   536→                          <Select
+   537→                            value={item.category}
+   538→                            onValueChange={(val) => updateItem(item.id, 'category', val)}
+   539→                          >
+   540→                            <SelectTrigger size="sm" className="h-8 w-full text-sm">
+   541→                              <SelectValue placeholder="Category" />
+   542→                            </SelectTrigger>
+   543→                            <SelectContent>
+   544→                              {categories.map((cat) => (
+   545→                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+   546→                              ))}
+   547→                              <SelectItem
+   548→                                value="__new__"
+   549→                                onClick={() => setShowNewCategory(true)}
+   550→                                className="text-emerald-600"
+   551→                              >
+   552→                                + New Category
+   553→                              </SelectItem>
+   554→                            </SelectContent>
+   555→                          </Select>
+   556→                        </TableCell>
+   557→                        <TableCell>
+   558→                          <Button
+   559→                            variant="ghost"
+   560→                            size="sm"
+   561→                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+   562→                            onClick={() => removeItem(item.id)}
+   563→                          >
+   564→                            <Trash2 className="h-4 w-4" />
+   565→                          </Button>
+   566→                        </TableCell>
+   567→                      </TableRow>
+   568→                    ))}
+   569→                    {items.length === 0 && (
+   570→                      <TableRow>
+   571→                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+   572→                          No items. Click &quot;Add Item&quot; to add manually.
+   573→                        </TableCell>
+   574→                      </TableRow>
+   575→                    )}
+   576→                  </TableBody>
+   577→                </Table>
+   578→              </div>
+   579→
+   580→              {/* Mobile: Show description below each item */}
+   581→              <div className="md:hidden mt-3 space-y-2">
+   582→                {items.map((item) => (
+   583→                  <div key={`desc-${item.id}`} className="text-xs text-muted-foreground px-1">
+   584→                    <span className="font-medium text-foreground">{item.name || 'Unnamed'}</span>
+   585→                    {item.description ? ` — ${item.description}` : ''}
+   586→                  </div>
+   587→                ))}
+   588→              </div>
+   589→
+   590→              {/* New Category Input */}
+   591→              {showNewCategory && (
+   592→                <div className="mt-4 flex items-center gap-2">
+   593→                  <Input
+   594→                    value={newCategory}
+   595→                    onChange={(e) => setNewCategory(e.target.value)}
+   596→                    placeholder="New category name"
+   597→                    className="h-8 text-sm max-w-xs"
+   598→                    onKeyDown={(e) => {
+   599→                      if (e.key === 'Enter') addNewCategory();
+   600→                      if (e.key === 'Escape') setShowNewCategory(false);
+   601→                    }}
+   602→                    autoFocus
+   603→                  />
+   604→                  <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={addNewCategory}>
+   605→                    Add
+   606→                  </Button>
+   607→                  <Button size="sm" variant="ghost" className="h-8" onClick={() => setShowNewCategory(false)}>
+   608→                    Cancel
+   609→                  </Button>
+   610→                </div>
+   611→              )}
+   612→            </CardContent>
+   613→          </Card>
+   614→
+   615→          {/* Save Actions */}
+   616→          <div className="flex items-center justify-between">
+   617→            <Button variant="outline" onClick={resetScanner}>
+   618→              <Camera className="h-4 w-4 mr-2" />
+   619→              Scan Another
+   620→            </Button>
+   621→            <Button
+   622→              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+   623→              onClick={handleSave}
+   624→              disabled={saving || items.filter(i => i.name.trim()).length === 0}
+   625→            >
+   626→              {saving ? (
+   627→                <>
+   628→                  <Loader2 className="h-4 w-4 animate-spin" />
+   629→                  Saving...
+   630→                </>
+   631→              ) : (
+   632→                <>
+   633→                  <CheckCircle2 className="h-4 w-4" />
+   634→                  Review & Save
+   635→                  <ArrowRight className="h-4 w-4" />
+   636→                </>
+   637→              )}
+   638→            </Button>
+   639→          </div>
+   640→        </div>
+   641→      )}
+   642→
+   643→      {/* Step: Save (Success) */}
+   644→      {step === 'save' && (
+   645→        <Card>
+   646→          <CardContent className="py-16">
+   647→            <div className="flex flex-col items-center text-center space-y-6">
+   648→              <div className="w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+   649→                <CheckCircle2 className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+   650→              </div>
+   651→              <div className="space-y-2">
+   652→                <h3 className="text-xl font-semibold">Menu Items Saved!</h3>
+   653→                <p className="text-sm text-muted-foreground max-w-md">
+   654→                  {items.filter(i => i.name.trim()).length} items across {categories.length} categories have been
+   655→                  added to your menu. You can now manage them in the Menu Manager.
+   656→                </p>
+   657→              </div>
+   658→              <div className="flex items-center gap-3 mt-4">
+   659→                <Button
+   660→                  variant="outline"
+   661→                  onClick={resetScanner}
+   662→                >
+   663→                  <Camera className="h-4 w-4 mr-2" />
+   664→                  Scan Another Menu
+   665→                </Button>
+   666→                <Button
+   667→                  className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+   668→                  onClick={goToMenuManager}
+   669→                >
+   670→                  Go to Menu Manager
+   671→                  <ChevronRight className="h-4 w-4" />
+   672→                </Button>
+   673→              </div>
+   674→            </div>
+   675→          </CardContent>
+   676→        </Card>
+   677→      )}
+   678→    </div>
+   679→  );
+   680→}
+   681→

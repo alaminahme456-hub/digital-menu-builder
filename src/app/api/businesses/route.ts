@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const authUser = await getAuthUser(request);
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const supabase = createServerClient(authUser.userId);
+    const supabase = createServerClient(authUser.token);
 
     const { data: rows, error } = await supabase
       .from('businesses')
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     const slug = generateSlug(name);
 
-    const supabase = createServerClient(authUser.userId);
+    const supabase = createServerClient(authUser.token);
 
     const { data, error } = await supabase
       .from('businesses')

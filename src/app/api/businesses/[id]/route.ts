@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const authUser = await getAuthUser(request);
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const supabase = createServerClient(authUser.userId);
+    const supabase = createServerClient(authUser.token);
     const { data, error } = await supabase
       .from('businesses')
       .select('*')
@@ -62,7 +62,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const body = await request.json();
 
-    const supabase = createServerClient(authUser.userId);
+    const supabase = createServerClient(authUser.token);
     const { data, error } = await supabase
       .from('businesses')
       .update(toSnake(body))
@@ -89,7 +89,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id } = await params;
-    const supabase = createServerClient(authUser.userId);
+    const supabase = createServerClient(authUser.token);
 
     const { error } = await supabase
       .from('businesses')

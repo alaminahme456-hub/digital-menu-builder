@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient(authUser.userId);
+    const supabase = createServerClient(authUser.token);
 
     const { data: catRows, error: catError } = await supabase
       .from('menu_categories')
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Business ID and name are required' }, { status: 400 });
     }
 
-    const supabase = createServerClient(authUser.userId);
+    const supabase = createServerClient(authUser.token);
 
     // Verify ownership
     const { data: bizRow, error: bizError } = await supabase

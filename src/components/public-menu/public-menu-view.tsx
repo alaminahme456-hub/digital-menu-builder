@@ -121,15 +121,18 @@ export default function PublicMenuView({ slug, isPreview = false }: PublicMenuPr
         }
 
         const bizData = await bizRes.json();
-        const catData = await catRes.ok ? await catRes.json() : { categories: [] };
+        const catPayload = catRes.ok ? await catRes.json() : null;
         const itemData = await itemRes.ok ? await itemRes.json() : { items: [] };
 
         setBusiness(bizData.business || bizData);
-        setCategories(catData.categories || []);
+
+        // When fetched by slug, categories API returns { business: { categories: [...] } }
+        const cats = catPayload?.business?.categories || catPayload?.categories || [];
+        setCategories(cats);
         setItems(itemData.items || []);
 
-        if (catData.categories?.length > 0) {
-          setActiveCategory(catData.categories[0].id);
+        if (cats.length > 0) {
+          setActiveCategory(cats[0].id);
         }
 
         // Determine initial view mode based on business settings

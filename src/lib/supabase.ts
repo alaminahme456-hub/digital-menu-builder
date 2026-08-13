@@ -15,7 +15,7 @@ export function createServerClient(token?: string): SupabaseClient {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Verify user from request — returns user metadata                  */
+/*  Verify user from request — returns user metadata + raw token       */
 /* ------------------------------------------------------------------ */
 export interface AuthUser {
   userId: string;
@@ -23,6 +23,7 @@ export interface AuthUser {
   role: string;
   name?: string | null;
   phone?: string | null;
+  token: string;
 }
 
 export async function getAuthUser(request: Request): Promise<AuthUser | null> {
@@ -49,6 +50,7 @@ export async function getAuthUser(request: Request): Promise<AuthUser | null> {
       role: profile?.role || 'user',
       name: profile?.name ?? user.user_metadata?.name ?? null,
       phone: profile?.phone ?? null,
+      token,
     };
   } catch {
     return null;

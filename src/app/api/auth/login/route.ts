@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient, toCamel } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,8 +24,9 @@ export async function POST(request: NextRequest) {
     const user = data.user;
     const token = data.session.access_token;
 
-    // Fetch profile for name/role
-    const { data: profile } = await supabase
+    // Fetch profile for name/role — use the session token for RLS
+    const authClient = createServerClient(token);
+    const { data: profile } = await authClient
       .from('profiles')
       .select('name, role')
       .eq('id', user.id)

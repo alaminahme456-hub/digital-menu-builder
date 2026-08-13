@@ -24,6 +24,11 @@ export async function GET(request: NextRequest) {
       resolvedBusinessId = bizRow.id;
     }
 
+    // Require at least businessId or slug to prevent data leakage
+    if (!resolvedBusinessId) {
+      return NextResponse.json({ items: [] });
+    }
+
     let query = supabase
       .from('menu_items')
       .select('*')
@@ -60,7 +65,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const supabase = createServerClient(authUser.userId);
+    const supabase = createServerClient(authUser.token);
 
     // Verify ownership
     const { data: bizRow, error: bizError } = await supabase
@@ -118,7 +123,7 @@ export async function PUT(request: NextRequest) {
     const { id, ...data } = await request.json();
     if (!id) return NextResponse.json({ error: 'Item ID required' }, { status: 400 });
 
-    const supabase = createServerClient(authUser.userId);
+    const supabase = createServerClient(authUser.token);
 
     const updateData: Record<string, unknown> = { ...data };
     if (updateData.price !== undefined) {
@@ -153,7 +158,7 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'Item ID required' }, { status: 400 });
 
-    const supabase = createServerClient(authUser.userId);
+    const supabase = createServerClient(authUser.token);
 
     const { error } = await supabase
       .from('menu_items')

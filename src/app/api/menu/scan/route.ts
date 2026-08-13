@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Business ID and image data required' }, { status: 400 });
     }
 
-    const supabase = createServerClient(authUser.userId);
+    const supabase = createServerClient(authUser.token);
 
     // Verify ownership
     const { data: bizRow, error: bizError } = await supabase

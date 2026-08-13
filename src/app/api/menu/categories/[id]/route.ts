@@ -19,7 +19,7 @@ export async function PUT(
     if (name !== undefined) data.name = name;
     if (sortOrder !== undefined) data.sortOrder = Number(sortOrder);
 
-    const supabase = createServerClient(authUser.userId);
+    const supabase = createServerClient(authUser.token);
 
     const { data: row, error } = await supabase
       .from('menu_categories')
@@ -51,7 +51,7 @@ export async function DELETE(
     const { id } = await params;
     if (!id) return NextResponse.json({ error: 'Category ID required' }, { status: 400 });
 
-    const supabase = createServerClient(authUser.userId);
+    const supabase = createServerClient(authUser.token);
 
     // Cascade delete handled by FK (menu_items.onDelete: Cascade)
     const { error } = await supabase

@@ -1,0 +1,1566 @@
+     1→'use client';
+     2→
+     3→import React, { useState, useEffect, useCallback, useRef } from 'react';
+     4→import {
+     5→  Plus,
+     6→  UtensilsCrossed,
+     7→  Pencil,
+     8→  Trash2,
+     9→  ChevronUp,
+    10→  ChevronDown,
+    11→  LayoutGrid,
+    12→  List,
+    13→  Copy,
+    14→  GripVertical,
+    15→  ImageIcon,
+    16→  Loader2,
+    17→  X,
+    18→  Upload,
+    19→  Check,
+    20→  FolderOpen,
+    21→} from 'lucide-react';
+    22→import { toast } from 'sonner';
+    23→
+    24→import { useAuthStore, useAppStore } from '@/lib/store';
+    25→import { formatPrice } from '@/lib/auth';
+    26→import type { MenuCategory, MenuItem } from '@/lib/types';
+    27→import { CATEGORIES_PRESETS } from '@/lib/types';
+    28→
+    29→import { Button } from '@/components/ui/button';
+    30→import { Input } from '@/components/ui/input';
+    31→import { Textarea } from '@/components/ui/textarea';
+    32→import { Label } from '@/components/ui/label';
+    33→import { Badge } from '@/components/ui/badge';
+    34→import { Switch } from '@/components/ui/switch';
+    35→import { Separator } from '@/components/ui/separator';
+    36→import { Skeleton } from '@/components/ui/skeleton';
+    37→import { ScrollArea } from '@/components/ui/scroll-area';
+    38→import {
+    39→  Dialog,
+    40→  DialogContent,
+    41→  DialogHeader,
+    42→  DialogTitle,
+    43→  DialogDescription,
+    44→  DialogFooter,
+    45→} from '@/components/ui/dialog';
+    46→import {
+    47→  AlertDialog,
+    48→  AlertDialogAction,
+    49→  AlertDialogCancel,
+    50→  AlertDialogContent,
+    51→  AlertDialogDescription,
+    52→  AlertDialogFooter,
+    53→  AlertDialogHeader,
+    54→  AlertDialogTitle,
+    55→} from '@/components/ui/alert-dialog';
+    56→import {
+    57→  Select,
+    58→  SelectContent,
+    59→  SelectItem,
+    60→  SelectTrigger,
+    61→  SelectValue,
+    62→} from '@/components/ui/select';
+    63→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    64→
+    65→// ============================================================
+    66→// Types
+    67→// ============================================================
+    68→
+    69→type ViewMode = 'grid' | 'list';
+    70→
+    71→interface ItemFormData {
+    72→  name: string;
+    73→  description: string;
+    74→  price: string;
+    75→  categoryId: string;
+    76→  image: string | null;
+    77→  available: boolean;
+    78→}
+    79→
+    80→const EMPTY_ITEM_FORM: ItemFormData = {
+    81→  name: '',
+    82→  description: '',
+    83→  price: '',
+    84→  categoryId: '',
+    85→  image: null,
+    86→  available: true,
+    87→};
+    88→
+    89→// ============================================================
+    90→// Helper: API request with auth
+    91→// ============================================================
+    92→
+    93→function authHeaders(token: string, json = true): HeadersInit {
+    94→  const h: HeadersInit = {
+    95→    Authorization: `Bearer ${token}`,
+    96→  };
+    97→  if (json) h['Content-Type'] = 'application/json';
+    98→  return h;
+    99→}
+   100→
+   101→// ============================================================
+   102→// Sub-components
+   103→// ============================================================
+   104→
+   105→function CategorySkeleton() {
+   106→  return (
+   107→    <div className="flex items-center justify-between px-3 py-2.5">
+   108→      <div className="flex items-center gap-3">
+   109→        <Skeleton className="size-8 rounded-md" />
+   110→        <Skeleton className="h-4 w-28" />
+   111→      </div>
+   112→      <Skeleton className="h-5 w-5 rounded" />
+   113→    </div>
+   114→  );
+   115→}
+   116→
+   117→function ItemCardSkeleton() {
+   118→  return (
+   119→    <div className="overflow-hidden rounded-xl border bg-card">
+   120→      <Skeleton className="aspect-[4/3] w-full" />
+   121→      <div className="space-y-2 p-4">
+   122→        <Skeleton className="h-5 w-3/4" />
+   123→        <Skeleton className="h-3 w-full" />
+   124→        <Skeleton className="h-3 w-1/2" />
+   125→        <div className="flex items-center justify-between pt-2">
+   126→          <Skeleton className="h-5 w-16" />
+   127→          <Skeleton className="h-8 w-20" />
+   128→        </div>
+   129→      </div>
+   130→    </div>
+   131→  );
+   132→}
+   133→
+   134→function ItemRowSkeleton() {
+   135→  return (
+   136→    <div className="flex items-center gap-4 rounded-lg border bg-card p-3">
+   137→      <Skeleton className="size-12 shrink-0 rounded-lg" />
+   138→      <div className="flex-1 space-y-1.5">
+   139→        <Skeleton className="h-4 w-40" />
+   140→        <Skeleton className="h-3 w-64" />
+   141→      </div>
+   142→      <Skeleton className="h-5 w-16" />
+   143→    </div>
+   144→  );
+   145→}
+   146→
+   147→function EmptyCategoriesState({ onAdd }: { onAdd: () => void }) {
+   148→  return (
+   149→    <div className="flex flex-col items-center justify-center gap-4 px-4 py-16 text-center">
+   150→      <div className="flex size-16 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/40">
+   151→        <FolderOpen className="size-8 text-emerald-600 dark:text-emerald-400" />
+   152→      </div>
+   153→      <div>
+   154→        <p className="text-sm font-semibold text-foreground">
+   155→          No categories yet
+   156→        </p>
+   157→        <p className="mt-1 text-sm text-muted-foreground">
+   158→          Create your first menu category to get started
+   159→        </p>
+   160→      </div>
+   161→      <Button onClick={onAdd} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+   162→        <Plus className="size-4" />
+   163→        Add Category
+   164→      </Button>
+   165→    </div>
+   166→  );
+   167→}
+   168→
+   169→function EmptyItemsState({ onAdd }: { onAdd: () => void }) {
+   170→  return (
+   171→    <div className="flex flex-col items-center justify-center gap-4 px-4 py-20 text-center">
+   172→      <div className="flex size-16 items-center justify-center rounded-2xl bg-muted">
+   173→        <UtensilsCrossed className="size-8 text-muted-foreground" />
+   174→      </div>
+   175→      <div>
+   176→        <p className="text-sm font-semibold text-foreground">No items yet</p>
+   177→        <p className="mt-1 text-sm text-muted-foreground">
+   178→          Add your first menu item to this category
+   179→        </p>
+   180→      </div>
+   181→      <Button onClick={onAdd} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+   182→        <Plus className="size-4" />
+   183→        Add Item
+   184→      </Button>
+   185→    </div>
+   186→  );
+   187→}
+   188→
+   189→// ============================================================
+   190→// Add Category Dialog
+   191→// ============================================================
+   192→
+   193→function AddCategoryDialog({
+   194→  open,
+   195→  onOpenChange,
+   196→  businessId,
+   197→  token,
+   198→  existingNames,
+   199→  onSuccess,
+   200→}: {
+   201→  open: boolean;
+   202→  onOpenChange: (open: boolean) => void;
+   203→  businessId: string;
+   204→  token: string;
+   205→  existingNames: string[];
+   206→  onSuccess?: () => void;
+   207→}) {
+   208→  const [name, setName] = useState('');
+   209→  const [loading, setLoading] = useState(false);
+   210→
+   211→  const availablePresets = CATEGORIES_PRESETS.filter(
+   212→    (p) => !existingNames.some((e) => e.toLowerCase() === p.toLowerCase())
+   213→  );
+   214→
+   215→  const handleSubmit = async () => {
+   216→    if (!name.trim()) return;
+   217→    setLoading(true);
+   218→    try {
+   219→      const res = await fetch('/api/menu/categories', {
+   220→        method: 'POST',
+   221→        headers: authHeaders(token),
+   222→        body: JSON.stringify({ businessId, name: name.trim() }),
+   223→      });
+   224→      if (!res.ok) {
+   225→        const data = await res.json();
+   226→        throw new Error(data.error || 'Failed to create category');
+   227→      }
+   228→      toast.success(`Category "${name.trim()}" created`);
+   229→      setName('');
+   230→      onOpenChange(false);
+   231→      onSuccess?.();
+   232→    } catch (err) {
+   233→      toast.error(err instanceof Error ? err.message : 'Failed to create category');
+   234→    } finally {
+   235→      setLoading(false);
+   236→    }
+   237→  };
+   238→
+   239→  return (
+   240→    <Dialog open={open} onOpenChange={(v) => { if (!v) setName(''); onOpenChange(v); }}>
+   241→      <DialogContent className="sm:max-w-md">
+   242→        <DialogHeader>
+   243→          <DialogTitle>Add Category</DialogTitle>
+   244→          <DialogDescription>
+   245→            Type a name or pick from suggestions below
+   246→          </DialogDescription>
+   247→        </DialogHeader>
+   248→        <div className="space-y-4">
+   249→          <div className="space-y-2">
+   250→            <Label htmlFor="cat-name">Category Name</Label>
+   251→            <Input
+   252→              id="cat-name"
+   253→              placeholder="e.g. Main Meals"
+   254→              value={name}
+   255→              onChange={(e) => setName(e.target.value)}
+   256→              onKeyDown={(e) => {
+   257→                if (e.key === 'Enter') handleSubmit();
+   258→              }}
+   259→              autoFocus
+   260→            />
+   261→          </div>
+   262→          {availablePresets.length > 0 && (
+   263→            <div className="space-y-2">
+   264→              <Label className="text-xs text-muted-foreground">Suggestions</Label>
+   265→              <div className="flex flex-wrap gap-2">
+   266→                {availablePresets.map((preset) => (
+   267→                  <button
+   268→                    key={preset}
+   269→                    type="button"
+   270→                    onClick={() => setName(preset)}
+   271→                    className="inline-flex items-center rounded-full border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+   272→                  >
+   273→                    {preset}
+   274→                  </button>
+   275→                ))}
+   276→              </div>
+   277→            </div>
+   278→          )}
+   279→        </div>
+   280→        <DialogFooter>
+   281→          <Button variant="outline" onClick={() => { setName(''); onOpenChange(false); }}>
+   282→            Cancel
+   283→          </Button>
+   284→          <Button
+   285→            onClick={handleSubmit}
+   286→            disabled={!name.trim() || loading}
+   287→            className="bg-emerald-600 hover:bg-emerald-700"
+   288→          >
+   289→            {loading && <Loader2 className="size-4 animate-spin" />}
+   290→            Create Category
+   291→          </Button>
+   292→        </DialogFooter>
+   293→      </DialogContent>
+   294→    </Dialog>
+   295→  );
+   296→}
+   297→
+   298→// ============================================================
+   299→// Add/Edit Item Sheet (Dialog on mobile)
+   300→// ============================================================
+   301→
+   302→function ItemFormDialog({
+   303→  open,
+   304→  onOpenChange,
+   305→  item,
+   306→  categories,
+   307→  businessId,
+   308→  token,
+   309→}: {
+   310→  open: boolean;
+   311→  onOpenChange: (open: boolean) => void;
+   312→  item: MenuItem | null;
+   313→  categories: MenuCategory[];
+   314→  businessId: string;
+   315→  token: string;
+   316→}) {
+   317→  const isEditing = !!item;
+   318→  const [form, setForm] = useState<ItemFormData>(EMPTY_ITEM_FORM);
+   319→  const [loading, setLoading] = useState(false);
+   320→  const [uploading, setUploading] = useState(false);
+   321→  const fileInputRef = useRef<HTMLInputElement>(null);
+   322→  const dragCounter = useRef(0);
+   323→  const [dragOver, setDragOver] = useState(false);
+   324→
+   325→  useEffect(() => {
+   326→    if (open) {
+   327→      if (item) {
+   328→        setForm({
+   329→          name: item.name,
+   330→          description: item.description || '',
+   331→          price: String(item.price),
+   332→          categoryId: item.categoryId,
+   333→          image: item.image,
+   334→          available: item.available,
+   335→        });
+   336→      } else {
+   337→        setForm({
+   338→          ...EMPTY_ITEM_FORM,
+   339→          categoryId: categories.length > 0 ? categories[0].id : '',
+   340→        });
+   341→      }
+   342→    }
+   343→  }, [open, item, categories]);
+   344→
+   345→  const uploadFile = async (file: File) => {
+   346→    setUploading(true);
+   347→    try {
+   348→      const fd = new FormData();
+   349→      fd.append('file', file);
+   350→      fd.append('type', 'item-image');
+   351→      const res = await fetch('/api/upload', {
+   352→        method: 'POST',
+   353→        headers: { Authorization: `Bearer ${token}` },
+   354→        body: fd,
+   355→      });
+   356→      if (!res.ok) throw new Error('Upload failed');
+   357→      const data = await res.json();
+   358→      setForm((f) => ({ ...f, image: data.url }));
+   359→      toast.success('Image uploaded');
+   360→    } catch {
+   361→      toast.error('Failed to upload image');
+   362→    } finally {
+   363→      setUploading(false);
+   364→    }
+   365→  };
+   366→
+   367→  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+   368→    const file = e.target.files?.[0];
+   369→    if (file) uploadFile(file);
+   370→    if (fileInputRef.current) fileInputRef.current.value = '';
+   371→  };
+   372→
+   373→  const handleDrop = (e: React.DragEvent) => {
+   374→    e.preventDefault();
+   375→    dragCounter.current = 0;
+   376→    setDragOver(false);
+   377→    const file = e.dataTransfer.files?.[0];
+   378→    if (file && file.type.startsWith('image/')) uploadFile(file);
+   379→  };
+   380→
+   381→  const handleDragEnter = (e: React.DragEvent) => {
+   382→    e.preventDefault();
+   383→    dragCounter.current++;
+   384→    setDragOver(true);
+   385→  };
+   386→
+   387→  const handleDragLeave = (e: React.DragEvent) => {
+   388→    e.preventDefault();
+   389→    dragCounter.current--;
+   390→    if (dragCounter.current <= 0) {
+   391→      dragCounter.current = 0;
+   392→      setDragOver(false);
+   393→    }
+   394→  };
+   395→
+   396→  const handleSubmit = async () => {
+   397→    if (!form.name.trim() || !form.price || !form.categoryId) return;
+   398→    setLoading(true);
+   399→    try {
+   400→      const body = {
+   401→        businessId,
+   402→        categoryId: form.categoryId,
+   403→        name: form.name.trim(),
+   404→        description: form.description.trim() || null,
+   405→        price: Number(form.price),
+   406→        image: form.image,
+   407→        available: form.available,
+   408→      };
+   409→
+   410→      let res: Response;
+   411→      if (isEditing) {
+   412→        res = await fetch('/api/menu/items', {
+   413→          method: 'PUT',
+   414→          headers: authHeaders(token),
+   415→          body: JSON.stringify({ id: item!.id, ...body }),
+   416→        });
+   417→      } else {
+   418→        res = await fetch('/api/menu/items', {
+   419→          method: 'POST',
+   420→          headers: authHeaders(token),
+   421→          body: JSON.stringify(body),
+   422→        });
+   423→      }
+   424→
+   425→      if (!res.ok) {
+   426→        const data = await res.json();
+   427→        throw new Error(data.error || `Failed to ${isEditing ? 'update' : 'create'} item`);
+   428→      }
+   429→
+   430→      toast.success(`Item ${isEditing ? 'updated' : 'created'} successfully`);
+   431→      onOpenChange(false);
+   432→    } catch (err) {
+   433→      toast.error(err instanceof Error ? err.message : 'Operation failed');
+   434→    } finally {
+   435→      setLoading(false);
+   436→    }
+   437→  };
+   438→
+   439→  return (
+   440→    <Dialog open={open} onOpenChange={onOpenChange}>
+   441→      <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+   442→        <DialogHeader className="shrink-0 px-6 pb-4 pt-6">
+   443→          <DialogTitle>{isEditing ? 'Edit Item' : 'Add New Item'}</DialogTitle>
+   444→          <DialogDescription>
+   445→            {isEditing
+   446→              ? 'Update the menu item details below'
+   447→              : 'Fill in the details to add a new menu item'}
+   448→          </DialogDescription>
+   449→        </DialogHeader>
+   450→
+   451→        <Separator />
+   452→
+   453→        <ScrollArea className="flex-1">
+   454→          <div className="space-y-5 px-6 py-5">
+   455→            {/* Image Upload */}
+   456→            <div className="space-y-2">
+   457→              <Label>Food Image</Label>
+   458→              <div
+   459→                onDrop={handleDrop}
+   460→                onDragEnter={handleDragEnter}
+   461→                onDragLeave={handleDragLeave}
+   462→                onDragOver={(e) => e.preventDefault()}
+   463→                onClick={() => fileInputRef.current?.click()}
+   464→                className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors ${
+   465→                  dragOver
+   466→                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30'
+   467→                    : form.image
+   468→                      ? 'border-transparent bg-muted/50'
+   469→                      : 'border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/50'
+   470→                }`}
+   471→              >
+   472→                {form.image ? (
+   473→                  <div className="relative w-full">
+   474→                    <img
+   475→                      src={form.image}
+   476→                      alt="Preview"
+   477→                      className="mx-auto max-h-48 rounded-lg object-contain"
+   478→                    />
+   479→                    <button
+   480→                      type="button"
+   481→                      onClick={(e) => {
+   482→                        e.stopPropagation();
+   483→                        setForm((f) => ({ ...f, image: null }));
+   484→                      }}
+   485→                      className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
+   486→                    >
+   487→                      <X className="size-3.5" />
+   488→                    </button>
+   489→                  </div>
+   490→                ) : uploading ? (
+   491→                  <div className="flex flex-col items-center gap-2">
+   492→                    <Loader2 className="size-8 animate-spin text-muted-foreground" />
+   493→                    <p className="text-xs text-muted-foreground">Uploading...</p>
+   494→                  </div>
+   495→                ) : (
+   496→                  <div className="flex flex-col items-center gap-2">
+   497→                    <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+   498→                      <Upload className="size-5 text-muted-foreground" />
+   499→                    </div>
+   500→                    <div className="text-center">
+   501→                      <p className="text-sm font-medium text-foreground">
+   502→                        Drop image here or click to browse
+   503→                      </p>
+   504→                      <p className="mt-0.5 text-xs text-muted-foreground">
+   505→                        PNG, JPG, WebP up to 5MB
+   506→                      </p>
+   507→                    </div>
+   508→                  </div>
+   509→                )}
+   510→                <input
+   511→                  ref={fileInputRef}
+   512→                  type="file"
+   513→                  accept="image/*"
+   514→                  className="hidden"
+   515→                  onChange={handleFileChange}
+   516→                />
+   517→              </div>
+   518→            </div>
+   519→
+   520→            {/* Name */}
+   521→            <div className="space-y-2">
+   522→              <Label htmlFor="item-name">
+   523→                Item Name <span className="text-destructive">*</span>
+   524→              </Label>
+   525→              <Input
+   526→                id="item-name"
+   527→                placeholder="e.g. Jollof Rice"
+   528→                value={form.name}
+   529→                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+   530→              />
+   531→            </div>
+   532→
+   533→            {/* Description */}
+   534→            <div className="space-y-2">
+   535→              <Label htmlFor="item-desc">Description</Label>
+   536→              <Textarea
+   537→                id="item-desc"
+   538→                placeholder="Brief description of the dish..."
+   539→                value={form.description}
+   540→                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+   541→                rows={3}
+   542→              />
+   543→            </div>
+   544→
+   545→            {/* Price + Category Row */}
+   546→            <div className="grid grid-cols-2 gap-4">
+   547→              <div className="space-y-2">
+   548→                <Label htmlFor="item-price">
+   549→                  Price <span className="text-destructive">*</span>
+   550→                </Label>
+   551→                <div className="relative">
+   552→                  <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+   553→                    ₦
+   554→                  </span>
+   555→                  <Input
+   556→                    id="item-price"
+   557→                    type="number"
+   558→                    min="0"
+   559→                    step="1"
+   560→                    placeholder="0"
+   561→                    value={form.price}
+   562→                    onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+   563→                    className="pl-8"
+   564→                  />
+   565→                </div>
+   566→              </div>
+   567→              <div className="space-y-2">
+   568→                <Label>Category</Label>
+   569→                <Select
+   570→                  value={form.categoryId}
+   571→                  onValueChange={(v) => setForm((f) => ({ ...f, categoryId: v }))}
+   572→                >
+   573→                  <SelectTrigger className="w-full">
+   574→                    <SelectValue placeholder="Select category" />
+   575→                  </SelectTrigger>
+   576→                  <SelectContent>
+   577→                    {categories.map((cat) => (
+   578→                      <SelectItem key={cat.id} value={cat.id}>
+   579→                        {cat.name}
+   580→                      </SelectItem>
+   581→                    ))}
+   582→                  </SelectContent>
+   583→                </Select>
+   584→              </div>
+   585→            </div>
+   586→
+   587→            {/* Availability */}
+   588→            <div className="flex items-center justify-between rounded-lg border p-3">
+   589→              <div className="space-y-0.5">
+   590→                <Label className="text-sm font-medium">Available</Label>
+   591→                <p className="text-xs text-muted-foreground">
+   592→                  Item will be visible on the public menu
+   593→                </p>
+   594→              </div>
+   595→              <Switch
+   596→                checked={form.available}
+   597→                onCheckedChange={(v) => setForm((f) => ({ ...f, available: v }))}
+   598→              />
+   599→            </div>
+   600→          </div>
+   601→        </ScrollArea>
+   602→
+   603→        <Separator />
+   604→
+   605→        <DialogFooter className="shrink-0 px-6 py-4">
+   606→          <Button variant="outline" onClick={() => onOpenChange(false)}>
+   607→            Cancel
+   608→          </Button>
+   609→          <Button
+   610→            onClick={handleSubmit}
+   611→            disabled={!form.name.trim() || !form.price || !form.categoryId || loading}
+   612→            className="bg-emerald-600 hover:bg-emerald-700"
+   613→          >
+   614→            {loading && <Loader2 className="size-4 animate-spin" />}
+   615→            {isEditing ? 'Save Changes' : 'Add Item'}
+   616→          </Button>
+   617→        </DialogFooter>
+   618→      </DialogContent>
+   619→    </Dialog>
+   620→  );
+   621→}
+   622→
+   623→// ============================================================
+   624→// Delete Confirmation Dialog
+   625→// ============================================================
+   626→
+   627→function DeleteConfirmDialog({
+   628→  open,
+   629→  onOpenChange,
+   630→  title,
+   631→  description,
+   632→  onConfirm,
+   633→  loading,
+   634→}: {
+   635→  open: boolean;
+   636→  onOpenChange: (open: boolean) => void;
+   637→  title: string;
+   638→  description: string;
+   639→  onConfirm: () => void;
+   640→  loading: boolean;
+   641→}) {
+   642→  return (
+   643→    <AlertDialog open={open} onOpenChange={onOpenChange}>
+   644→      <AlertDialogContent>
+   645→        <AlertDialogHeader>
+   646→          <AlertDialogTitle>{title}</AlertDialogTitle>
+   647→          <AlertDialogDescription>{description}</AlertDialogDescription>
+   648→        </AlertDialogHeader>
+   649→        <AlertDialogFooter>
+   650→          <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+   651→          <AlertDialogAction
+   652→            onClick={onConfirm}
+   653→            disabled={loading}
+   654→            className="bg-destructive text-white hover:bg-destructive/90"
+   655→          >
+   656→            {loading && <Loader2 className="size-4 animate-spin" />}
+   657→            Delete
+   658→          </AlertDialogAction>
+   659→        </AlertDialogFooter>
+   660→      </AlertDialogContent>
+   661→    </AlertDialog>
+   662→  );
+   663→}
+   664→
+   665→// ============================================================
+   666→// Main Menu Manager
+   667→// ============================================================
+   668→
+   669→export default function MenuManager() {
+   670→  const token = useAuthStore((s) => s.token);
+   671→  const businessId = useAppStore((s) => s.currentBusiness?.id);
+   672→
+   673→  const [categories, setCategories] = useState<MenuCategory[]>([]);
+   674→  const [loading, setLoading] = useState(true);
+   675→  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+   676→  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+   677→  const [mobileTab, setMobileTab] = useState('categories');
+   678→
+   679→  // Dialog states
+   680→  const [addCatOpen, setAddCatOpen] = useState(false);
+   681→  const [itemFormOpen, setItemFormOpen] = useState(false);
+   682→  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+   683→  const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
+   684→  const [renameValue, setRenameValue] = useState('');
+   685→  const [deleteTarget, setDeleteTarget] = useState<{
+   686→      type: 'category' | 'item';
+   687→      id: string;
+   688→      name: string;
+   689→    } | null>(null);
+   690→  const [deleting, setDeleting] = useState(false);
+   691→
+   692→  // Derived
+   693→  const selectedCategory = categories.find((c) => c.id === selectedCategoryId) || null;
+   694→  const items = selectedCategory?.items || [];
+   695→
+   696→  // =========================================================
+   697→  // Data fetching
+   698→  // =========================================================
+   699→
+   700→  const fetchCategories = useCallback(async () => {
+   701→    if (!token || !businessId) return;
+   702→    try {
+   703→      const res = await fetch(`/api/menu/categories?businessId=${businessId}`, {
+   704→        headers: authHeaders(token),
+   705→      });
+   706→      if (!res.ok) throw new Error('Failed to fetch');
+   707→      const data = await res.json();
+   708→      setCategories(data.categories || []);
+   709→      // Auto-select first category if none selected
+   710→      setSelectedCategoryId((prev) => {
+   711→        if (!prev && data.categories?.length > 0) {
+   712→          return data.categories[0].id;
+   713→        }
+   714→        // If selected category was deleted, pick first
+   715→        if (prev && !data.categories?.find((c: MenuCategory) => c.id === prev)) {
+   716→          return data.categories?.[0]?.id || null;
+   717→        }
+   718→        return prev;
+   719→      });
+   720→    } catch {
+   721→      toast.error('Failed to load menu data');
+   722→    } finally {
+   723→      setLoading(false);
+   724→    }
+   725→  }, [token, businessId]);
+   726→
+   727→  useEffect(() => {
+   728→    setLoading(true);
+   729→    fetchCategories();
+   730→  }, [fetchCategories]);
+   731→
+   732→  // =========================================================
+   733→  // Category operations
+   734→  // =========================================================
+   735→
+   736→  const handleRenameCategory = async () => {
+   737→    if (!editingCategory || !renameValue.trim() || !token) return;
+   738→    try {
+   739→      const res = await fetch(`/api/menu/categories/${editingCategory.id}`, {
+   740→        method: 'PUT',
+   741→        headers: authHeaders(token),
+   742→        body: JSON.stringify({ name: renameValue.trim() }),
+   743→      });
+   744→      if (!res.ok) throw new Error('Rename failed');
+   745→      toast.success('Category renamed');
+   746→      setEditingCategory(null);
+   747→      fetchCategories();
+   748→    } catch {
+   749→      toast.error('Failed to rename category');
+   750→    }
+   751→  };
+   752→
+   753→  const handleDeleteCategory = async () => {
+   754→    if (!deleteTarget || !token) return;
+   755→    setDeleting(true);
+   756→    try {
+   757→      const res = await fetch(`/api/menu/categories/${deleteTarget.id}`, {
+   758→        method: 'DELETE',
+   759→        headers: authHeaders(token),
+   760→      });
+   761→      if (!res.ok) throw new Error('Delete failed');
+   762→      toast.success(`Category "${deleteTarget.name}" deleted`);
+   763→      setDeleteTarget(null);
+   764→      fetchCategories();
+   765→    } catch {
+   766→      toast.error('Failed to delete category');
+   767→    } finally {
+   768→      setDeleting(false);
+   769→    }
+   770→  };
+   771→
+   772→  const handleMoveCategory = async (cat: MenuCategory, direction: 'up' | 'down') => {
+   773→    if (!token) return;
+   774→    const idx = categories.findIndex((c) => c.id === cat.id);
+   775→    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+   776→    if (swapIdx < 0 || swapIdx >= categories.length) return;
+   777→
+   778→    const swapCat = categories[swapIdx];
+   779→    const newSortOrder = swapCat.sortOrder;
+   780→
+   781→    try {
+   782→      // Update the moved category's sort order
+   783→      const res = await fetch(`/api/menu/categories/${cat.id}`, {
+   784→        method: 'PUT',
+   785→        headers: authHeaders(token),
+   786→        body: JSON.stringify({ sortOrder: newSortOrder }),
+   787→      });
+   788→      if (!res.ok) throw new Error('Move failed');
+   789→      fetchCategories();
+   790→    } catch {
+   791→      toast.error('Failed to reorder categories');
+   792→    }
+   793→  };
+   794→
+   795→  // =========================================================
+   796→  // Item operations
+   797→  // =========================================================
+   798→
+   799→  const openAddItem = () => {
+   800→    setEditingItem(null);
+   801→    setItemFormOpen(true);
+   802→  };
+   803→
+   804→  const openEditItem = (item: MenuItem) => {
+   805→    setEditingItem(item);
+   806→    setItemFormOpen(true);
+   807→  };
+   808→
+   809→  const handleToggleAvailability = async (item: MenuItem) => {
+   810→    if (!token) return;
+   811→    try {
+   812→      const res = await fetch('/api/menu/items', {
+   813→        method: 'PUT',
+   814→        headers: authHeaders(token),
+   815→        body: JSON.stringify({ id: item.id, available: !item.available }),
+   816→      });
+   817→      if (!res.ok) throw new Error('Toggle failed');
+   818→      fetchCategories();
+   819→    } catch {
+   820→      toast.error('Failed to update availability');
+   821→    }
+   822→  };
+   823→
+   824→  const handleDuplicateItem = async (item: MenuItem) => {
+   825→    if (!token || !businessId) return;
+   826→    try {
+   827→      const res = await fetch('/api/menu/items', {
+   828→        method: 'POST',
+   829→        headers: authHeaders(token),
+   830→        body: JSON.stringify({
+   831→          businessId,
+   832→          categoryId: item.categoryId,
+   833→          name: `${item.name} (Copy)`,
+   834→          description: item.description,
+   835→          price: item.price,
+   836→          image: item.image,
+   837→        }),
+   838→      });
+   839→      if (!res.ok) throw new Error('Duplicate failed');
+   840→      toast.success(`"${item.name}" duplicated`);
+   841→      fetchCategories();
+   842→    } catch {
+   843→      toast.error('Failed to duplicate item');
+   844→    }
+   845→  };
+   846→
+   847→  const handleDeleteItem = async () => {
+   848→    if (!deleteTarget || !token) return;
+   849→    setDeleting(true);
+   850→    try {
+   851→      const res = await fetch(`/api/menu/items?id=${deleteTarget.id}`, {
+   852→        method: 'DELETE',
+   853→        headers: authHeaders(token),
+   854→      });
+   855→      if (!res.ok) throw new Error('Delete failed');
+   856→      toast.success(`"${deleteTarget.name}" deleted`);
+   857→      setDeleteTarget(null);
+   858→      fetchCategories();
+   859→    } catch {
+   860→      toast.error('Failed to delete item');
+   861→    } finally {
+   862→      setDeleting(false);
+   863→    }
+   864→  };
+   865→
+   866→  const handleMoveItem = async (item: MenuItem, direction: 'up' | 'down') => {
+   867→    if (!token || !selectedCategory) return;
+   868→    const idx = items.findIndex((i) => i.id === item.id);
+   869→    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+   870→    if (swapIdx < 0 || swapIdx >= items.length) return;
+   871→
+   872→    const swapItem = items[swapIdx];
+   873→    try {
+   874→      const res = await fetch('/api/menu/items', {
+   875→        method: 'PUT',
+   876→        headers: authHeaders(token),
+   877→        body: JSON.stringify({ id: item.id, sortOrder: swapItem.sortOrder }),
+   878→      });
+   879→      if (!res.ok) throw new Error('Move failed');
+   880→      fetchCategories();
+   881→    } catch {
+   882→      toast.error('Failed to reorder items');
+   883→    }
+   884→  };
+   885→
+   886→  // =========================================================
+   887→  // Render: Category item in sidebar
+   888→  // =========================================================
+   889→
+   890→  const renderCategoryItem = (cat: MenuCategory, idx: number) => {
+   891→    const isActive = cat.id === selectedCategoryId;
+   892→    const isEditing = editingCategory?.id === cat.id;
+   893→    const itemCount = cat.items?.length || 0;
+   894→
+   895→    return (
+   896→      <div
+   897→        key={cat.id}
+   898→        className={`group relative flex items-center gap-2 rounded-lg px-3 py-2.5 transition-colors ${
+   899→          isActive
+   900→            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+   901→            : 'text-foreground hover:bg-muted'
+   902→        }`}
+   903→      >
+   904→        {/* Active indicator */}
+   905→        {isActive && (
+   906→          <div className="absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r-full bg-emerald-600" />
+   907→        )}
+   908→
+   909→        {/* Reorder buttons */}
+   910→        <div className="flex shrink-0 flex-col gap-0 opacity-0 transition-opacity group-hover:opacity-100">
+   911→          <button
+   912→            type="button"
+   913→            onClick={() => handleMoveCategory(cat, 'up')}
+   914→            disabled={idx === 0}
+   915→            className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+   916→          >
+   917→            <ChevronUp className="size-3" />
+   918→          </button>
+   919→          <button
+   920→            type="button"
+   921→            onClick={() => handleMoveCategory(cat, 'down')}
+   922→            disabled={idx === categories.length - 1}
+   923→            className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+   924→          >
+   925→            <ChevronDown className="size-3" />
+   926→          </button>
+   927→        </div>
+   928→
+   929→        {/* Name / edit input */}
+   930→        {isEditing ? (
+   931→          <div className="flex flex-1 items-center gap-1.5">
+   932→            <Input
+   933→              value={renameValue}
+   934→              onChange={(e) => setRenameValue(e.target.value)}
+   935→              onKeyDown={(e) => {
+   936→                if (e.key === 'Enter') handleRenameCategory();
+   937→                if (e.key === 'Escape') setEditingCategory(null);
+   938→              }}
+   939→              className="h-7 border-emerald-300 bg-white text-sm dark:border-emerald-700 dark:bg-background"
+   940→              autoFocus
+   941→            />
+   942→            <button
+   943→              type="button"
+   944→              onClick={handleRenameCategory}
+   945→              className="rounded p-1 text-emerald-600 hover:bg-emerald-100 dark:text-emerald-400 dark:hover:bg-emerald-900/40"
+   946→            >
+   947→              <Check className="size-3.5" />
+   948→            </button>
+   949→            <button
+   950→              type="button"
+   951→              onClick={() => setEditingCategory(null)}
+   952→              className="rounded p-1 text-muted-foreground hover:bg-accent"
+   953→            >
+   954→              <X className="size-3.5" />
+   955→            </button>
+   956→          </div>
+   957→        ) : (
+   958→          <button
+   959→            type="button"
+   960→            onClick={() => setSelectedCategoryId(cat.id)}
+   961→            className="flex flex-1 items-center gap-2 overflow-hidden text-left"
+   962→          >
+   963→            <FolderOpen className="size-4 shrink-0" />
+   964→            <span className="truncate text-sm font-medium">{cat.name}</span>
+   965→          </button>
+   966→        )}
+   967→
+   968→        {/* Item count badge */}
+   969→        {!isEditing && (
+   970→          <Badge
+   971→            variant={isActive ? 'default' : 'secondary'}
+   972→            className={`shrink-0 text-[10px] px-1.5 py-0 ${
+   973→              isActive
+   974→                ? 'bg-emerald-600 text-white hover:bg-emerald-600'
+   975→                : ''
+   976→            }`}
+   977→          >
+   978→            {itemCount}
+   979→          </Badge>
+   980→        )}
+   981→
+   982→        {/* Action buttons */}
+   983→        {!isEditing && (
+   984→          <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+   985→            <button
+   986→              type="button"
+   987→              onClick={() => {
+   988→                setEditingCategory(cat);
+   989→                setRenameValue(cat.name);
+   990→              }}
+   991→              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+   992→            >
+   993→              <Pencil className="size-3" />
+   994→            </button>
+   995→            <button
+   996→              type="button"
+   997→              onClick={() =>
+   998→                setDeleteTarget({
+   999→                  type: 'category',
+  1000→                  id: cat.id,
+  1001→                  name: cat.name,
+  1002→                })
+  1003→              }
+  1004→              className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+  1005→            >
+  1006→              <Trash2 className="size-3" />
+  1007→            </button>
+  1008→          </div>
+  1009→        )}
+  1010→      </div>
+  1011→    );
+  1012→  };
+  1013→
+  1014→  // =========================================================
+  1015→  // Render: Item card (grid view)
+  1016→  // =========================================================
+  1017→
+  1018→  const renderItemCard = (item: MenuItem, idx: number) => (
+  1019→    <div
+  1020→      key={item.id}
+  1021→      className={`group relative overflow-hidden rounded-xl border bg-card shadow-sm transition-all hover:shadow-md ${
+  1022→        !item.available ? 'opacity-60' : ''
+  1023→      }`}
+  1024→    >
+  1025→      {/* Image */}
+  1026→      <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
+  1027→        {item.image ? (
+  1028→          <img
+  1029→            src={item.image}
+  1030→            alt={item.name}
+  1031→            className="size-full object-cover transition-transform group-hover:scale-105"
+  1032→          />
+  1033→        ) : (
+  1034→          <div className="flex size-full items-center justify-center">
+  1035→            <UtensilsCrossed className="size-10 text-muted-foreground/40" />
+  1036→          </div>
+  1037→        )}
+  1038→
+  1039→        {/* Unavailable badge */}
+  1040→        {!item.available && (
+  1041→          <div className="absolute top-2 left-2">
+  1042→            <Badge variant="secondary" className="bg-black/70 text-white backdrop-blur-sm">
+  1043→              Unavailable
+  1044→            </Badge>
+  1045→          </div>
+  1046→        )}
+  1047→
+  1048→        {/* Hover actions overlay */}
+  1049→        <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+  1050→          <button
+  1051→            type="button"
+  1052→            onClick={() => openEditItem(item)}
+  1053→            className="flex size-8 items-center justify-center rounded-full bg-white/90 text-foreground shadow-sm backdrop-blur-sm hover:bg-white"
+  1054→          >
+  1055→            <Pencil className="size-3.5" />
+  1056→          </button>
+  1057→          <button
+  1058→            type="button"
+  1059→            onClick={() => handleDuplicateItem(item)}
+  1060→            className="flex size-8 items-center justify-center rounded-full bg-white/90 text-foreground shadow-sm backdrop-blur-sm hover:bg-white"
+  1061→          >
+  1062→            <Copy className="size-3.5" />
+  1063→          </button>
+  1064→          <button
+  1065→            type="button"
+  1066→            onClick={() =>
+  1067→              setDeleteTarget({
+  1068→                type: 'item',
+  1069→                id: item.id,
+  1070→                name: item.name,
+  1071→              })
+  1072→            }
+  1073→            className="flex size-8 items-center justify-center rounded-full bg-white/90 text-destructive shadow-sm backdrop-blur-sm hover:bg-white"
+  1074→          >
+  1075→            <Trash2 className="size-3.5" />
+  1076→          </button>
+  1077→        </div>
+  1078→      </div>
+  1079→
+  1080→      {/* Content */}
+  1081→      <div className="p-4">
+  1082→        <div className="flex items-start justify-between gap-2">
+  1083→          <div className="flex-1 overflow-hidden">
+  1084→            <h4 className="truncate text-sm font-semibold text-foreground">
+  1085→              {item.name}
+  1086→            </h4>
+  1087→            {item.description && (
+  1088→              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+  1089→                {item.description}
+  1090→              </p>
+  1091→            )}
+  1092→          </div>
+  1093→          <span className="shrink-0 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+  1094→            {formatPrice(item.price)}
+  1095→          </span>
+  1096→        </div>
+  1097→
+  1098→        {/* Bottom row: reorder + availability */}
+  1099→        <div className="mt-3 flex items-center justify-between">
+  1100→          <div className="flex gap-0.5">
+  1101→            <button
+  1102→              type="button"
+  1103→              onClick={() => handleMoveItem(item, 'up')}
+  1104→              disabled={idx === 0}
+  1105→              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+  1106→            >
+  1107→              <ChevronUp className="size-3.5" />
+  1108→            </button>
+  1109→            <button
+  1110→              type="button"
+  1111→              onClick={() => handleMoveItem(item, 'down')}
+  1112→              disabled={idx === items.length - 1}
+  1113→              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+  1114→            >
+  1115→              <ChevronDown className="size-3.5" />
+  1116→            </button>
+  1117→          </div>
+  1118→          <div className="flex items-center gap-2">
+  1119→            <span className="text-[10px] text-muted-foreground">
+  1120→              {item.available ? 'Available' : 'Hidden'}
+  1121→            </span>
+  1122→            <Switch
+  1123→              checked={item.available}
+  1124→              onCheckedChange={() => handleToggleAvailability(item)}
+  1125→            />
+  1126→          </div>
+  1127→        </div>
+  1128→      </div>
+  1129→    </div>
+  1130→  );
+  1131→
+  1132→  // =========================================================
+  1133→  // Render: Item row (list view)
+  1134→  // =========================================================
+  1135→
+  1136→  const renderItemRow = (item: MenuItem, idx: number) => (
+  1137→    <div
+  1138→      key={item.id}
+  1139→      className={`group flex items-center gap-4 rounded-lg border bg-card p-3 transition-all hover:shadow-sm ${
+  1140→        !item.available ? 'opacity-60' : ''
+  1141→      }`}
+  1142→    >
+  1143→      {/* Reorder handle */}
+  1144→      <div className="flex shrink-0 flex-col gap-0 opacity-0 transition-opacity group-hover:opacity-100">
+  1145→        <button
+  1146→          type="button"
+  1147→          onClick={() => handleMoveItem(item, 'up')}
+  1148→          disabled={idx === 0}
+  1149→          className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+  1150→        >
+  1151→          <ChevronUp className="size-3" />
+  1152→        </button>
+  1153→        <button
+  1154→          type="button"
+  1155→          onClick={() => handleMoveItem(item, 'down')}
+  1156→          disabled={idx === items.length - 1}
+  1157→          className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+  1158→        >
+  1159→          <ChevronDown className="size-3" />
+  1160→        </button>
+  1161→      </div>
+  1162→
+  1163→      {/* Thumbnail */}
+  1164→      <div className="size-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+  1165→        {item.image ? (
+  1166→          <img
+  1167→            src={item.image}
+  1168→            alt={item.name}
+  1169→            className="size-full object-cover"
+  1170→          />
+  1171→        ) : (
+  1172→          <div className="flex size-full items-center justify-center">
+  1173→            <UtensilsCrossed className="size-5 text-muted-foreground/40" />
+  1174→          </div>
+  1175→        )}
+  1176→      </div>
+  1177→
+  1178→      {/* Info */}
+  1179→      <div className="flex-1 overflow-hidden">
+  1180→        <div className="flex items-center gap-2">
+  1181→          <h4 className="truncate text-sm font-semibold text-foreground">
+  1182→            {item.name}
+  1183→          </h4>
+  1184→          {!item.available && (
+  1185→            <Badge variant="secondary" className="shrink-0 text-[10px]">
+  1186→              Unavailable
+  1187→            </Badge>
+  1188→          )}
+  1189→        </div>
+  1190→        {item.description && (
+  1191→          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+  1192→            {item.description}
+  1193→          </p>
+  1194→        )}
+  1195→      </div>
+  1196→
+  1197→      {/* Price */}
+  1198→      <span className="shrink-0 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+  1199→        {formatPrice(item.price)}
+  1200→      </span>
+  1201→
+  1202→      {/* Availability toggle */}
+  1203→      <Switch
+  1204→        checked={item.available}
+  1205→        onCheckedChange={() => handleToggleAvailability(item)}
+  1206→      />
+  1207→
+  1208→      {/* Action buttons */}
+  1209→      <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+  1210→        <button
+  1211→          type="button"
+  1212→          onClick={() => openEditItem(item)}
+  1213→          className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+  1214→        >
+  1215→          <Pencil className="size-3.5" />
+  1216→        </button>
+  1217→        <button
+  1218→          type="button"
+  1219→          onClick={() => handleDuplicateItem(item)}
+  1220→          className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+  1221→        >
+  1222→          <Copy className="size-3.5" />
+  1223→        </button>
+  1224→        <button
+  1225→          type="button"
+  1226→          onClick={() =>
+  1227→            setDeleteTarget({
+  1228→              type: 'item',
+  1229→              id: item.id,
+  1230→              name: item.name,
+  1231→            })
+  1232→          }
+  1233→          className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+  1234→        >
+  1235→          <Trash2 className="size-3.5" />
+  1236→        </button>
+  1237→      </div>
+  1238→    </div>
+  1239→  );
+  1240→
+  1241→  // =========================================================
+  1242→  // Main render
+  1243→  // =========================================================
+  1244→
+  1245→  if (!token || !businessId) {
+  1246→    return (
+  1247→      <div className="flex items-center justify-center py-20">
+  1248→        <p className="text-sm text-muted-foreground">Select a business to manage menu</p>
+  1249→      </div>
+  1250→    );
+  1251→  }
+  1252→
+  1253→  const existingCatNames = categories.map((c) => c.name);
+  1254→
+  1255→  return (
+  1256→    <div className="flex h-full flex-col">
+  1257→      {/* Top Action Bar */}
+  1258→      <div className="flex items-center justify-between border-b px-4 py-3 sm:px-6">
+  1259→        <div>
+  1260→          <h2 className="text-lg font-semibold text-foreground">Menu Manager</h2>
+  1261→          <p className="text-sm text-muted-foreground">
+  1262→            {categories.length} {categories.length === 1 ? 'category' : 'categories'},{''}
+  1263→            {items.length} {items.length === 1 ? 'item' : 'items'}
+  1264→          </p>
+  1265→        </div>
+  1266→        <div className="flex items-center gap-2">
+  1267→          <Button
+  1268→            variant="outline"
+  1269→            size="sm"
+  1270→            onClick={() => setAddCatOpen(true)}
+  1271→            className="gap-1.5"
+  1272→          >
+  1273→            <Plus className="size-4" />
+  1274→            <span className="hidden sm:inline">Add Category</span>
+  1275→            <span className="sm:hidden">Category</span>
+  1276→          </Button>
+  1277→          <Button
+  1278→            size="sm"
+  1279→            onClick={openAddItem}
+  1280→            disabled={!selectedCategoryId}
+  1281→            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+  1282→          >
+  1283→            <Plus className="size-4" />
+  1284→            <span className="hidden sm:inline">Add Item</span>
+  1285→            <span className="sm:hidden">Item</span>
+  1286→          </Button>
+  1287→        </div>
+  1288→      </div>
+  1289→
+  1290→      {/* Main Content */}
+  1291→      <div className="flex flex-1 overflow-hidden">
+  1292→        {/* ========== DESKTOP: Two-panel layout ========== */}
+  1293→        <div className="hidden md:flex md:flex-1">
+  1294→          {/* Categories Sidebar */}
+  1295→          <div className="flex w-[280px] shrink-0 flex-col border-r">
+  1296→            <div className="px-4 py-3">
+  1297→              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+  1298→                Categories
+  1299→              </h3>
+  1300→            </div>
+  1301→            <ScrollArea className="flex-1">
+  1302→              <div className="space-y-1 px-2 pb-4">
+  1303→                {loading
+  1304→                  ? Array.from({ length: 4 }).map((_, i) => (
+  1305→                      <CategorySkeleton key={i} />
+  1306→                    ))
+  1307→                  : categories.length === 0
+  1308→                    ? null
+  1309→                    : categories.map((cat, idx) => renderCategoryItem(cat, idx))}
+  1310→              </div>
+  1311→            </ScrollArea>
+  1312→            {!loading && categories.length === 0 && (
+  1313→              <div className="px-2 pb-4">
+  1314→                <EmptyCategoriesState onAdd={() => setAddCatOpen(true)} />
+  1315→              </div>
+  1316→            )}
+  1317→          </div>
+  1318→
+  1319→          {/* Items Panel */}
+  1320→          <div className="flex flex-1 flex-col overflow-hidden">
+  1321→            {selectedCategory ? (
+  1322→              <>
+  1323→                {/* Items toolbar */}
+  1324→                <div className="flex items-center justify-between border-b px-6 py-3">
+  1325→                  <div className="flex items-center gap-2">
+  1326→                    <h3 className="text-sm font-semibold text-foreground">
+  1327→                      {selectedCategory.name}
+  1328→                    </h3>
+  1329→                    <Badge variant="secondary" className="text-[10px]">
+  1330→                      {items.length} {items.length === 1 ? 'item' : 'items'}
+  1331→                    </Badge>
+  1332→                  </div>
+  1333→                  <div className="flex items-center gap-1 rounded-lg border bg-muted p-0.5">
+  1334→                    <button
+  1335→                      type="button"
+  1336→                      onClick={() => setViewMode('grid')}
+  1337→                      className={`rounded-md p-1.5 transition-colors ${
+  1338→                        viewMode === 'grid'
+  1339→                          ? 'bg-background text-foreground shadow-sm'
+  1340→                          : 'text-muted-foreground hover:text-foreground'
+  1341→                      }`}
+  1342→                    >
+  1343→                      <LayoutGrid className="size-4" />
+  1344→                    </button>
+  1345→                    <button
+  1346→                      type="button"
+  1347→                      onClick={() => setViewMode('list')}
+  1348→                      className={`rounded-md p-1.5 transition-colors ${
+  1349→                        viewMode === 'list'
+  1350→                          ? 'bg-background text-foreground shadow-sm'
+  1351→                          : 'text-muted-foreground hover:text-foreground'
+  1352→                      }`}
+  1353→                    >
+  1354→                      <List className="size-4" />
+  1355→                    </button>
+  1356→                  </div>
+  1357→                </div>
+  1358→
+  1359→                {/* Items content */}
+  1360→                <ScrollArea className="flex-1">
+  1361→                  <div className="p-6">
+  1362→                    {loading ? (
+  1363→                      <div className={
+  1364→                        viewMode === 'grid'
+  1365→                          ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'
+  1366→                          : 'space-y-3'
+  1367→                      }>
+  1368→                        {Array.from({ length: 6 }).map((_, i) =>
+  1369→                          viewMode === 'grid' ? (
+  1370→                            <ItemCardSkeleton key={i} />
+  1371→                          ) : (
+  1372→                            <ItemRowSkeleton key={i} />
+  1373→                          )
+  1374→                        )}
+  1375→                      </div>
+  1376→                    ) : items.length === 0 ? (
+  1377→                      <EmptyItemsState onAdd={openAddItem} />
+  1378→                    ) : viewMode === 'grid' ? (
+  1379→                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  1380→                        {items.map((item, idx) => renderItemCard(item, idx))}
+  1381→                      </div>
+  1382→                    ) : (
+  1383→                      <div className="space-y-3">
+  1384→                        {items.map((item, idx) => renderItemRow(item, idx))}
+  1385→                      </div>
+  1386→                    )}
+  1387→                  </div>
+  1388→                </ScrollArea>
+  1389→              </>
+  1390→            ) : (
+  1391→              <div className="flex flex-1 items-center justify-center">
+  1392→                {loading ? (
+  1393→                  <div className="space-y-3">
+  1394→                    <Skeleton className="mx-auto h-8 w-48" />
+  1395→                    <Skeleton className="mx-auto h-4 w-32" />
+  1396→                  </div>
+  1397→                ) : categories.length > 0 ? (
+  1398→                  <div className="text-center">
+  1399→                    <p className="text-sm text-muted-foreground">
+  1400→                      Select a category to view items
+  1401→                    </p>
+  1402→                  </div>
+  1403→                ) : null}
+  1404→              </div>
+  1405→            )}
+  1406→          </div>
+  1407→        </div>
+  1408→
+  1409→        {/* ========== MOBILE: Tabbed layout ========== */}
+  1410→        <div className="flex flex-1 flex-col md:hidden">
+  1411→          <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex flex-1 flex-col">
+  1412→            <TabsList className="mx-4 mt-3 grid w-auto grid-cols-2">
+  1413→              <TabsTrigger value="categories" className="gap-1.5">
+  1414→                <FolderOpen className="size-3.5" />
+  1415→                Categories
+  1416→              </TabsTrigger>
+  1417→              <TabsTrigger value="items" className="gap-1.5">
+  1418→                <UtensilsCrossed className="size-3.5" />
+  1419→                Items
+  1420→              </TabsTrigger>
+  1421→            </TabsList>
+  1422→
+  1423→            <TabsContent value="categories" className="flex-1 overflow-hidden">
+  1424→              <ScrollArea className="h-full">
+  1425→                <div className="space-y-1 p-4">
+  1426→                  {loading
+  1427→                    ? Array.from({ length: 4 }).map((_, i) => (
+  1428→                        <CategorySkeleton key={i} />
+  1429→                      ))
+  1430→                    : categories.length === 0
+  1431→                      ? <EmptyCategoriesState onAdd={() => setAddCatOpen(true)} />
+  1432→                      : categories.map((cat, idx) => renderCategoryItem(cat, idx))}
+  1433→                </div>
+  1434→              </ScrollArea>
+  1435→            </TabsContent>
+  1436→
+  1437→            <TabsContent value="items" className="flex flex-1 flex-col overflow-hidden">
+  1438→              {selectedCategory ? (
+  1439→                <>
+  1440→                  <div className="flex items-center justify-between border-b px-4 py-2">
+  1441→                    <div className="flex items-center gap-2">
+  1442→                      <h3 className="text-sm font-semibold text-foreground">
+  1443→                        {selectedCategory.name}
+  1444→                      </h3>
+  1445→                      <Badge variant="secondary" className="text-[10px]">
+  1446→                        {items.length}
+  1447→                      </Badge>
+  1448→                    </div>
+  1449→                    <div className="flex items-center gap-1 rounded-lg border bg-muted p-0.5">
+  1450→                      <button
+  1451→                        type="button"
+  1452→                        onClick={() => setViewMode('grid')}
+  1453→                        className={`rounded-md p-1.5 transition-colors ${
+  1454→                          viewMode === 'grid'
+  1455→                            ? 'bg-background text-foreground shadow-sm'
+  1456→                            : 'text-muted-foreground hover:text-foreground'
+  1457→                        }`}
+  1458→                      >
+  1459→                        <LayoutGrid className="size-4" />
+  1460→                      </button>
+  1461→                      <button
+  1462→                        type="button"
+  1463→                        onClick={() => setViewMode('list')}
+  1464→                        className={`rounded-md p-1.5 transition-colors ${
+  1465→                          viewMode === 'list'
+  1466→                            ? 'bg-background text-foreground shadow-sm'
+  1467→                            : 'text-muted-foreground hover:text-foreground'
+  1468→                        }`}
+  1469→                      >
+  1470→                        <List className="size-4" />
+  1471→                      </button>
+  1472→                    </div>
+  1473→                  </div>
+  1474→                  <ScrollArea className="flex-1">
+  1475→                    <div className="p-4">
+  1476→                      {loading ? (
+  1477→                        <div className={
+  1478→                          viewMode === 'grid'
+  1479→                            ? 'grid grid-cols-1 gap-3 sm:grid-cols-2'
+  1480→                            : 'space-y-3'
+  1481→                        }>
+  1482→                          {Array.from({ length: 4 }).map((_, i) =>
+  1483→                            viewMode === 'grid' ? (
+  1484→                              <ItemCardSkeleton key={i} />
+  1485→                            ) : (
+  1486→                              <ItemRowSkeleton key={i} />
+  1487→                            )
+  1488→                          )}
+  1489→                        </div>
+  1490→                      ) : items.length === 0 ? (
+  1491→                        <EmptyItemsState onAdd={openAddItem} />
+  1492→                      ) : viewMode === 'grid' ? (
+  1493→                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+  1494→                          {items.map((item, idx) => renderItemCard(item, idx))}
+  1495→                        </div>
+  1496→                      ) : (
+  1497→                        <div className="space-y-3">
+  1498→                          {items.map((item, idx) => renderItemRow(item, idx))}
+  1499→                        </div>
+  1500→                      )}
+  1501→                    </div>
+  1502→                  </ScrollArea>
+  1503→                </>
+  1504→              ) : (
+  1505→                <div className="flex flex-1 items-center justify-center p-4">
+  1506→                  <div className="text-center">
+  1507→                    <p className="text-sm text-muted-foreground">
+  1508→                      Select a category first
+  1509→                    </p>
+  1510→                    <Button
+  1511→                      variant="link"
+  1512→                      size="sm"
+  1513→                      onClick={() => setMobileTab('categories')}
+  1514→                    >
+  1515→                      Go to Categories
+  1516→                    </Button>
+  1517→                  </div>
+  1518→                </div>
+  1519→              )}
+  1520→            </TabsContent>
+  1521→          </Tabs>
+  1522→        </div>
+  1523→      </div>
+  1524→
+  1525→      {/* ========== Dialogs ========== */}
+  1526→      <AddCategoryDialog
+  1527→        open={addCatOpen}
+  1528→        onOpenChange={setAddCatOpen}
+  1529→        businessId={businessId}
+  1530→        token={token}
+  1531→        existingNames={existingCatNames}
+  1532→        onSuccess={fetchCategories}
+  1533→      />
+  1534→
+  1535→      <ItemFormDialog
+  1536→        open={itemFormOpen}
+  1537→        onOpenChange={setItemFormOpen}
+  1538→        item={editingItem}
+  1539→        categories={categories}
+  1540→        businessId={businessId}
+  1541→        token={token}
+  1542→      />
+  1543→
+  1544→      <DeleteConfirmDialog
+  1545→        open={!!deleteTarget}
+  1546→        onOpenChange={(v) => !v && setDeleteTarget(null)}
+  1547→        title={
+  1548→          deleteTarget?.type === 'category'
+  1549→            ? 'Delete Category'
+  1550→            : 'Delete Item'
+  1551→        }
+  1552→        description={
+  1553→          deleteTarget?.type === 'category'
+  1554→            ? `This will permanently delete "${deleteTarget?.name}" and all its items. This action cannot be undone.`
+  1555→            : `This will permanently delete "${deleteTarget?.name}". This action cannot be undone.`
+  1556→        }
+  1557→        onConfirm={
+  1558→          deleteTarget?.type === 'category'
+  1559→            ? handleDeleteCategory
+  1560→            : handleDeleteItem
+  1561→        }
+  1562→        loading={deleting}
+  1563→      />
+  1564→    </div>
+  1565→  );
+  1566→}

@@ -105,6 +105,13 @@ export default function RegisterPage() {
         return;
       }
 
+      // If email confirmation required, show message instead of auto-login
+      if (data.requiresConfirmation || !data.token) {
+        toast.success('Account created! Please check your email to verify your account.');
+        navigate('/login');
+        return;
+      }
+
       // Auto-login after registration
       setAuth(data.token, data.user);
 

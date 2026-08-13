@@ -1,0 +1,714 @@
+     1→'use client';
+     2→
+     3→import React, { useState, useEffect, useMemo } from 'react';
+     4→import {
+     5→  Palette, Eye, Check, Loader2, Type, Paintbrush,
+     6→  Smartphone, X
+     7→} from 'lucide-react';
+     8→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+     9→import { Button } from '@/components/ui/button';
+    10→import { Badge } from '@/components/ui/badge';
+    11→import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+    12→import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+    13→import {
+    14→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    15→} from '@/components/ui/select';
+    16→import { Label } from '@/components/ui/label';
+    17→import { Input } from '@/components/ui/input';
+    18→import { useAuthStore, useAppStore } from '@/lib/store';
+    19→import { TEMPLATES, FONT_OPTIONS } from '@/lib/types';
+    20→import { toast } from 'sonner';
+    21→
+    22→// Template style configs for CSS previews
+    23→const TEMPLATE_STYLES: Record<string, {
+    24→  bg: string;
+    25→  headerBg: string;
+    26→  headerText: string;
+    27→  accent: string;
+    28→  text: string;
+    29→  subtext: string;
+    30→  cardBg: string;
+    31→  borderRadius: string;
+    32→  font: string;
+    33→  layout: 'list' | 'grid' | 'cards';
+    34→  dark?: boolean;
+    35→}> = {
+    36→  modern: {
+    37→    bg: '#ffffff', headerBg: '#f8fafc', headerText: '#0f172a', accent: '#10b981',
+    38→    text: '#1e293b', subtext: '#64748b', cardBg: '#f1f5f9', borderRadius: '8px', font: 'Inter, sans-serif', layout: 'list',
+    39→  },
+    40→  classic: {
+    41→    bg: '#fefce8', headerBg: '#92400e', headerText: '#ffffff', accent: '#b45309',
+    42→    text: '#451a03', subtext: '#78716c', cardBg: '#fffbeb', borderRadius: '4px', font: 'Georgia, serif', layout: 'list',
+    43→  },
+    44→  luxury: {
+    45→    bg: '#1c1917', headerBg: '#292524', headerText: '#d4a843', accent: '#d4a843',
+    46→    text: '#e7e5e4', subtext: '#a8a29e', cardBg: '#292524', borderRadius: '2px', font: 'Georgia, serif', layout: 'cards', dark: true,
+    47→  },
+    48→  minimal: {
+    49→    bg: '#ffffff', headerBg: '#ffffff', headerText: '#0a0a0a', accent: '#0a0a0a',
+    50→    text: '#171717', subtext: '#a3a3a3', cardBg: '#fafafa', borderRadius: '0px', font: 'Inter, sans-serif', layout: 'list',
+    51→  },
+    52→  fastfood: {
+    53→    bg: '#fff7ed', headerBg: '#ea580c', headerText: '#ffffff', accent: '#ea580c',
+    54→    text: '#431407', subtext: '#9a3412', cardBg: '#fff7ed', borderRadius: '12px', font: 'Inter, sans-serif', layout: 'grid',
+    55→  },
+    56→  cafe: {
+    57→    bg: '#fef7ee', headerBg: '#78350f', headerText: '#fffbeb', accent: '#a16207',
+    58→    text: '#422006', subtext: '#92400e', cardBg: '#fffbeb', borderRadius: '8px', font: 'Georgia, serif', layout: 'cards',
+    59→  },
+    60→  pizza: {
+    61→    bg: '#fef2f2', headerBg: '#16a34a', headerText: '#ffffff', accent: '#dc2626',
+    62→    text: '#1c1917', subtext: '#78716c', cardBg: '#ffffff', borderRadius: '12px', font: 'Inter, sans-serif', layout: 'grid',
+    63→  },
+    64→  dark: {
+    65→    bg: '#0a0a0a', headerBg: '#171717', headerText: '#ffffff', accent: '#10b981',
+    66→    text: '#e5e5e5', subtext: '#737373', cardBg: '#171717', borderRadius: '8px', font: 'Inter, sans-serif', layout: 'list', dark: true,
+    67→  },
+    68→  colorful: {
+    69→    bg: '#f0f9ff', headerBg: 'linear-gradient(135deg, #7c3aed, #ec4899, #f59e0b)', headerText: '#ffffff', accent: '#7c3aed',
+    70→    text: '#1e293b', subtext: '#64748b', cardBg: '#ffffff', borderRadius: '16px', font: 'Inter, sans-serif', layout: 'grid',
+    71→  },
+    72→  elegant: {
+    73→    bg: '#fafaf9', headerBg: '#1c1917', headerText: '#d6d3d1', accent: '#78716c',
+    74→    text: '#292524', subtext: '#a8a29e', cardBg: '#f5f5f4', borderRadius: '4px', font: 'Georgia, serif', layout: 'list',
+    75→  },
+    76→};
+    77→
+    78→// Mini template preview component
+    79→function TemplateMiniPreview({ templateName, width = 200, height = 260 }: { templateName: string; width?: number; height?: number }) {
+    80→  const style = TEMPLATE_STYLES[templateName] || TEMPLATE_STYLES.modern;
+    81→  const isGradient = style.headerBg.includes('gradient');
+    82→
+    83→  const mockItems = [
+    84→    { name: 'Grilled Chicken', price: '₦4,500' },
+    85→    { name: 'Jollof Rice', price: '₦3,000' },
+    86→    { name: 'Caesar Salad', price: '₦2,500' },
+    87→  ];
+    88→
+    89→  return (
+    90→    <div
+    91→      style={{
+    92→        width,
+    93→        height,
+    94→        background: style.bg,
+    95→        borderRadius: '8px',
+    96→        overflow: 'hidden',
+    97→        boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)',
+    98→        fontFamily: style.font,
+    99→        fontSize: '7px',
+   100→        lineHeight: 1.3,
+   101→      }}
+   102→    >
+   103→      {/* Header */}
+   104→      <div
+   105→        style={{
+   106→          background: isGradient ? undefined : style.headerBg,
+   107→          backgroundImage: isGradient ? style.headerBg : undefined,
+   108→          padding: '10px 8px',
+   109→          borderBottom: isGradient ? 'none' : `1px solid ${style.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'}`,
+   110→        }}
+   111→      >
+   112→        <div style={{ color: style.headerText, fontWeight: 700, fontSize: '9px', letterSpacing: '0.5px' }}>
+   113→          RESTAURANT
+   114→        </div>
+   115→        <div style={{ color: style.headerText, opacity: 0.7, fontSize: '5px', marginTop: '1px' }}>
+   116→          MENU
+   117→        </div>
+   118→      </div>
+   119→
+   120→      {/* Category */}
+   121→      <div style={{ padding: '5px 8px 2px' }}>
+   122→        <div style={{
+   123→          color: style.accent,
+   124→          fontWeight: 600,
+   125→          fontSize: '7px',
+   126→          textTransform: 'uppercase' as const,
+   127→          letterSpacing: '0.5px',
+   128→          borderBottom: `1.5px solid ${style.accent}`,
+   129→          paddingBottom: '2px',
+   130→          marginBottom: '4px',
+   131→          display: 'inline-block',
+   132→        }}>
+   133→          Main Course
+   134→        </div>
+   135→      </div>
+   136→
+   137→      {/* Items */}
+   138→      <div style={{ padding: '0 8px 8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+   139→        {style.layout === 'grid' ? (
+   140→          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+   141→            {mockItems.map((item, i) => (
+   142→              <div
+   143→                key={i}
+   144→                style={{
+   145→                  background: style.cardBg,
+   146→                  borderRadius: style.borderRadius,
+   147→                  padding: '4px',
+   148→                }}
+   149→              >
+   150→                <div style={{ color: style.text, fontWeight: 600, fontSize: '6px' }}>{item.name}</div>
+   151→                <div style={{ color: style.accent, fontWeight: 700, fontSize: '7px', marginTop: '2px' }}>{item.price}</div>
+   152→              </div>
+   153→            ))}
+   154→          </div>
+   155→        ) : style.layout === 'cards' ? (
+   156→          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+   157→            {mockItems.map((item, i) => (
+   158→              <div
+   159→                key={i}
+   160→                style={{
+   161→                  background: style.cardBg,
+   162→                  borderRadius: style.borderRadius,
+   163→                  padding: '5px 6px',
+   164→                  display: 'flex',
+   165→                  justifyContent: 'space-between',
+   166→                  alignItems: 'center',
+   167→                }}
+   168→              >
+   169→                <div style={{ color: style.text, fontWeight: 600, fontSize: '6px' }}>{item.name}</div>
+   170→                <div style={{ color: style.accent, fontWeight: 700, fontSize: '7px' }}>{item.price}</div>
+   171→              </div>
+   172→            ))}
+   173→          </div>
+   174→        ) : (
+   175→          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+   176→            {mockItems.map((item, i) => (
+   177→              <div
+   178→                key={i}
+   179→                style={{
+   180→                  borderBottom: `0.5px solid ${style.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+   181→                  paddingBottom: '3px',
+   182→                  display: 'flex',
+   183→                  justifyContent: 'space-between',
+   184→                }}
+   185→              >
+   186→                <div style={{ color: style.text, fontWeight: 500, fontSize: '6px' }}>{item.name}</div>
+   187→                <div style={{ color: style.accent, fontWeight: 600, fontSize: '6.5px' }}>{item.price}</div>
+   188→              </div>
+   189→            ))}
+   190→          </div>
+   191→        )}
+   192→      </div>
+   193→
+   194→      {/* Second category hint */}
+   195→      <div style={{ padding: '2px 8px 0' }}>
+   196→        <div style={{
+   197→          color: style.subtext,
+   198→          fontSize: '6px',
+   199→          fontWeight: 500,
+   200→          textTransform: 'uppercase' as const,
+   201→          letterSpacing: '0.3px',
+   202→        }}>
+   203→          Drinks & Desserts ▸
+   204→        </div>
+   205→      </div>
+   206→    </div>
+   207→  );
+   208→}
+   209→
+   210→// Full mobile preview for dialog
+   211→function TemplateMobilePreview({ templateName, primaryColor, secondaryColor, fontFamily }: {
+   212→  templateName: string;
+   213→  primaryColor?: string;
+   214→  secondaryColor?: string;
+   215→  fontFamily?: string;
+   216→}) {
+   217→  const style = { ...TEMPLATE_STYLES[templateName] || TEMPLATE_STYLES.modern };
+   218→  if (primaryColor) style.accent = primaryColor;
+   219→  if (secondaryColor) style.cardBg = secondaryColor + '22';
+   220→  if (fontFamily) {
+   221→    const fontMap: Record<string, string> = {
+   222→      inter: 'Inter, sans-serif',
+   223→      serif: 'Georgia, serif',
+   224→      mono: 'monospace',
+   225→      playfair: '"Playfair Display", Georgia, serif',
+   226→    };
+   227→    style.font = fontMap[fontFamily] || style.font;
+   228→  }
+   229→
+   230→  const isGradient = style.headerBg.includes('gradient');
+   231→
+   232→  const mockCategories = [
+   233→    {
+   234→      name: 'Main Course',
+   235→      items: [
+   236→        { name: 'Grilled Chicken', description: 'Crispy chicken with vegetables', price: '₦4,500' },
+   237→        { name: 'Jollof Rice', description: 'Classic Nigerian jollof rice', price: '₦3,000' },
+   238→      ],
+   239→    },
+   240→    {
+   241→      name: 'Drinks',
+   242→      items: [
+   243→        { name: 'Chapman', description: 'Classic Nigerian cocktail', price: '₦1,500' },
+   244→        { name: 'Fresh Juice', description: 'Freshly squeezed orange juice', price: '₦1,000' },
+   245→      ],
+   246→    },
+   247→  ];
+   248→
+   249→  return (
+   250→    <div
+   251→      className="mx-auto"
+   252→      style={{
+   253→        width: '280px',
+   254→        maxWidth: '100%',
+   255→        minHeight: '480px',
+   256→        background: style.bg,
+   257→        borderRadius: '16px',
+   258→        overflow: 'hidden',
+   259→        boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+   260→        fontFamily: style.font,
+   261→        fontSize: '12px',
+   262→        lineHeight: 1.5,
+   263→      }}
+   264→    >
+   265→      {/* Phone notch area */}
+   266→      <div className="flex justify-center pt-2 pb-1" style={{ background: isGradient ? undefined : style.headerBg, backgroundImage: isGradient ? style.headerBg : undefined }}>
+   267→        <div className="w-16 h-1 rounded-full" style={{ background: style.dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)' }} />
+   268→      </div>
+   269→
+   270→      {/* Header */}
+   271→      <div
+   272→        style={{
+   273→          background: isGradient ? undefined : style.headerBg,
+   274→          backgroundImage: isGradient ? style.headerBg : undefined,
+   275→          padding: '16px 20px 20px',
+   276→        }}
+   277→      >
+   278→        <div style={{ color: style.headerText, fontWeight: 700, fontSize: '18px', letterSpacing: '1px' }}>
+   279→          MY RESTAURANT
+   280→        </div>
+   281→        <div style={{ color: style.headerText, opacity: 0.8, fontSize: '11px', marginTop: '2px' }}>
+   282→          Delicious Food, Served Fresh
+   283→        </div>
+   284→      </div>
+   285→
+   286→      {/* Menu content */}
+   287→      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+   288→        {mockCategories.map((cat) => (
+   289→          <div key={cat.name}>
+   290→            <div style={{
+   291→              color: style.accent,
+   292→              fontWeight: 700,
+   293→              fontSize: '11px',
+   294→              textTransform: 'uppercase' as const,
+   295→              letterSpacing: '1px',
+   296→              borderBottom: `2px solid ${style.accent}`,
+   297→              paddingBottom: '4px',
+   298→              marginBottom: '10px',
+   299→            }}>
+   300→              {cat.name}
+   301→            </div>
+   302→            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+   303→              {cat.items.map((item) => (
+   304→                <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+   305→                  <div style={{ flex: 1, marginRight: '12px' }}>
+   306→                    <div style={{ color: style.text, fontWeight: 600, fontSize: '13px' }}>{item.name}</div>
+   307→                    <div style={{ color: style.subtext, fontSize: '10px', marginTop: '1px' }}>{item.description}</div>
+   308→                  </div>
+   309→                  <div style={{ color: style.accent, fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap' }}>
+   310→                    {item.price}
+   311→                  </div>
+   312→                </div>
+   313→              ))}
+   314→            </div>
+   315→          </div>
+   316→        ))}
+   317→      </div>
+   318→    </div>
+   319→  );
+   320→}
+   321→
+   322→export default function Templates() {
+   323→  const { token } = useAuthStore();
+   324→  const { currentBusiness } = useAppStore();
+   325→
+   326→  const [previewTemplate, setPreviewTemplate] = useState<string | null>(null);
+   327→  const [applying, setApplying] = useState(false);
+   328→  const [saving, setSaving] = useState(false);
+   329→  const [primaryColor, setPrimaryColor] = useState('#10b981');
+   330→  const [secondaryColor, setSecondaryColor] = useState('#f1f5f9');
+   331→  const [selectedFont, setSelectedFont] = useState('inter');
+   332→
+   333→  // Sync with current business data
+   334→  useEffect(() => {
+   335→    if (currentBusiness) {
+   336→      setPrimaryColor(currentBusiness.primaryColor || '#10b981');
+   337→      setSecondaryColor(currentBusiness.secondaryColor || '#f1f5f9');
+   338→      setSelectedFont(currentBusiness.fontFamily || 'inter');
+   339→    }
+   340→  }, [currentBusiness]);
+   341→
+   342→  const currentTemplate = currentBusiness?.templateName || 'modern';
+   343→
+   344→  const applyTemplate = async (templateName: string) => {
+   345→    if (!currentBusiness?.id || !token) return;
+   346→
+   347→    setApplying(true);
+   348→    try {
+   349→      const res = await fetch(`/api/businesses/${currentBusiness.id}`, {
+   350→        method: 'PUT',
+   351→        headers: {
+   352→          Authorization: `Bearer ${token}`,
+   353→          'Content-Type': 'application/json',
+   354→        },
+   355→        body: JSON.stringify({ templateName }),
+   356→      });
+   357→
+   358→      if (res.ok) {
+   359→        toast.success(`"${TEMPLATES.find(t => t.name === templateName)?.label}" template applied!`);
+   360→      } else {
+   361→        toast.error('Failed to apply template');
+   362→      }
+   363→    } catch {
+   364→      toast.error('Failed to apply template');
+   365→    } finally {
+   366→      setApplying(false);
+   367→      setPreviewTemplate(null);
+   368→    }
+   369→  };
+   370→
+   371→  const applyCustomization = async () => {
+   372→    if (!currentBusiness?.id || !token) return;
+   373→
+   374→    setSaving(true);
+   375→    try {
+   376→      const res = await fetch(`/api/businesses/${currentBusiness.id}`, {
+   377→        method: 'PUT',
+   378→        headers: {
+   379→          Authorization: `Bearer ${token}`,
+   380→          'Content-Type': 'application/json',
+   381→        },
+   382→        body: JSON.stringify({
+   383→          primaryColor,
+   384→          secondaryColor,
+   385→          fontFamily: selectedFont,
+   386→        }),
+   387→      });
+   388→
+   389→      if (res.ok) {
+   390→        toast.success('Customization applied successfully!');
+   391→      } else {
+   392→        toast.error('Failed to apply changes');
+   393→      }
+   394→    } catch {
+   395→      toast.error('Failed to apply changes');
+   396→    } finally {
+   397→      setSaving(false);
+   398→    }
+   399→  };
+   400→
+   401→  if (!currentBusiness) {
+   402→    return (
+   403→      <Card>
+   404→        <CardContent className="flex flex-col items-center justify-center py-16">
+   405→          <Palette className="h-12 w-12 text-muted-foreground mb-4" />
+   406→          <p className="text-muted-foreground">Please select a business first.</p>
+   407→        </CardContent>
+   408→      </Card>
+   409→    );
+   410→  }
+   411→
+   412→  return (
+   413→    <div className="space-y-6">
+   414→      {/* Template Gallery */}
+   415→      <Card>
+   416→        <CardHeader>
+   417→          <CardTitle className="flex items-center gap-2">
+   418→            <Palette className="h-5 w-5 text-emerald-500" />
+   419→            Design Templates
+   420→          </CardTitle>
+   421→          <CardDescription>
+   422→            Choose a template for your menu. Click Preview to see how it looks, then Apply to activate it.
+   423→          </CardDescription>
+   424→        </CardHeader>
+   425→        <CardContent>
+   426→          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+   427→            {TEMPLATES.map((template) => {
+   428→              const isActive = currentTemplate === template.name;
+   429→              return (
+   430→                <div
+   431→                  key={template.name}
+   432→                  className={`group relative rounded-xl border-2 p-3 transition-all duration-200 hover:shadow-lg cursor-pointer ${
+   433→                    isActive
+   434→                      ? 'border-emerald-500 shadow-emerald-500/10 bg-emerald-50/50 dark:bg-emerald-950/10'
+   435→                      : 'border-border hover:border-emerald-300'
+   436→                  }`}
+   437→                >
+   438→                  {/* Active badge */}
+   439→                  {isActive && (
+   440→                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10">
+   441→                      <Badge className="bg-emerald-500 text-white border-0 shadow-sm gap-1 px-2.5">
+   442→                        <Check className="h-3 w-3" />
+   443→                        Active
+   444→                      </Badge>
+   445→                    </div>
+   446→                  )}
+   447→
+   448→                  {/* Preview */}
+   449→                  <div className="flex justify-center mb-3">
+   450→                    <TemplateMiniPreview templateName={template.name} width={180} height={230} />
+   451→                  </div>
+   452→
+   453→                  {/* Info */}
+   454→                  <div className="space-y-2">
+   455→                    <div>
+   456→                      <h3 className="text-sm font-semibold text-center">{template.label}</h3>
+   457→                      <p className="text-xs text-muted-foreground text-center mt-0.5 line-clamp-2">
+   458→                        {template.description}
+   459→                      </p>
+   460→                    </div>
+   461→
+   462→                    {/* Actions */}
+   463→                    <div className="flex items-center gap-2">
+   464→                      <Button
+   465→                        variant="outline"
+   466→                        size="sm"
+   467→                        className="flex-1 h-8 text-xs gap-1"
+   468→                        onClick={(e) => {
+   469→                          e.stopPropagation();
+   470→                          setPreviewTemplate(template.name);
+   471→                        }}
+   472→                      >
+   473→                        <Eye className="h-3.5 w-3.5" />
+   474→                        Preview
+   475→                      </Button>
+   476→                      <Button
+   477→                        size="sm"
+   478→                        className={`flex-1 h-8 text-xs ${
+   479→                          isActive
+   480→                            ? 'bg-muted text-muted-foreground hover:bg-muted'
+   481→                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+   482→                        }`}
+   483→                        disabled={isActive || applying}
+   484→                        onClick={(e) => {
+   485→                          e.stopPropagation();
+   486→                          applyTemplate(template.name);
+   487→                        }}
+   488→                      >
+   489→                        {applying && previewTemplate === template.name ? (
+   490→                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+   491→                        ) : isActive ? (
+   492→                          <Check className="h-3.5 w-3.5" />
+   493→                        ) : null}
+   494→                        {isActive ? 'Applied' : 'Apply'}
+   495→                      </Button>
+   496→                    </div>
+   497→                  </div>
+   498→                </div>
+   499→              );
+   500→            })}
+   501→          </div>
+   502→        </CardContent>
+   503→      </Card>
+   504→
+   505→      {/* Customization Panel */}
+   506→      <Card>
+   507→        <CardHeader>
+   508→          <CardTitle className="flex items-center gap-2">
+   509→            <Paintbrush className="h-5 w-5 text-emerald-500" />
+   510→            Customize Design
+   511→          </CardTitle>
+   512→          <CardDescription>
+   513→            Fine-tune your menu&apos;s colors and typography.
+   514→          </CardDescription>
+   515→        </CardHeader>
+   516→        <CardContent>
+   517→          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+   518→            {/* Primary Color */}
+   519→            <div className="space-y-2">
+   520→              <Label className="text-sm font-medium flex items-center gap-2">
+   521→                <Paintbrush className="h-4 w-4 text-muted-foreground" />
+   522→                Primary Color
+   523→              </Label>
+   524→              <div className="flex items-center gap-3">
+   525→                <Popover>
+   526→                  <PopoverTrigger asChild>
+   527→                    <Button
+   528→                      variant="outline"
+   529→                      className="h-10 w-10 p-0 border-2"
+   530→                      style={{ borderColor: primaryColor }}
+   531→                    >
+   532→                      <div
+   533→                        className="w-full h-full rounded-sm"
+   534→                        style={{ backgroundColor: primaryColor }}
+   535→                      />
+   536→                    </Button>
+   537→                  </PopoverTrigger>
+   538→                  <PopoverContent className="w-auto p-3">
+   539→                    <div className="space-y-2">
+   540→                      <p className="text-xs font-medium text-muted-foreground">Primary Color</p>
+   541→                      <input
+   542→                        type="color"
+   543→                        value={primaryColor}
+   544→                        onChange={(e) => setPrimaryColor(e.target.value)}
+   545→                        className="w-full h-10 rounded cursor-pointer border-0"
+   546→                      />
+   547→                      <div className="flex gap-1.5 flex-wrap">
+   548→                        {['#10b981', '#0ea5e9', '#8b5cf6', '#f43f5e', '#f59e0b', '#ec4899', '#06b6d4', '#84cc16'].map((c) => (
+   549→                          <button
+   550→                            key={c}
+   551→                            className="w-6 h-6 rounded-full border-2 border-transparent hover:border-foreground/30 transition-colors"
+   552→                            style={{ backgroundColor: c }}
+   553→                            onClick={() => setPrimaryColor(c)}
+   554→                            title={c}
+   555→                          />
+   556→                        ))}
+   557→                      </div>
+   558→                    </div>
+   559→                  </PopoverContent>
+   560→                </Popover>
+   561→                <Input
+   562→                  value={primaryColor}
+   563→                  onChange={(e) => setPrimaryColor(e.target.value)}
+   564→                  className="h-10 flex-1 font-mono text-sm"
+   565→                  maxLength={7}
+   566→                />
+   567→              </div>
+   568→            </div>
+   569→
+   570→            {/* Secondary Color */}
+   571→            <div className="space-y-2">
+   572→              <Label className="text-sm font-medium flex items-center gap-2">
+   573→                <Paintbrush className="h-4 w-4 text-muted-foreground" />
+   574→                Secondary Color
+   575→              </Label>
+   576→              <div className="flex items-center gap-3">
+   577→                <Popover>
+   578→                  <PopoverTrigger asChild>
+   579→                    <Button
+   580→                      variant="outline"
+   581→                      className="h-10 w-10 p-0 border-2"
+   582→                      style={{ borderColor: secondaryColor }}
+   583→                    >
+   584→                      <div
+   585→                        className="w-full h-full rounded-sm"
+   586→                        style={{ backgroundColor: secondaryColor }}
+   587→                      />
+   588→                    </Button>
+   589→                  </PopoverTrigger>
+   590→                  <PopoverContent className="w-auto p-3">
+   591→                    <div className="space-y-2">
+   592→                      <p className="text-xs font-medium text-muted-foreground">Secondary Color</p>
+   593→                      <input
+   594→                        type="color"
+   595→                        value={secondaryColor}
+   596→                        onChange={(e) => setSecondaryColor(e.target.value)}
+   597→                        className="w-full h-10 rounded cursor-pointer border-0"
+   598→                      />
+   599→                      <div className="flex gap-1.5 flex-wrap">
+   600→                        {['#f1f5f9', '#fef3c7', '#fce7f3', '#dbeafe', '#d1fae5', '#f3e8ff', '#fff7ed', '#f0fdf4'].map((c) => (
+   601→                          <button
+   602→                            key={c}
+   603→                            className="w-6 h-6 rounded-full border border-border hover:border-foreground/30 transition-colors"
+   604→                            style={{ backgroundColor: c }}
+   605→                            onClick={() => setSecondaryColor(c)}
+   606→                            title={c}
+   607→                          />
+   608→                        ))}
+   609→                      </div>
+   610→                    </div>
+   611→                  </PopoverContent>
+   612→                </Popover>
+   613→                <Input
+   614→                  value={secondaryColor}
+   615→                  onChange={(e) => setSecondaryColor(e.target.value)}
+   616→                  className="h-10 flex-1 font-mono text-sm"
+   617→                  maxLength={7}
+   618→                />
+   619→              </div>
+   620→            </div>
+   621→
+   622→            {/* Font Family */}
+   623→            <div className="space-y-2">
+   624→              <Label className="text-sm font-medium flex items-center gap-2">
+   625→                <Type className="h-4 w-4 text-muted-foreground" />
+   626→                Font Family
+   627→              </Label>
+   628→              <Select value={selectedFont} onValueChange={setSelectedFont}>
+   629→                <SelectTrigger className="h-10 w-full">
+   630→                  <SelectValue placeholder="Select font" />
+   631→                </SelectTrigger>
+   632→                <SelectContent>
+   633→                  {FONT_OPTIONS.map((font) => (
+   634→                    <SelectItem key={font.value} value={font.value}>
+   635→                      <span style={{ fontFamily: font.value === 'inter' ? 'Inter, sans-serif' : font.value === 'serif' ? 'Georgia, serif' : font.value === 'mono' ? 'monospace' : '"Playfair Display", Georgia, serif' }}>
+   636→                        {font.label}
+   637→                      </span>
+   638→                    </SelectItem>
+   639→                  ))}
+   640→                </SelectContent>
+   641→              </Select>
+   642→            </div>
+   643→          </div>
+   644→
+   645→          {/* Apply Button */}
+   646→          <div className="flex justify-end mt-6">
+   647→            <Button
+   648→              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+   649→              onClick={applyCustomization}
+   650→              disabled={saving}
+   651→            >
+   652→              {saving ? (
+   653→                <>
+   654→                  <Loader2 className="h-4 w-4 animate-spin" />
+   655→                  Applying...
+   656→                </>
+   657→              ) : (
+   658→                <>
+   659→                  <Check className="h-4 w-4" />
+   660→                  Apply Changes
+   661→                </>
+   662→              )}
+   663→            </Button>
+   664→          </div>
+   665→        </CardContent>
+   666→      </Card>
+   667→
+   668→      {/* Template Preview Dialog */}
+   669→      <Dialog open={!!previewTemplate} onOpenChange={(open) => !open && setPreviewTemplate(null)}>
+   670→        <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+   671→          <DialogHeader>
+   672→            <DialogTitle className="flex items-center gap-2">
+   673→              <Smartphone className="h-5 w-5 text-emerald-500" />
+   674→              {TEMPLATES.find(t => t.name === previewTemplate)?.label} Preview
+   675→            </DialogTitle>
+   676→            <DialogDescription>
+   677→              {TEMPLATES.find(t => t.name === previewTemplate)?.description}
+   678→            </DialogDescription>
+   679→          </DialogHeader>
+   680→
+   681→          <div className="flex justify-center py-6">
+   682→            {previewTemplate && (
+   683→              <TemplateMobilePreview
+   684→                templateName={previewTemplate}
+   685→                primaryColor={primaryColor}
+   686→                secondaryColor={secondaryColor}
+   687→                fontFamily={selectedFont}
+   688→              />
+   689→            )}
+   690→          </div>
+   691→
+   692→          <div className="flex items-center justify-end gap-3">
+   693→            <Button variant="outline" onClick={() => setPreviewTemplate(null)}>
+   694→              Close
+   695→            </Button>
+   696→            <Button
+   697→              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+   698→              disabled={currentTemplate === previewTemplate || applying}
+   699→              onClick={() => previewTemplate && applyTemplate(previewTemplate)}
+   700→            >
+   701→              {applying ? (
+   702→                <Loader2 className="h-4 w-4 animate-spin" />
+   703→              ) : (
+   704→                <Check className="h-4 w-4" />
+   705→              )}
+   706→              Apply This Template
+   707→            </Button>
+   708→          </div>
+   709→        </DialogContent>
+   710→      </Dialog>
+   711→    </div>
+   712→  );
+   713→}
+   714→

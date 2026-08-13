@@ -32,7 +32,20 @@ export async function POST(request: NextRequest) {
     const user = data.user;
     const token = data.session?.access_token || null;
 
-    // Return user info (profile is auto-created by trigger)
+    // If no session (email confirmation required), tell frontend
+    if (!token) {
+      return NextResponse.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          name: name || null,
+          role: 'user',
+        },
+        token: null,
+        requiresConfirmation: true,
+      });
+    }
+
     return NextResponse.json({
       user: {
         id: user.id,
