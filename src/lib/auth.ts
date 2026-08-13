@@ -8,6 +8,16 @@ export function generateSlug(name: string): string {
     + '-' + Math.random().toString(36).substring(2, 8);
 }
 
+/** Get the configurable app URL from environment */
+export function getAppUrl(): string {
+  return process.env.NEXT_PUBLIC_APP_URL || 'https://digital-menu-builder-gamma.vercel.app';
+}
+
+/** Generate a public business URL */
+export function getPublicBusinessUrl(slug: string): string {
+  return `${getAppUrl()}/p/${slug}`;
+}
+
 export function formatPrice(price: number): string {
   return new Intl.NumberFormat('en-NG', {
     style: 'currency',

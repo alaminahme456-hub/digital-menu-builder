@@ -10,7 +10,8 @@ import {
   Check,
   QrCode,
   ExternalLink,
-  Image,
+  Globe,
+  ImageIcon,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,16 +26,14 @@ import {
 } from '@/components/ui/dialog';
 import { useAuthStore, useAppStore } from '@/lib/store';
 import type { Business } from '@/lib/types';
+import { getPublicBusinessUrl, getAppUrl } from '@/lib/auth';
 import { toast } from 'sonner';
-
-function getPublicUrl(slug: string) {
-  return `https://menuqr.app/menu/${slug}`;
-}
 
 export default function QRCodePanel() {
   const { token } = useAuthStore();
   const { currentBusiness } = useAppStore();
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [qrSvgString, setQrSvgString] = useState<string>('');
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -42,7 +41,7 @@ export default function QRCodePanel() {
   const printRef = useRef<HTMLDivElement>(null);
 
   const slug = currentBusiness?.slug;
-  const menuUrl = slug ? getPublicUrl(slug) : '';
+  const menuUrl = slug ? getPublicBusinessUrl(slug) : '';
 
   // Fetch full business data
   useEffect(() => {
@@ -65,19 +64,27 @@ export default function QRCodePanel() {
     fetchBusiness();
   }, [currentBusiness?.id, token]);
 
-  // Generate QR code
+  // Generate QR code (both PNG data URL and SVG string)
   useEffect(() => {
     if (!menuUrl) return;
+    // PNG
     QRCode.toDataURL(menuUrl, {
       width: 512,
       margin: 2,
-      color: {
-        dark: '#000000',
-        light: '#ffffff',
-      },
+      color: { dark: '#000000', light: '#ffffff' },
       errorCorrectionLevel: 'H',
     })
       .then((url) => setQrDataUrl(url))
+      .catch(() => {});
+    // SVG
+    QRCode.toString(menuUrl, {
+      type: 'svg',
+      width: 512,
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' },
+      errorCorrectionLevel: 'H',
+    })
+      .then((svg) => setQrSvgString(svg))
       .catch(() => {});
   }, [menuUrl]);
 
@@ -90,12 +97,24 @@ export default function QRCodePanel() {
     toast.success('QR code downloaded as PNG');
   }, [qrDataUrl, business?.name]);
 
+  const handleDownloadSVG = useCallback(() => {
+    if (!qrSvgString) return;
+    const blob = new Blob([qrSvgString], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `${business?.name || 'menu'}-qr-code.svg`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success('QR code downloaded as SVG');
+  }, [qrSvgString, business?.name]);
+
   const handleCopyLink = useCallback(async () => {
     if (!menuUrl) return;
     try {
       await navigator.clipboard.writeText(menuUrl);
       setCopied(true);
-      toast.success('Menu link copied to clipboard');
+      toast.success('Public link copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error('Failed to copy link');
@@ -107,8 +126,8 @@ export default function QRCodePanel() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `${business?.name || 'Menu'} - Digital Menu`,
-          text: `Scan the QR code or visit to view our menu!`,
+          title: `${business?.name || 'Menu'} - Digital Catalog`,
+          text: `View our digital catalog and order online!`,
           url: menuUrl,
         });
       } catch {
@@ -122,8 +141,6 @@ export default function QRCodePanel() {
   const handlePrint = useCallback(() => {
     setPrintDialogOpen(false);
     setTimeout(() => {
-      const printContent = printRef.current;
-      if (!printContent) return;
       const printWindow = window.open('', '_blank');
       if (!printWindow) {
         toast.error('Please allow popups to print');
@@ -137,51 +154,22 @@ export default function QRCodePanel() {
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              min-height: 100vh;
-              font-family: system-ui, -apple-system, sans-serif;
+              display: flex; justify-content: center; align-items: center;
+              min-height: 100vh; font-family: system-ui, -apple-system, sans-serif;
               background: white;
             }
             .print-card {
-              text-align: center;
-              padding: 40px;
-              border: 2px solid #e5e7eb;
-              border-radius: 16px;
-              max-width: 400px;
-              width: 100%;
+              text-align: center; padding: 40px;
+              border: 2px solid #e5e7eb; border-radius: 16px;
+              max-width: 400px; width: 100%;
             }
-            .print-card h1 {
-              font-size: 24px;
-              font-weight: 700;
-              margin-bottom: 8px;
-              color: #111827;
-            }
-            .print-card .subtitle {
-              font-size: 14px;
-              color: #6b7280;
-              margin-bottom: 24px;
-            }
-            .print-card img {
-              width: 280px;
-              height: 280px;
-              margin: 0 auto 24px;
-              display: block;
-            }
-            .print-card .scan-text {
-              font-size: 16px;
-              font-weight: 600;
-              color: #374151;
-            }
-            .print-card .url {
-              font-size: 12px;
-              color: #9ca3af;
-              margin-top: 8px;
-            }
-            @media print {
-              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            }
+            .print-card h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; color: #111827; }
+            .print-card .subtitle { font-size: 14px; color: #6b7280; margin-bottom: 24px; }
+            .print-card img { width: 280px; height: 280px; margin: 0 auto 24px; display: block; }
+            .print-card .scan-text { font-size: 16px; font-weight: 600; color: #374151; }
+            .print-card .url { font-size: 12px; color: #9ca3af; margin-top: 8px; }
+            .print-card .powered { font-size: 10px; color: #d1d5db; margin-top: 16px; }
+            @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
           </style>
         </head>
         <body>
@@ -189,10 +177,11 @@ export default function QRCodePanel() {
             <h1>${business?.name || 'Our Menu'}</h1>
             <p class="subtitle">${business?.category || 'Restaurant'}</p>
             <img src="${qrDataUrl}" alt="QR Code" />
-            <p class="scan-text">Scan to view our menu</p>
+            <p class="scan-text">Scan to view our digital catalog</p>
             <p class="url">${menuUrl}</p>
+            <p class="powered">Powered by BizFlip</p>
           </div>
-          <script>window.onload = function() { window.print(); window.close(); }</script>
+          <script>window.onload = function() { window.print(); window.close(); }<\/script>
         </body>
         </html>
       `);
@@ -252,8 +241,19 @@ export default function QRCodePanel() {
                 variant={isPublished ? 'default' : 'secondary'}
                 className={isPublished ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
               >
-                {isPublished ? 'Active' : 'Draft'}
+                {isPublished ? 'Published' : 'Draft'}
               </Badge>
+            </div>
+          </div>
+
+          {/* Public URL */}
+          <div className="w-full max-w-sm">
+            <div className="flex items-center gap-2 rounded-lg border bg-gray-50 px-3 py-2">
+              <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-sm text-muted-foreground truncate flex-1">{menuUrl}</span>
+              <Button variant="ghost" size="sm" onClick={handleCopyLink} className="h-7 px-2">
+                {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+              </Button>
             </div>
           </div>
 
@@ -262,6 +262,10 @@ export default function QRCodePanel() {
             <Button variant="outline" size="sm" onClick={handleDownloadPNG}>
               <Download className="mr-1.5 h-4 w-4" />
               PNG
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDownloadSVG}>
+              <ImageIcon className="mr-1.5 h-4 w-4" />
+              SVG
             </Button>
             <Button variant="outline" size="sm" onClick={handleCopyLink}>
               {copied ? (
@@ -286,8 +290,8 @@ export default function QRCodePanel() {
       {/* Business Info Card */}
       <Card className="w-full max-w-lg">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Business Information</CardTitle>
-          <CardDescription>Details for your QR code</CardDescription>
+          <CardTitle className="text-lg">QR Code Details</CardTitle>
+          <CardDescription>Information about your public QR code</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-start justify-between gap-4">
@@ -308,22 +312,17 @@ export default function QRCodePanel() {
             <span className="font-medium">{business?.category || 'Not set'}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Menu Status</span>
+            <span className="text-muted-foreground">QR Status</span>
             <Badge variant={isPublished ? 'default' : 'secondary'} className={isPublished ? 'bg-emerald-600 hover:bg-emerald-700' : ''}>
-              {isPublished ? 'Published - QR Active' : 'Draft - QR Not Active'}
+              {isPublished ? 'Active' : 'Not Active'}
             </Badge>
           </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Last Updated</span>
-            <span className="font-medium">
-              {business?.createdAt
-                ? new Date(business.createdAt).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })
-                : 'N/A'}
-            </span>
+          <Separator />
+          <div className="rounded-lg bg-blue-50 border border-blue-100 p-3">
+            <p className="text-xs text-blue-800">
+              Customers can scan this QR code to view your public digital experience. No account is required.
+              The QR code remains permanent even if you update your content.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -333,7 +332,7 @@ export default function QRCodePanel() {
         <div className="text-center">
           <h1>{business?.name || 'Our Menu'}</h1>
           <img src={qrDataUrl} alt="QR Code" />
-          <p>Scan to view our menu</p>
+          <p>Scan to view our digital catalog</p>
         </div>
       </div>
 
@@ -355,7 +354,7 @@ export default function QRCodePanel() {
             </div>
             <div className="text-center text-sm text-muted-foreground">
               <p className="font-medium">{business?.name}</p>
-              <p>Scan to view our menu</p>
+              <p>Scan to view our digital catalog</p>
             </div>
           </div>
           <div className="flex justify-end gap-2">

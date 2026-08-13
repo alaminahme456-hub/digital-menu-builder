@@ -15,6 +15,10 @@ import {
   Clock,
   Sparkles,
   Menu,
+  Globe,
+  ExternalLink,
+  Copy,
+  Share2,
   type LucideIcon,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -34,6 +38,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { useAuthStore, useAppStore } from '@/lib/store';
 import { AnalyticsSummary } from '@/lib/types';
+import { getPublicBusinessUrl } from '@/lib/auth';
+import { toast } from 'sonner';
 
 const chartConfig = {
   views: {
@@ -332,6 +338,77 @@ export default function Overview() {
           )}
         </StatCard>
       </div>
+
+      {/* Public Experience Card */}
+      {currentBusiness && (
+        <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-teal-50/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Globe className="size-5 text-emerald-600" />
+                <CardTitle className="text-lg text-emerald-900">Public Experience</CardTitle>
+              </div>
+              <Badge className={isPublished ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-100 text-amber-700'}>
+                {isPublished ? 'Published' : 'Unpublished'}
+              </Badge>
+            </div>
+            <CardDescription>Your public URL and QR code for customers</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Public URL */}
+            <div className="rounded-lg border border-emerald-200 bg-white/80 px-4 py-3">
+              <p className="text-xs text-slate-500 mb-1">Your Public URL</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-sm font-medium text-slate-900 truncate">
+                  {getPublicBusinessUrl(currentBusiness.slug)}
+                </code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 shrink-0"
+                  onClick={() => {
+                    navigator.clipboard.writeText(getPublicBusinessUrl(currentBusiness.slug));
+                    toast.success('Link copied!');
+                  }}
+                >
+                  <Copy className="size-3.5" />
+                </Button>
+              </div>
+            </div>
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={() => window.open(getPublicBusinessUrl(currentBusiness.slug), '_blank')}
+              >
+                <ExternalLink className="mr-1.5 size-3.5" />
+                Open Public Page
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => navigate('#/qr-code')}>
+                <QrCode className="mr-1.5 size-3.5" />
+                QR Code
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const url = getPublicBusinessUrl(currentBusiness.slug);
+                  if (navigator.share) {
+                    navigator.share({ title: currentBusiness.name, url });
+                  } else {
+                    navigator.clipboard.writeText(url);
+                    toast.success('Link copied!');
+                  }
+                }}
+              >
+                <Share2 className="mr-1.5 size-3.5" />
+                Share
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Views Chart + Quick Actions */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

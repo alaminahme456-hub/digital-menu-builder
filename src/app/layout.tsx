@@ -14,22 +14,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MenuQR - Digital Menu Builder",
+  title: "BizFlip - Digital Menu Builder",
   description: "Create beautiful QR code digital menus, track analytics, and delight customers with a seamless dining experience.",
-  keywords: ["MenuQR", "Digital Menu", "QR Code Menu", "Restaurant Menu", "Next.js", "TypeScript", "Tailwind CSS"],
-  authors: [{ name: "MenuQR" }],
+  keywords: ["BizFlip", "Digital Menu", "QR Code Menu", "Restaurant Menu", "Next.js", "TypeScript", "Tailwind CSS"],
+  authors: [{ name: "BizFlip" }],
   icons: {
     icon: "/favicon.ico",
   },
   openGraph: {
-    title: "MenuQR - Digital Menu Builder",
+    title: "BizFlip - Digital Menu Builder",
     description: "Create beautiful QR code digital menus for your restaurant",
-    siteName: "MenuQR",
+    siteName: "BizFlip",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MenuQR - Digital Menu Builder",
+    title: "BizFlip - Digital Menu Builder",
     description: "Create beautiful QR code digital menus for your restaurant",
   },
 };

@@ -44,6 +44,7 @@ import {
 import { useAuthStore, useAppStore } from '@/lib/store';
 import type { Business } from '@/lib/types';
 import { BUSINESS_CATEGORIES } from '@/lib/types';
+import { getAppUrl } from '@/lib/auth';
 import { toast } from 'sonner';
 
 interface SettingsPanelProps {
@@ -434,6 +435,26 @@ export default function SettingsPanel({ initialTab = 'business' }: SettingsPanel
                     }
                     placeholder="Enter business name"
                   />
+                </div>
+
+                {/* Public URL / Slug */}
+                <div className="space-y-2">
+                  <Label htmlFor="biz-slug">Public URL</Label>
+                  <div className="flex items-center gap-0">
+                    <div className="flex items-center bg-muted text-muted-foreground text-sm px-3 py-2 rounded-l-md border border-r-0 border-input">
+                      {getAppUrl()}/p/
+                    </div>
+                    <Input
+                      id="biz-slug"
+                      value={currentBusiness?.slug || ''}
+                      disabled
+                      className="rounded-l-none"
+                      placeholder="auto-generated-slug"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Slug is auto-generated from your business name. Contact support to change it.
+                  </p>
                 </div>
 
                 {/* Category */}

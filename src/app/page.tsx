@@ -125,9 +125,13 @@ export default function Home() {
 
   // Determine which view to show
   const renderView = () => {
-    // Public menu routes (always accessible)
+    // Public menu routes — support both /menu/{slug} (legacy) and /p/{slug} (new)
     if (currentRoute.startsWith('/menu/')) {
       const slug = currentRoute.replace('/menu/', '');
+      return <PublicMenuView slug={slug} />;
+    }
+    if (currentRoute.startsWith('/p/')) {
+      const slug = currentRoute.replace('/p/', '');
       return <PublicMenuView slug={slug} />;
     }
 
@@ -155,7 +159,7 @@ export default function Home() {
         <DashboardLayout activePage="">
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-slate-800 mb-2">Welcome to MenuQR!</h2>
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">Welcome to BizFlip!</h2>
               <p className="text-slate-500">Create your first business to get started.</p>
             </div>
             <button
