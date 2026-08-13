@@ -129,8 +129,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Insert upload record error:', error);
-      return NextResponse.json({ error: 'Failed to save upload record' }, { status: 500 });
+      console.error('Insert upload record error:', JSON.stringify(error, null, 2));
+      return NextResponse.json({ error: `Failed to save upload record: ${error.message}` }, { status: 500 });
     }
 
     return NextResponse.json({ upload: toCamel(data) }, { status: 201 });
