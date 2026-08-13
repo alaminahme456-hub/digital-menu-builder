@@ -23,8 +23,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatPrice } from '@/lib/auth';
-import { FlipbookMenu } from '@/components/flipbook';
-import type { Business, MenuCategory, MenuItem } from '@/lib/types';
+import { FlipbookMenu, UploadFlipbook } from '@/components/flipbook';
+import type { Business, MenuCategory, MenuItem, MenuUpload } from '@/lib/types';
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -215,9 +215,32 @@ export default function PublicMenuClient({ business: biz, categories: cats, item
   }
 
   /* ------------------------------------------------------------------ */
-  /*  FLIPBOOK MODE                                                       */
+  /*  PUBLISHED UPLOAD DETECTION                                         */
+  /* ------------------------------------------------------------------ */
+  const publishedUploads = uploads.filter((u: Record<string, unknown>) => u.published === true);
+  const publishedUpload = publishedUploads.length > 0 ? publishedUploads[0] as unknown as MenuUpload : null;
+
+  const hasPublishedUpload = !!publishedUpload;
+  const hasManualItems = items.length > 0;
+
+  /* ------------------------------------------------------------------ */
+  /*  FLIPBOOK MODE — Published Upload Priority                           */
   /* ------------------------------------------------------------------ */
   if (viewMode === 'flipbook' && business.flipbookEnabled) {
+    // If there's a published upload, use the upload flipbook
+    if (hasPublishedUpload && publishedUpload) {
+      return (
+        <div className="min-h-screen bg-gray-100" style={{ fontFamily }}>
+          <UploadFlipbook
+            business={business}
+            publishedUpload={publishedUpload}
+            isPreview={false}
+          />
+        </div>
+      );
+    }
+
+    // Otherwise, use the standard manual menu flipbook
     return (
       <div className="min-h-screen bg-gray-100" style={{ fontFamily }}>
         {/* View mode switcher */}
@@ -272,6 +295,57 @@ export default function PublicMenuClient({ business: biz, categories: cats, item
   /*  LIST MODE                                                          */
   /* ------------------------------------------------------------------ */
   const headerTextColor = getHeaderTextColor(templateName);
+
+  // If there's a published upload, show it in a simple viewer (non-flipbook list mode)
+  if (hasPublishedUpload && publishedUpload && !business.flipbookEnabled) {
+    const isImage = publishedUpload.fileType?.startsWith('image/');
+    return (
+      <div className={getTemplateClasses(templateName, primaryColor)} style={{ fontFamily }}>
+        {/* Header */}
+        <div className={`${getHeaderBg(templateName, primaryColor)} ${headerTextColor} px-6 pt-8 pb-6`}>
+          <div className="max-w-2xl mx-auto text-center">
+            {business.logo ? (
+              <img src={business.logo} alt={business.name} className="w-20 h-20 rounded-2xl object-cover mx-auto mb-4 shadow-lg ring-4 ring-white/20" />
+            ) : (
+              <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold shadow-lg ring-4 ring-white/20"
+                style={{ backgroundColor: `${primaryColor}30`, color: headerTextColor === 'text-white' ? '#fff' : primaryColor }}>
+                {business.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <h1 className="text-2xl font-bold mb-1">{business.name}</h1>
+            {business.description && (
+              <p className={`text-sm opacity-80 line-clamp-2 max-w-md mx-auto ${headerTextColor === 'text-white' ? 'text-white/70' : 'text-gray-500'}`}>
+                {business.description}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Uploaded Menu Content */}
+        <div className="max-w-2xl mx-auto p-4">
+          <h2 className="text-lg font-bold mb-3 text-gray-900">Our Menu</h2>
+          {isImage ? (
+            <img src={publishedUpload.url} alt={publishedUpload.fileName} className="w-full rounded-xl shadow-md" />
+          ) : (
+            <div className="rounded-xl border border-gray-200 p-8 text-center">
+              <p className="text-gray-500 mb-3">{publishedUpload.fileName}</p>
+              <a href={publishedUpload.url} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium"
+                style={{ backgroundColor: primaryColor }}
+              >
+                View PDF Menu
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center py-6 text-xs text-gray-400 border-t">
+          Powered by <span className="font-semibold">BizFlip</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={getTemplateClasses(templateName, primaryColor)} style={{ fontFamily }}>

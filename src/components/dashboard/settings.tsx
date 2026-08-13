@@ -134,6 +134,7 @@ export default function SettingsPanel({ initialTab = 'business' }: SettingsPanel
             status: b.status || 'draft',
             whatsappOrder: b.whatsappOrder ?? false,
             seoEnabled: b.seoEnabled ?? false,
+            welcomeMessage: (b as Record<string, unknown>).welcomeMessage as string || '',
           });
           // Load flipbook settings
           setFlipbookForm({
@@ -533,7 +534,7 @@ export default function SettingsPanel({ initialTab = 'business' }: SettingsPanel
 
                 {/* Description */}
                 <div className="space-y-2">
-                  <Label htmlFor="biz-desc">Description</Label>
+                  <Label htmlFor="biz-desc">Description / Tagline</Label>
                   <Textarea
                     id="biz-desc"
                     value={bizForm.description}
@@ -543,6 +544,23 @@ export default function SettingsPanel({ initialTab = 'business' }: SettingsPanel
                     placeholder="Brief description of your business"
                     rows={3}
                   />
+                </div>
+
+                {/* Welcome Message */}
+                <div className="space-y-2">
+                  <Label htmlFor="biz-welcome">Welcome Message</Label>
+                  <Textarea
+                    id="biz-welcome"
+                    value={(bizForm as Record<string, unknown>).welcomeMessage as string || ''}
+                    onChange={(e) =>
+                      setBizForm((p) => ({ ...p, welcomeMessage: e.target.value }))
+                    }
+                    placeholder="Welcome message shown to customers when they open your menu. e.g. Thank you for visiting us. Explore our menu and discover our products."
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This message appears on the Welcome page of your digital book experience.
+                  </p>
                 </div>
               </>
             )}

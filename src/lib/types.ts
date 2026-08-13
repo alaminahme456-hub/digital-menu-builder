@@ -65,6 +65,7 @@ export interface Business {
   showQuantitySelector: boolean;
   showOrderButton: boolean;
   whatsappGreeting: string;
+  welcomeMessage: string;
   ownerId: string;
   createdAt: string;
   _count?: {

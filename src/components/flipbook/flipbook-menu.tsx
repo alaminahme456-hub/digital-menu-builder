@@ -305,9 +305,20 @@ export default function FlipbookMenu({
     <div className="flex flex-col items-center justify-center min-h-full p-8 text-center" style={{ fontFamily }}>
       <div className="w-12 h-1 rounded-full mb-6" style={{ backgroundColor: primaryColor }} />
       <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">Welcome to {business.name}</h2>
-      {business.description && (
-        <p className="text-gray-600 text-base leading-relaxed max-w-md">{business.description}</p>
-      )}
+      {(business as Record<string, unknown>).welcomeMessage
+        ? (
+          <p className="text-gray-600 text-base leading-relaxed max-w-md">{(business as Record<string, unknown>).welcomeMessage as string}</p>
+        )
+        : business.description
+          ? (
+            <p className="text-gray-600 text-base leading-relaxed max-w-md">{business.description}</p>
+          )
+          : (
+            <p className="text-gray-600 text-base leading-relaxed max-w-md">
+              Thank you for visiting us. Explore our menu and discover our offerings.
+            </p>
+          )
+      }
       {business.openingHours && (
         <div className="mt-6 px-4 py-2 bg-gray-50 rounded-lg text-sm text-gray-500">
           Opening Hours: {business.openingHours}
@@ -412,7 +423,7 @@ export default function FlipbookMenu({
       )}
 
       <div className="mt-8 text-xs text-gray-400">
-        Powered by MenuQR
+        Powered by <span className="font-semibold">BizFlip</span>
       </div>
     </div>
   );
