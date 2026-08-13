@@ -22,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAppStore } from '@/lib/store';
+import { SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
@@ -173,6 +174,7 @@ const PRICING_TIERS = [
 
 export default function LandingPage() {
   const navigate = useAppStore((s) => s.navigate);
+  const { isSignedIn, isLoaded } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const scrollToSection = (href: string) => {
@@ -216,20 +218,37 @@ export default function LandingPage() {
 
           {/* Desktop auth buttons */}
           <div className="hidden items-center gap-3 md:flex">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/login')}
-              className="text-gray-600 hover:text-emerald-600"
-            >
-              Sign In
-            </Button>
-            <Button
-              onClick={() => navigate('/register')}
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
-            >
-              Get Started
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+            {isSignedIn ? (
+              <>
+                <Button
+                  onClick={() => navigate('/dashboard')}
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                >
+                  Dashboard
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <UserButton afterSignOutUrl="/" />
+              </>
+            ) : (
+              <>
+                <SignInButton mode="modal">
+                  <Button
+                    variant="ghost"
+                    className="text-gray-600 hover:text-emerald-600"
+                  >
+                    Sign In
+                  </Button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <Button
+                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  >
+                    Get Started
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </SignUpButton>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -256,20 +275,39 @@ export default function LandingPage() {
                 </button>
               ))}
               <hr className="border-gray-100" />
-              <Button
-                variant="ghost"
-                onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
-                className="justify-start text-gray-600"
-              >
-                Sign In
-              </Button>
-              <Button
-                onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
-                className="bg-emerald-600 text-white hover:bg-emerald-700"
-              >
-                Get Started
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+              {isSignedIn ? (
+                <>
+                  <Button
+                    onClick={() => { setMobileMenuOpen(false); navigate('/dashboard'); }}
+                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  >
+                    Dashboard
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                  <div className="flex justify-start pt-2">
+                    <UserButton afterSignOutUrl="/" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <SignInButton mode="modal">
+                    <Button
+                      variant="ghost"
+                      className="justify-start text-gray-600"
+                    >
+                      Sign In
+                    </Button>
+                  </SignInButton>
+                  <SignUpButton mode="modal">
+                    <Button
+                      className="bg-emerald-600 text-white hover:bg-emerald-700"
+                    >
+                      Get Started
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </SignUpButton>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -298,22 +336,37 @@ export default function LandingPage() {
                 Scan your existing menu with AI, customize with beautiful templates, and share instantly.
               </p>
               <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
-                <Button
-                  size="lg"
-                  onClick={() => navigate('/register')}
-                  className="h-12 bg-emerald-600 px-8 text-base font-semibold text-white hover:bg-emerald-700"
-                >
-                  Sign Up Free
-                  <ArrowRight className="h-5 w-5" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => navigate('/login')}
-                  className="h-12 px-8 text-base font-semibold border-gray-300 hover:border-emerald-300 hover:text-emerald-600"
-                >
-                  See Demo
-                </Button>
+                {isSignedIn ? (
+                  <Button
+                    size="lg"
+                    onClick={() => navigate('/dashboard')}
+                    className="h-12 bg-emerald-600 px-8 text-base font-semibold text-white hover:bg-emerald-700"
+                  >
+                    Go to Dashboard
+                    <ArrowRight className="h-5 w-5" />
+                  </Button>
+                ) : (
+                  <>
+                    <SignUpButton mode="modal">
+                      <Button
+                        size="lg"
+                        className="h-12 bg-emerald-600 px-8 text-base font-semibold text-white hover:bg-emerald-700"
+                      >
+                        Sign Up Free
+                        <ArrowRight className="h-5 w-5" />
+                      </Button>
+                    </SignUpButton>
+                    <SignInButton mode="modal">
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="h-12 px-8 text-base font-semibold border-gray-300 hover:border-emerald-300 hover:text-emerald-600"
+                      >
+                        See Demo
+                      </Button>
+                    </SignInButton>
+                  </>
+                )}
               </div>
               <div className="mt-8 flex items-center justify-center gap-6 text-sm text-gray-500 lg:justify-start">
                 <span className="flex items-center gap-1.5">
@@ -571,18 +624,19 @@ export default function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <Button
-                    className={
-                      tier.highlighted
-                        ? 'mt-8 w-full bg-emerald-600 text-white hover:bg-emerald-700'
-                        : 'mt-8 w-full'
-                    }
-                    variant={tier.highlighted ? 'default' : 'outline'}
-                    onClick={() => navigate('/register')}
-                  >
-                    {tier.cta}
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
+                  <SignUpButton mode="modal">
+                    <Button
+                      className={
+                        tier.highlighted
+                          ? 'mt-8 w-full bg-emerald-600 text-white hover:bg-emerald-700'
+                          : 'mt-8 w-full'
+                      }
+                      variant={tier.highlighted ? 'default' : 'outline'}
+                    >
+                      {tier.cta}
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </SignUpButton>
                 </CardContent>
               </Card>
             ))}
@@ -602,14 +656,26 @@ export default function LandingPage() {
             Start your free account today and see the difference.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button
-              size="lg"
-              onClick={() => navigate('/register')}
-              className="h-12 bg-white px-8 text-base font-semibold text-emerald-700 hover:bg-emerald-50"
-            >
-              Start Building for Free
-              <ArrowRight className="h-5 w-5" />
-            </Button>
+            {isSignedIn ? (
+              <Button
+                size="lg"
+                onClick={() => navigate('/dashboard')}
+                className="h-12 bg-white px-8 text-base font-semibold text-emerald-700 hover:bg-emerald-50"
+              >
+                Go to Dashboard
+                <ArrowRight className="h-5 w-5" />
+              </Button>
+            ) : (
+              <SignUpButton mode="modal">
+                <Button
+                  size="lg"
+                  className="h-12 bg-white px-8 text-base font-semibold text-emerald-700 hover:bg-emerald-50"
+                >
+                  Start Building for Free
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              </SignUpButton>
+            )}
           </div>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-emerald-200">
             <span className="flex items-center gap-1.5">
