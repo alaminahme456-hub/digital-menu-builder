@@ -10,10 +10,21 @@ async function authenticate(request: NextRequest) {
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
+    
+    // Public access by slug (no auth required)
+    const businessBySlug = await db.business.findUnique({
+      where: { slug: id },
+      include: {
+        _count: { select: { categories: true, menuItems: true, analytics: true } },
+      },
+    });
+    if (businessBySlug) return NextResponse.json({ business: businessBySlug });
+
+    // Authenticated access by ID
     const payload = await authenticate(request);
     if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { id } = await params;
     const business = await db.business.findFirst({
       where: { id, ownerId: payload.userId },
       include: {

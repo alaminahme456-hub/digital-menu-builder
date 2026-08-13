@@ -46,7 +46,11 @@ import type { Business } from '@/lib/types';
 import { BUSINESS_CATEGORIES } from '@/lib/types';
 import { toast } from 'sonner';
 
-export default function SettingsPanel() {
+interface SettingsPanelProps {
+  initialTab?: string;
+}
+
+export default function SettingsPanel({ initialTab = 'business' }: SettingsPanelProps) {
   const { token, user } = useAuthStore();
   const { currentBusiness, setCurrentBusiness } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +86,29 @@ export default function SettingsPanel() {
   // Upload state
   const [uploading, setUploading] = useState(false);
 
+  // Flipbook settings state
+  const [flipbookForm, setFlipbookForm] = useState({
+    flipbookEnabled: true,
+    flipbookAnimEnabled: true,
+    flipbookAnimSpeed: 'medium' as string,
+    flipbookPageNumbers: true,
+    flipbookSwipeNav: true,
+    flipbookSoundEffects: false,
+    flipbookFullscreen: true,
+    flipbookInteractions: true,
+  });
+  const [flipbookSaving, setFlipbookSaving] = useState(false);
+
+  // Ordering settings state
+  const [orderingForm, setOrderingForm] = useState({
+    whatsappOrder: true,
+    basketEnabled: true,
+    showQuantitySelector: true,
+    showOrderButton: true,
+    whatsappGreeting: 'Hello, I would like to place an order:',
+  });
+  const [orderingSaving, setOrderingSaving] = useState(false);
+
   // Fetch business data
   useEffect(() => {
     if (!currentBusiness?.id || !token) return;
@@ -106,6 +133,25 @@ export default function SettingsPanel() {
             status: b.status || 'draft',
             whatsappOrder: b.whatsappOrder ?? false,
             seoEnabled: b.seoEnabled ?? false,
+          });
+          // Load flipbook settings
+          setFlipbookForm({
+            flipbookEnabled: b.flipbookEnabled ?? true,
+            flipbookAnimEnabled: b.flipbookAnimEnabled ?? true,
+            flipbookAnimSpeed: b.flipbookAnimSpeed || 'medium',
+            flipbookPageNumbers: b.flipbookPageNumbers ?? true,
+            flipbookSwipeNav: b.flipbookSwipeNav ?? true,
+            flipbookSoundEffects: b.flipbookSoundEffects ?? false,
+            flipbookFullscreen: b.flipbookFullscreen ?? true,
+            flipbookInteractions: b.flipbookInteractions ?? true,
+          });
+          // Load ordering settings
+          setOrderingForm({
+            whatsappOrder: b.whatsappOrder ?? true,
+            basketEnabled: b.basketEnabled ?? true,
+            showQuantitySelector: b.showQuantitySelector ?? true,
+            showOrderButton: b.showOrderButton ?? true,
+            whatsappGreeting: b.whatsappGreeting || 'Hello, I would like to place an order:',
           });
         }
       } catch {
@@ -301,9 +347,11 @@ export default function SettingsPanel() {
       bizForm.seoEnabled !== (bizInitial.seoEnabled ?? false));
 
   return (
-    <Tabs defaultValue="business" className="space-y-6">
+    <Tabs defaultValue={initialTab} className="space-y-6">
       <TabsList>
         <TabsTrigger value="business">Business Settings</TabsTrigger>
+        <TabsTrigger value="flipbook">Flipbook</TabsTrigger>
+        <TabsTrigger value="ordering">Ordering</TabsTrigger>
         <TabsTrigger value="account">Account Settings</TabsTrigger>
       </TabsList>
 
@@ -760,6 +808,258 @@ export default function SettingsPanel() {
             </div>
           </CardContent>
         </Card>
+      </TabsContent>
+
+      {/* Flipbook Settings Tab */}
+      <TabsContent value="flipbook" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Flipbook Settings</CardTitle>
+            <CardDescription>
+              Configure the interactive flipbook menu experience for your customers.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Enable flipbook */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">Enable Flipbook</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Show your menu as an interactive digital book</p>
+              </div>
+              <Switch
+                checked={flipbookForm.flipbookEnabled}
+                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookEnabled: v }))}
+              />
+            </div>
+            <Separator />
+            {/* Enable animation */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">Page Animation</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Smooth page-turn animations when navigating</p>
+              </div>
+              <Switch
+                checked={flipbookForm.flipbookAnimEnabled}
+                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookAnimEnabled: v }))}
+                disabled={!flipbookForm.flipbookEnabled}
+              />
+            </div>
+            {/* Animation speed */}
+            {flipbookForm.flipbookEnabled && flipbookForm.flipbookAnimEnabled && (
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Animation Speed</Label>
+                <Select
+                  value={flipbookForm.flipbookAnimSpeed}
+                  onValueChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookAnimSpeed: v }))}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="slow">Slow</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="fast">Fast</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <Separator />
+            {/* Page numbers */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">Show Page Numbers</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Display current page / total pages</p>
+              </div>
+              <Switch
+                checked={flipbookForm.flipbookPageNumbers}
+                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookPageNumbers: v }))}
+                disabled={!flipbookForm.flipbookEnabled}
+              />
+            </div>
+            {/* Swipe navigation */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">Swipe Navigation</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Allow customers to swipe left/right to turn pages</p>
+              </div>
+              <Switch
+                checked={flipbookForm.flipbookSwipeNav}
+                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookSwipeNav: v }))}
+                disabled={!flipbookForm.flipbookEnabled}
+              />
+            </div>
+            {/* Sound effects */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">Sound Effects</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Play page-turn sounds on navigation</p>
+              </div>
+              <Switch
+                checked={flipbookForm.flipbookSoundEffects}
+                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookSoundEffects: v }))}
+                disabled={!flipbookForm.flipbookEnabled}
+              />
+            </div>
+            <Separator />
+            {/* Fullscreen */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">Fullscreen Button</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Allow customers to view menu in fullscreen</p>
+              </div>
+              <Switch
+                checked={flipbookForm.flipbookFullscreen}
+                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookFullscreen: v }))}
+                disabled={!flipbookForm.flipbookEnabled}
+              />
+            </div>
+            {/* Product interactions */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">Product Interactions</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Allow customers to tap items for details</p>
+              </div>
+              <Switch
+                checked={flipbookForm.flipbookInteractions}
+                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookInteractions: v }))}
+                disabled={!flipbookForm.flipbookEnabled}
+              />
+            </div>
+          </CardContent>
+        </Card>
+        <div className="flex justify-end">
+          <Button
+            onClick={async () => {
+              if (!currentBusiness?.id || !token) return;
+              setFlipbookSaving(true);
+              try {
+                const res = await fetch(`/api/businesses/${currentBusiness.id}`, {
+                  method: 'PUT',
+                  headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify(flipbookForm),
+                });
+                if (res.ok) toast.success('Flipbook settings saved');
+                else toast.error('Failed to save');
+              } catch { toast.error('Failed to save'); }
+              finally { setFlipbookSaving(false); }
+            }}
+            disabled={flipbookSaving}
+          >
+            {flipbookSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+            Save Flipbook Settings
+          </Button>
+        </div>
+      </TabsContent>
+
+      {/* Ordering Settings Tab */}
+      <TabsContent value="ordering" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Ordering Settings</CardTitle>
+            <CardDescription>
+              Configure WhatsApp ordering and basket options for your customers.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* WhatsApp ordering */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">Enable WhatsApp Ordering</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Let customers order directly via WhatsApp</p>
+              </div>
+              <Switch
+                checked={orderingForm.whatsappOrder}
+                onCheckedChange={(v) => {
+                  setOrderingForm((p) => ({ ...p, whatsappOrder: v }));
+                  setBizForm((p) => ({ ...p, whatsappOrder: v }));
+                }}
+              />
+            </div>
+            {/* WhatsApp number */}
+            <div className="space-y-2">
+              <Label htmlFor="order-whatsapp">WhatsApp Number</Label>
+              <p className="text-xs text-muted-foreground">Customer orders will be sent to this number</p>
+              <Input
+                id="order-whatsapp"
+                value={orderingForm.whatsappGreeting}
+                onChange={(e) => setBizForm((p) => ({ ...p, whatsapp: e.target.value }))}
+                placeholder={bizForm.whatsapp || 'e.g. +2341234567890'}
+              />
+            </div>
+            <Separator />
+            {/* Basket */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">Enable Basket</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Allow customers to add multiple items before ordering</p>
+              </div>
+              <Switch
+                checked={orderingForm.basketEnabled}
+                onCheckedChange={(v) => setOrderingForm((p) => ({ ...p, basketEnabled: v }))}
+                disabled={!orderingForm.whatsappOrder}
+              />
+            </div>
+            {/* Quantity selector */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">Show Quantity Selector</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Display quantity +/- buttons on item details</p>
+              </div>
+              <Switch
+                checked={orderingForm.showQuantitySelector}
+                onCheckedChange={(v) => setOrderingForm((p) => ({ ...p, showQuantitySelector: v }))}
+                disabled={!orderingForm.whatsappOrder}
+              />
+            </div>
+            {/* Order button */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">Show Order Button</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Display &ldquo;Order on WhatsApp&rdquo; button on items</p>
+              </div>
+              <Switch
+                checked={orderingForm.showOrderButton}
+                onCheckedChange={(v) => setOrderingForm((p) => ({ ...p, showOrderButton: v }))}
+                disabled={!orderingForm.whatsappOrder}
+              />
+            </div>
+            <Separator />
+            {/* Custom greeting */}
+            <div className="space-y-2">
+              <Label htmlFor="wa-greeting">Custom WhatsApp Greeting</Label>
+              <p className="text-xs text-muted-foreground">This message will appear at the top of every order</p>
+              <Textarea
+                id="wa-greeting"
+                value={orderingForm.whatsappGreeting}
+                onChange={(e) => setOrderingForm((p) => ({ ...p, whatsappGreeting: e.target.value }))}
+                placeholder="Hello, I would like to place an order:"
+                rows={2}
+              />
+            </div>
+          </CardContent>
+        </Card>
+        <div className="flex justify-end">
+          <Button
+            onClick={async () => {
+              if (!currentBusiness?.id || !token) return;
+              setOrderingSaving(true);
+              try {
+                const res = await fetch(`/api/businesses/${currentBusiness.id}`, {
+                  method: 'PUT',
+                  headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify(orderingForm),
+                });
+                if (res.ok) toast.success('Ordering settings saved');
+                else toast.error('Failed to save');
+              } catch { toast.error('Failed to save'); }
+              finally { setOrderingSaving(false); }
+            }}
+            disabled={orderingSaving}
+          >
+            {orderingSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+            Save Ordering Settings
+          </Button>
+        </div>
       </TabsContent>
     </Tabs>
   );

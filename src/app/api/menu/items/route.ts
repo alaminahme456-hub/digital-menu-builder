@@ -12,9 +12,18 @@ export async function GET(request: NextRequest) {
   try {
     const businessId = request.nextUrl.searchParams.get('businessId');
     const categoryId = request.nextUrl.searchParams.get('categoryId');
+    const slug = request.nextUrl.searchParams.get('slug');
 
     const where: Record<string, unknown> = {};
-    if (businessId) where.businessId = businessId;
+    
+    if (slug) {
+      // Public access by business slug
+      const biz = await db.business.findUnique({ where: { slug }, select: { id: true } });
+      if (biz) where.businessId = biz.id;
+    } else if (businessId) {
+      where.businessId = businessId;
+    }
+    
     if (categoryId) where.categoryId = categoryId;
 
     const items = await db.menuItem.findMany({

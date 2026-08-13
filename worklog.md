@@ -1,35 +1,27 @@
 ---
-Task ID: 1
+Task ID: 2
 Agent: Main Agent
-Task: Build Production-Ready Digital Menu Builder Platform
+Task: Add Interactive Digital Flipbook Menu experience
 
 Work Log:
-- Designed complete Prisma database schema with 10 models (User, Session, Business, MenuCategory, MenuItem, MenuUpload, Analytics, AIScanLog, Template)
-- Built core infrastructure: types, auth utilities (JWT/bcrypt), Zustand stores (auth + app), hash-based SPA router
-- Created 15+ API routes for auth, businesses, menu management, uploads, AI scanning, analytics, admin
-- Built landing page with 7 sections (hero, features, how it works, templates, pricing, CTA, footer)
-- Built auth pages (login, register) with split layouts, form validation, toast notifications
-- Built dashboard layout with collapsible sidebar, business switcher, top bar with publish toggle
-- Built dashboard overview with stats cards, Recharts area chart, quick actions, getting started guide
-- Built full menu manager with categories sidebar, items grid/list, add/edit dialog, image upload, reorder, availability toggle
-- Built upload menu with drag-and-drop, file preview, publish workflow
-- Built AI scanner with step-based UI (upload, scanning, review, save)
-- Built templates gallery with 10 CSS-based previews, customization panel (colors, fonts)
-- Built QR code generator with client-side rendering, download, copy, share
-- Built preview modes (mobile with iPhone frame, desktop with browser chrome, fullscreen)
-- Built analytics dashboard with stats, area chart, date range filter
-- Built settings (business + account) with tabbed interface
-- Built admin panel with platform stats, user/business management
-- Built public customer menu (mobile-first, search, category nav, WhatsApp ordering, 10 templates)
-- Fixed SSR issue with window reference in Zustand store
-- Fixed missing slug in business creation API
-- Fixed menu manager category re-fetch after creation
-- Browser-verified: landing page, login, register, business creation, dashboard, menu manager, templates, QR code, public menu
+- Updated Prisma schema: Added 11 new fields to Business model (flipbookEnabled, flipbookAnimEnabled, flipbookAnimSpeed, flipbookPageNumbers, flipbookSwipeNav, flipbookSoundEffects, flipbookFullscreen, flipbookInteractions, basketEnabled, showQuantitySelector, showOrderButton, whatsappGreeting)
+- Pushed schema to SQLite database successfully
+- Updated types.ts: Added FlipbookSettings, OrderingSettings interfaces and DEFAULT_FLIPBOOK_SETTINGS, DEFAULT_ORDERING_SETTINGS constants
+- Built useSwipeGesture hook with touch/swipe detection, useReducedMotion, useCanAnimate accessibility utilities
+- Built FlipbookMenu component: cover page, welcome page, category pages, contact/ordering page, page turn animations (3D perspective CSS), keyboard navigation, tap zones (left=prev, right=next), fullscreen mode
+- Built ProductDetailModal: bottom-sheet on mobile, modal with item image, description, price, quantity selector (+/-), Add to Basket, Order on WhatsApp buttons, unavailable state
+- Built OrderBasket: floating cart button with item count + total, slide-up drawer, per-item quantity controls, clear all, WhatsApp order button with pre-filled message
+- Rewrote public-menu-view.tsx: flipbook mode (default when enabled) + list mode fallback, view mode switcher, public API access by slug
+- Updated API routes: /api/businesses/[id] supports public slug access, /api/menu/items supports ?slug= param
+- Updated dashboard preview.tsx: Flipbook/List toggle in preview modes (mobile/desktop/fullscreen)
+- Added Flipbook + Ordering tabs to dashboard settings: 8 flipbook toggles (enable, animation, speed, page numbers, swipe, sound, fullscreen, interactions), 5 ordering settings (WhatsApp toggle, basket, quantity selector, order button, custom greeting)
+- Added CSS animations to globals.css: page-flip-open, page-flip-next, page-flip-prev with 3D perspective, slide-up for basket drawer, reduced-motion fallback, no-scrollbar utility
+- Fixed lint issues: reordered callback declarations, fixed quote mismatch in template literal
+- Build passes cleanly, zero lint errors
 
 Stage Summary:
-- Complete SaaS platform built as Next.js 16 SPA on single / route with hash routing
-- 40+ files created across components, API routes, and infrastructure
-- All lint checks pass with zero errors
-- Browser-verified end-to-end: registration → business creation → menu management → public menu
-- Public menu works beautifully on mobile (375px) with search, category nav, WhatsApp ordering
-- 10 design templates with live CSS previews and customization
+- 7 new files created in /src/components/flipbook/
+- 5 existing files updated (schema, types, public-menu-view, preview, settings)
+- 2 API routes updated for public slug access
+- Global CSS animations added for flipbook page turns
+- Complete interactive digital flipbook menu with cover, page navigation, product details, WhatsApp ordering, multi-item basket, accessibility fallbacks

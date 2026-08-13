@@ -52,6 +52,20 @@ model Business {
   status        String   @default("draft") // "draft" | "published" | "unpublished"
   whatsappOrder Boolean  @default(true)
   seoEnabled    Boolean  @default(true)
+  // Flipbook settings (stored as JSON string)
+  flipbookEnabled      Boolean @default(true)
+  flipbookAnimEnabled  Boolean @default(true)
+  flipbookAnimSpeed    String  @default("medium") // "slow" | "medium" | "fast"
+  flipbookPageNumbers  Boolean @default(true)
+  flipbookSwipeNav     Boolean @default(true)
+  flipbookSoundEffects Boolean @default(false)
+  flipbookFullscreen   Boolean @default(true)
+  flipbookInteractions Boolean @default(true)
+  // Ordering settings
+  basketEnabled        Boolean @default(true)
+  showQuantitySelector Boolean @default(true)
+  showOrderButton      Boolean @default(true)
+  whatsappGreeting     String  @default("Hello, I would like to place an order:")
   ownerId       String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

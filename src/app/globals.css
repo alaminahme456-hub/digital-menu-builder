@@ -120,3 +120,120 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  Flipbook Animations                                                */
+/* ------------------------------------------------------------------ */
+
+/* Cover opening animation */
+@keyframes page-flip-open {
+  0% {
+    transform: perspective(1200px) rotateY(0deg);
+    transform-origin: left center;
+  }
+  100% {
+    transform: perspective(1200px) rotateY(-180deg);
+    transform-origin: left center;
+    opacity: 0;
+  }
+}
+
+.animate-page-flip-open {
+  animation: page-flip-open 0.7s ease-in-out forwards;
+}
+
+/* Page flip next */
+@keyframes page-flip-next {
+  0% {
+    transform: perspective(1200px) rotateY(0deg);
+    transform-origin: left center;
+  }
+  40% {
+    transform: perspective(1200px) rotateY(-90deg);
+    transform-origin: left center;
+  }
+  60% {
+    transform: perspective(1200px) rotateY(-90deg);
+    transform-origin: left center;
+    opacity: 0;
+  }
+  61% {
+    transform: perspective(1200px) rotateY(90deg);
+    transform-origin: right center;
+    opacity: 0;
+  }
+  100% {
+    transform: perspective(1200px) rotateY(0deg);
+    transform-origin: right center;
+  }
+}
+
+.animate-page-flip-next {
+  animation: page-flip-next var(--anim-duration, 0.5s) ease-in-out;
+}
+
+/* Page flip previous */
+@keyframes page-flip-prev {
+  0% {
+    transform: perspective(1200px) rotateY(0deg);
+    transform-origin: right center;
+  }
+  40% {
+    transform: perspective(1200px) rotateY(90deg);
+    transform-origin: right center;
+  }
+  60% {
+    transform: perspective(1200px) rotateY(90deg);
+    transform-origin: right center;
+    opacity: 0;
+  }
+  61% {
+    transform: perspective(1200px) rotateY(-90deg);
+    transform-origin: left center;
+    opacity: 0;
+  }
+  100% {
+    transform: perspective(1200px) rotateY(0deg);
+    transform-origin: left center;
+  }
+}
+
+.animate-page-flip-prev {
+  animation: page-flip-prev var(--anim-duration, 0.5s) ease-in-out;
+}
+
+/* Slide-up animation for basket drawer */
+@keyframes slide-up {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Hide scrollbar but allow scrolling */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Reduced motion: disable all custom animations */
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-flip-open,
+  .animate-page-flip-next,
+  .animate-page-flip-prev,
+  .animate-slide-up {
+    animation: none !important;
+    transform: none !important;
+  }
+}

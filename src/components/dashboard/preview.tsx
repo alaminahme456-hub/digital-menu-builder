@@ -9,6 +9,8 @@ import {
   ImageOff,
   Clock,
   MessageCircle,
+  BookOpen,
+  List,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -17,13 +19,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore, useAppStore } from '@/lib/store';
 import type { Business, MenuCategory, MenuItem } from '@/lib/types';
 import { formatPrice } from '@/lib/auth';
+import { FlipbookMenu } from '@/components/flipbook';
 
 type PreviewMode = 'mobile' | 'desktop' | 'fullscreen';
+type PreviewStyle = 'flipbook' | 'list';
 
 export default function PreviewPanel() {
   const { token } = useAuthStore();
   const { currentBusiness, previewMode, setPreviewMode } = useAppStore();
   const [mode, setMode] = useState<PreviewMode>(previewMode || 'mobile');
+  const [previewStyle, setPreviewStyle] = useState<PreviewStyle>('flipbook');
   const [business, setBusiness] = useState<Business | null>(null);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -99,7 +104,7 @@ export default function PreviewPanel() {
 
   const filteredItems = items.filter((item) => item.categoryId === activeCategory);
 
-  const renderMenuContent = () => {
+  const renderListMenuContent = () => {
     if (loading) {
       return (
         <div className="flex flex-col gap-3 p-4">
@@ -272,12 +277,53 @@ export default function PreviewPanel() {
     );
   };
 
+  const renderFlipbookContent = () => {
+    if (loading || !business) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-3 p-8">
+          <Skeleton className="h-16 w-16 rounded-2xl" />
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+      );
+    }
+
+    return (
+      <FlipbookMenu
+        business={business}
+        categories={categories}
+        items={items}
+        isPreview={true}
+      />
+    );
+  };
+
   // Fullscreen mode
   if (mode === 'fullscreen') {
     return (
-      <div className="fixed inset-0 z-50 bg-white">
+      <div className="fixed inset-0 z-50 bg-gray-100">
         {/* Exit button */}
-        <div className="absolute top-4 right-4 z-50">
+        <div className="absolute top-4 right-4 z-50 flex gap-2">
+          <div className="flex gap-1 p-1 bg-white rounded-lg shadow-md">
+            <button
+              onClick={() => setPreviewStyle('flipbook')}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                previewStyle === 'flipbook' ? 'bg-emerald-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Flipbook
+            </button>
+            <button
+              onClick={() => setPreviewStyle('list')}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                previewStyle === 'list' ? 'bg-emerald-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <List className="w-3.5 h-3.5" />
+              List
+            </button>
+          </div>
           <Button
             variant="outline"
             size="sm"
@@ -285,57 +331,78 @@ export default function PreviewPanel() {
             className="shadow-md"
           >
             <X className="mr-1.5 h-4 w-4" />
-            Exit Preview
+            Exit
           </Button>
         </div>
-        <div className="h-full overflow-y-auto">{renderMenuContent()}</div>
+        <div className="h-full overflow-y-auto">
+          {previewStyle === 'flipbook' ? renderFlipbookContent() : renderListMenuContent()}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col items-center gap-6">
-      {/* Mode Selector */}
-      <ToggleGroup
-        type="single"
-        value={mode}
-        onValueChange={(v) => v && handleModeChange(v)}
-        className="rounded-lg border bg-muted/50"
-      >
-        <ToggleGroupItem value="mobile" className="gap-1.5 px-4">
-          <Smartphone className="h-4 w-4" />
-          <span className="hidden sm:inline">Mobile</span>
-        </ToggleGroupItem>
-        <ToggleGroupItem value="desktop" className="gap-1.5 px-4">
-          <Monitor className="h-4 w-4" />
-          <span className="hidden sm:inline">Desktop</span>
-        </ToggleGroupItem>
-        <ToggleGroupItem value="fullscreen" className="gap-1.5 px-4">
-          <Maximize2 className="h-4 w-4" />
-          <span className="hidden sm:inline">Fullscreen</span>
-        </ToggleGroupItem>
-      </ToggleGroup>
+      {/* Mode & Style Selectors */}
+      <div className="flex items-center gap-3">
+        <ToggleGroup
+          type="single"
+          value={mode}
+          onValueChange={(v) => v && handleModeChange(v)}
+          className="rounded-lg border bg-muted/50"
+        >
+          <ToggleGroupItem value="mobile" className="gap-1.5 px-4">
+            <Smartphone className="h-4 w-4" />
+            <span className="hidden sm:inline">Mobile</span>
+          </ToggleGroupItem>
+          <ToggleGroupItem value="desktop" className="gap-1.5 px-4">
+            <Monitor className="h-4 w-4" />
+            <span className="hidden sm:inline">Desktop</span>
+          </ToggleGroupItem>
+          <ToggleGroupItem value="fullscreen" className="gap-1.5 px-4">
+            <Maximize2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Fullscreen</span>
+          </ToggleGroupItem>
+        </ToggleGroup>
+
+        <div className="flex gap-1 p-1 bg-muted/50 rounded-lg border">
+          <button
+            onClick={() => setPreviewStyle('flipbook')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              previewStyle === 'flipbook' ? 'bg-emerald-600 text-white' : 'text-gray-600 hover:bg-muted'
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            Flipbook
+          </button>
+          <button
+            onClick={() => setPreviewStyle('list')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              previewStyle === 'list' ? 'bg-emerald-600 text-white' : 'text-gray-600 hover:bg-muted'
+            }`}
+          >
+            <List className="w-3.5 h-3.5" />
+            List
+          </button>
+        </div>
+      </div>
 
       {/* Mobile Frame */}
       {mode === 'mobile' && (
         <div className="relative mx-auto">
-          {/* iPhone-like frame */}
           <div
             className="rounded-[3rem] border-[6px] border-gray-800 bg-gray-800 shadow-2xl overflow-hidden"
             style={{ width: '390px' }}
           >
-            {/* Notch */}
             <div className="relative bg-gray-800">
               <div className="mx-auto h-6 w-32 rounded-b-2xl bg-gray-800" />
             </div>
-            {/* Screen */}
             <div
               className="bg-white overflow-y-auto"
               style={{ height: '680px', width: '378px' }}
             >
-              {renderMenuContent()}
+              {previewStyle === 'flipbook' ? renderFlipbookContent() : renderListMenuContent()}
             </div>
-            {/* Home indicator */}
             <div className="flex justify-center py-2 bg-gray-800">
               <div className="h-1 w-32 rounded-full bg-gray-500" />
             </div>
@@ -346,9 +413,7 @@ export default function PreviewPanel() {
       {/* Desktop Frame */}
       {mode === 'desktop' && (
         <div className="mx-auto w-full max-w-5xl">
-          {/* Browser-like frame */}
           <div className="rounded-xl border shadow-xl overflow-hidden">
-            {/* Title bar */}
             <div className="flex items-center gap-2 bg-gray-100 border-b px-4 py-2.5">
               <div className="flex gap-1.5">
                 <div className="h-3 w-3 rounded-full bg-red-400" />
@@ -367,9 +432,10 @@ export default function PreviewPanel() {
                 </div>
               </div>
             </div>
-            {/* Content */}
             <div className="bg-white overflow-y-auto" style={{ height: '700px' }}>
-              <div className="mx-auto max-w-3xl">{renderMenuContent()}</div>
+              <div className="mx-auto max-w-3xl">
+                {previewStyle === 'flipbook' ? renderFlipbookContent() : renderListMenuContent()}
+              </div>
             </div>
           </div>
         </div>
@@ -379,6 +445,8 @@ export default function PreviewPanel() {
       <p className="text-xs text-muted-foreground text-center">
         {mode === 'mobile' && 'Previewing in mobile viewport (375px)'}
         {mode === 'desktop' && 'Previewing in desktop viewport (1280px)'}
+        {' · '}
+        {previewStyle === 'flipbook' ? 'Flipbook mode' : 'List mode'}
       </p>
     </div>
   );

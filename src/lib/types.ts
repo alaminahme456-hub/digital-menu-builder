@@ -14,6 +14,25 @@ export interface User {
   createdAt: string;
 }
 
+export interface FlipbookSettings {
+  flipbookEnabled: boolean;
+  flipbookAnimEnabled: boolean;
+  flipbookAnimSpeed: 'slow' | 'medium' | 'fast';
+  flipbookPageNumbers: boolean;
+  flipbookSwipeNav: boolean;
+  flipbookSoundEffects: boolean;
+  flipbookFullscreen: boolean;
+  flipbookInteractions: boolean;
+}
+
+export interface OrderingSettings {
+  whatsappOrder: boolean;
+  basketEnabled: boolean;
+  showQuantitySelector: boolean;
+  showOrderButton: boolean;
+  whatsappGreeting: string;
+}
+
 export interface Business {
   id: string;
   slug: string;
@@ -32,6 +51,20 @@ export interface Business {
   status: BusinessStatus;
   whatsappOrder: boolean;
   seoEnabled: boolean;
+  // Flipbook
+  flipbookEnabled: boolean;
+  flipbookAnimEnabled: boolean;
+  flipbookAnimSpeed: string;
+  flipbookPageNumbers: boolean;
+  flipbookSwipeNav: boolean;
+  flipbookSoundEffects: boolean;
+  flipbookFullscreen: boolean;
+  flipbookInteractions: boolean;
+  // Ordering
+  basketEnabled: boolean;
+  showQuantitySelector: boolean;
+  showOrderButton: boolean;
+  whatsappGreeting: string;
   ownerId: string;
   createdAt: string;
   _count?: {
@@ -40,6 +73,25 @@ export interface Business {
     analytics: number;
   };
 }
+
+export const DEFAULT_FLIPBOOK_SETTINGS: FlipbookSettings = {
+  flipbookEnabled: true,
+  flipbookAnimEnabled: true,
+  flipbookAnimSpeed: 'medium',
+  flipbookPageNumbers: true,
+  flipbookSwipeNav: true,
+  flipbookSoundEffects: false,
+  flipbookFullscreen: true,
+  flipbookInteractions: true,
+};
+
+export const DEFAULT_ORDERING_SETTINGS: OrderingSettings = {
+  whatsappOrder: true,
+  basketEnabled: true,
+  showQuantitySelector: true,
+  showOrderButton: true,
+  whatsappGreeting: 'Hello, I would like to place an order:',
+};
 
 export interface MenuCategory {
   id: string;
