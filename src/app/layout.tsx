@@ -14,24 +14,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Z.ai Code Scaffold - AI-Powered Development",
-  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
-  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
-  authors: [{ name: "Z.ai Team" }],
+  title: "MenuQR - Digital Menu Builder",
+  description: "Create beautiful QR code digital menus, track analytics, and delight customers with a seamless dining experience.",
+  keywords: ["MenuQR", "Digital Menu", "QR Code Menu", "Restaurant Menu", "Next.js", "TypeScript", "Tailwind CSS"],
+  authors: [{ name: "MenuQR" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/favicon.ico",
   },
   openGraph: {
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
-    url: "https://chat.z.ai",
-    siteName: "Z.ai",
+    title: "MenuQR - Digital Menu Builder",
+    description: "Create beautiful QR code digital menus for your restaurant",
+    siteName: "MenuQR",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
+    title: "MenuQR - Digital Menu Builder",
+    description: "Create beautiful QR code digital menus for your restaurant",
   },
 };
 
