@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String?
+  phone         String?
+  avatar        String?
+  role          String    @default("user") // "user" | "admin"
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  businesses   Business[]
+  analytics    Analytics[]
+  sessions     Session[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Business {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  category      String?
+  logo          String?
+  phone         String?
+  whatsapp      String?
+  address       String?
+  openingHours  String?
+  description   String?
+  primaryColor  String   @default("#10b981")
+  secondaryColor String  @default("#059669")
+  fontFamily    String   @default("inter")
+  templateName  String   @default("modern")
+  status        String   @default("draft") // "draft" | "published" | "unpublished"
+  whatsappOrder Boolean  @default(true)
+  seoEnabled    Boolean  @default(true)
+  ownerId       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  owner     User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  categories MenuCategory[]
+  uploads    MenuUpload[]
+  analytics  Analytics[]
+  menuItems  MenuItem[]
+}
+
+model MenuCategory {
+  id          String   @id @default(cuid())
+  name        String
+  sortOrder   Int      @default(0)
+  businessId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  items    MenuItem[]
+}
+
+model MenuItem {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  price         Float
+  image         String?
+  sortOrder     Int      @default(0)
+  available     Boolean  @default(true)
+  categoryId    String
+  businessId    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  category MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  business Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model MenuUpload {
+  id           String   @id @default(cuid())
+  fileName     String
+  fileSize     Int
+  fileType     String
+  url          String
+  published    Boolean  @default(false)
+  businessId   String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model Analytics {
+  id          String   @id @default(cuid())
+  eventType   String   // "view" | "qr_scan" | "item_view"
+  menuItemId  String?
+  businessId  String
+  userId      String?
+  referrer    String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model AIScanLog {
+  id           String   @id @default(cuid())
+  businessId   String
+  fileName     String
+  itemsDetected Int     @default(0)
+  itemsSaved   Int      @default(0)
+  status       String   @default("pending") // "pending" | "processing" | "completed" | "failed"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  label       String
+  description String?
+  thumbnail   String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
