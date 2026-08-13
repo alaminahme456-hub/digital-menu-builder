@@ -1,13 +1,4 @@
-import { PrismaClient } from '@prisma/client'
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-export const db =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: ['query'],
-  })
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
+// Legacy re-export — all DB operations now go through Supabase.
+// This file is kept for backwards compatibility with existing imports.
+// New code should import from '@/lib/supabase' directly.
+export { createServerClient, getAuthUser, toCamel, toCamelList, toSnake } from '@/lib/supabase';

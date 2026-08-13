@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { verifyToken } from '@/lib/auth';
-
-async function authenticate(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  return verifyToken(authHeader.substring(7));
-}
+import { createServerClient, getAuthUser, toCamel, toCamelList, toSnake } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,24 +7,43 @@ export async function GET(request: NextRequest) {
     const categoryId = request.nextUrl.searchParams.get('categoryId');
     const slug = request.nextUrl.searchParams.get('slug');
 
-    const where: Record<string, unknown> = {};
-    
+    const supabase = createServerClient();
+
+    let resolvedBusinessId = businessId;
+
     if (slug) {
-      // Public access by business slug
-      const biz = await db.business.findUnique({ where: { slug }, select: { id: true } });
-      if (biz) where.businessId = biz.id;
-    } else if (businessId) {
-      where.businessId = businessId;
+      const { data: bizRow, error: bizError } = await supabase
+        .from('businesses')
+        .select('id')
+        .eq('slug', slug)
+        .single();
+
+      if (bizError || !bizRow) {
+        return NextResponse.json({ items: [] });
+      }
+      resolvedBusinessId = bizRow.id;
     }
-    
-    if (categoryId) where.categoryId = categoryId;
 
-    const items = await db.menuItem.findMany({
-      where,
-      orderBy: { sortOrder: 'asc' },
-    });
+    let query = supabase
+      .from('menu_items')
+      .select('*')
+      .order('sort_order', { ascending: true });
 
-    return NextResponse.json({ items });
+    if (resolvedBusinessId) {
+      query = query.eq('business_id', resolvedBusinessId);
+    }
+    if (categoryId) {
+      query = query.eq('category_id', categoryId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Get items error:', error);
+      return NextResponse.json({ error: 'Failed to get items' }, { status: 500 });
+    }
+
+    return NextResponse.json({ items: toCamelList(data ?? []) });
   } catch (error) {
     console.error('Get items error:', error);
     return NextResponse.json({ error: 'Failed to get items' }, { status: 500 });
@@ -40,31 +52,58 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = await authenticate(request);
-    if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { businessId, categoryId, name, description, price, image } = await request.json();
     if (!businessId || !categoryId || !name || price === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const business = await db.business.findFirst({ where: { id: businessId, ownerId: payload.userId } });
-    if (!business) return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+    const supabase = createServerClient(authUser.userId);
 
-    const maxSort = await db.menuItem.findFirst({
-      where: { categoryId },
-      orderBy: { sortOrder: 'desc' },
-      select: { sortOrder: true },
-    });
+    // Verify ownership
+    const { data: bizRow, error: bizError } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('id', businessId)
+      .eq('owner_id', authUser.userId)
+      .single();
 
-    const item = await db.menuItem.create({
-      data: {
-        name, description, price: Number(price), image, categoryId, businessId,
-        sortOrder: (maxSort?.sortOrder || 0) + 1,
-      },
-    });
+    if (bizError || !bizRow) {
+      return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+    }
 
-    return NextResponse.json({ item }, { status: 201 });
+    // Find max sort_order
+    const { data: maxRows } = await supabase
+      .from('menu_items')
+      .select('sort_order')
+      .eq('category_id', categoryId)
+      .order('sort_order', { ascending: false })
+      .limit(1);
+
+    const nextSort = ((maxRows?.[0]?.sort_order as number) || 0) + 1;
+
+    const { data, error } = await supabase
+      .from('menu_items')
+      .insert(toSnake({
+        name,
+        description,
+        price: Number(price),
+        image,
+        categoryId,
+        businessId,
+        sortOrder: nextSort,
+      }))
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Create item error:', error);
+      return NextResponse.json({ error: 'Failed to create item' }, { status: 500 });
+    }
+
+    return NextResponse.json({ item: toCamel(data) }, { status: 201 });
   } catch (error) {
     console.error('Create item error:', error);
     return NextResponse.json({ error: 'Failed to create item' }, { status: 500 });
@@ -73,21 +112,32 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const payload = await authenticate(request);
-    if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id, ...data } = await request.json();
     if (!id) return NextResponse.json({ error: 'Item ID required' }, { status: 400 });
 
-    const item = await db.menuItem.update({
-      where: { id },
-      data: {
-        ...data,
-        price: data.price !== undefined ? Number(data.price) : undefined,
-      },
-    });
+    const supabase = createServerClient(authUser.userId);
 
-    return NextResponse.json({ item });
+    const updateData: Record<string, unknown> = { ...data };
+    if (updateData.price !== undefined) {
+      updateData.price = Number(updateData.price);
+    }
+
+    const { data: row, error } = await supabase
+      .from('menu_items')
+      .update(toSnake(updateData))
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Update item error:', error);
+      return NextResponse.json({ error: 'Failed to update item' }, { status: 500 });
+    }
+
+    return NextResponse.json({ item: toCamel(row) });
   } catch (error) {
     console.error('Update item error:', error);
     return NextResponse.json({ error: 'Failed to update item' }, { status: 500 });
@@ -96,14 +146,25 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const payload = await authenticate(request);
-    if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'Item ID required' }, { status: 400 });
 
-    await db.menuItem.delete({ where: { id } });
+    const supabase = createServerClient(authUser.userId);
+
+    const { error } = await supabase
+      .from('menu_items')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Delete item error:', error);
+      return NextResponse.json({ error: 'Failed to delete item' }, { status: 500 });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Delete item error:', error);

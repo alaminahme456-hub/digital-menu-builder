@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { verifyPassword, createToken } from '@/lib/auth';
+import { createServerClient, toCamel } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,20 +10,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    const user = await db.user.findUnique({ where: { email } });
-    if (!user) {
+    const supabase = createServerClient();
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
-    const valid = await verifyPassword(password, user.password);
-    if (!valid) {
-      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
-    }
+    const user = data.user;
+    const token = data.session.access_token;
 
-    const token = await createToken({ userId: user.id, email: user.email, role: user.role });
+    // Fetch profile for name/role
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name, role')
+      .eq('id', user.id)
+      .single();
 
     return NextResponse.json({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: profile?.name || user.user_metadata?.name || null,
+        role: profile?.role || 'user',
+      },
       token,
     });
   } catch (error) {

@@ -1,27 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { verifyToken } from '@/lib/auth';
+import { createServerClient, getAuthUser, toCamel } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = await verifyToken(authHeader.substring(7));
-    if (!payload) {
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const user = await db.user.findUnique({
-      where: { id: payload.userId },
-      select: { id: true, email: true, name: true, phone: true, avatar: true, role: true, createdAt: true },
-    });
+    const supabase = createServerClient();
 
-    if (!user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.userId)
+      .single();
+
+    if (!profile) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    const user = toCamel(profile) as Record<string, unknown>;
+    // Ensure id and email are present
+    user.id = authUser.userId;
+    user.email = authUser.email;
 
     return NextResponse.json({ user });
   } catch (error) {
@@ -32,24 +34,30 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = await verifyToken(authHeader.substring(7));
-    if (!payload) {
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     const body = await request.json();
     const { name, phone } = body;
 
-    const user = await db.user.update({
-      where: { id: payload.userId },
-      data: { name, phone },
-      select: { id: true, email: true, name: true, phone: true, avatar: true, role: true },
-    });
+    const supabase = createServerClient();
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .update({ name, phone })
+      .eq('id', authUser.userId)
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
+    }
+
+    const user = toCamel(profile as Record<string, unknown>) as Record<string, unknown>;
+    user.id = authUser.userId;
+    user.email = authUser.email;
 
     return NextResponse.json({ user });
   } catch (error) {

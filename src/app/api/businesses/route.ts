@@ -1,25 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { verifyToken, generateSlug } from '@/lib/auth';
-
-async function authenticate(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  return verifyToken(authHeader.substring(7));
-}
+import { createServerClient, getAuthUser, toCamel, toCamelList, toSnake } from '@/lib/supabase';
+import { generateSlug } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const payload = await authenticate(request);
-    if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const businesses = await db.business.findMany({
-      where: { ownerId: payload.userId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        _count: { select: { categories: true, menuItems: true, analytics: true } },
-      },
-    });
+    const supabase = createServerClient(authUser.userId);
+
+    const { data: rows, error } = await supabase
+      .from('businesses')
+      .select('*')
+      .eq('owner_id', authUser.userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Get businesses error:', error);
+      return NextResponse.json({ error: 'Failed to get businesses' }, { status: 500 });
+    }
+
+    const businesses = await Promise.all(
+      (rows ?? []).map(async (row) => {
+        const [catCount, itemCount, analyticsCount] = await Promise.all([
+          supabase.from('menu_categories').select('*', { count: 'exact', head: true }).eq('business_id', row.id),
+          supabase.from('menu_items').select('*', { count: 'exact', head: true }).eq('business_id', row.id),
+          supabase.from('analytics').select('*', { count: 'exact', head: true }).eq('business_id', row.id),
+        ]);
+        return {
+          ...toCamel(row),
+          _count: {
+            categories: catCount.count ?? 0,
+            menuItems: itemCount.count ?? 0,
+            analytics: analyticsCount.count ?? 0,
+          },
+        };
+      })
+    );
 
     return NextResponse.json({ businesses });
   } catch (error) {
@@ -30,8 +47,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = await authenticate(request);
-    if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
     const { name, category, phone, whatsapp, address, openingHours, description, logo, primaryColor, secondaryColor } = body;
@@ -40,17 +57,26 @@ export async function POST(request: NextRequest) {
 
     const slug = generateSlug(name);
 
-    const business = await db.business.create({
-      data: {
+    const supabase = createServerClient(authUser.userId);
+
+    const { data, error } = await supabase
+      .from('businesses')
+      .insert(toSnake({
         slug,
         name, category, phone, whatsapp, address, openingHours, description,
         primaryColor: primaryColor || '#10b981',
         secondaryColor: secondaryColor || '#059669',
-        ownerId: payload.userId,
-      },
-    });
+        ownerId: authUser.userId,
+      }))
+      .select()
+      .single();
 
-    return NextResponse.json({ business }, { status: 201 });
+    if (error) {
+      console.error('Create business error:', error);
+      return NextResponse.json({ error: 'Failed to create business' }, { status: 500 });
+    }
+
+    return NextResponse.json({ business: toCamel(data) }, { status: 201 });
   } catch (error) {
     console.error('Create business error:', error);
     return NextResponse.json({ error: 'Failed to create business' }, { status: 500 });

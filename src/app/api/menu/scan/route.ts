@@ -1,26 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { verifyToken } from '@/lib/auth';
-
-async function authenticate(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  return verifyToken(authHeader.substring(7));
-}
+import { createServerClient, getAuthUser, toSnake } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = await authenticate(request);
-    if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { businessId, imageData } = await request.json();
     if (!businessId || !imageData) {
       return NextResponse.json({ error: 'Business ID and image data required' }, { status: 400 });
     }
 
+    const supabase = createServerClient(authUser.userId);
+
     // Verify ownership
-    const business = await db.business.findFirst({ where: { id: businessId, ownerId: payload.userId } });
-    if (!business) return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+    const { data: bizRow, error: bizError } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('id', businessId)
+      .eq('owner_id', authUser.userId)
+      .single();
+
+    if (bizError || !bizRow) {
+      return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+    }
 
     // Simulate AI OCR processing - in production, this would use a vision API
     // For demo purposes, we generate sample detected items
@@ -39,14 +42,19 @@ export async function POST(request: NextRequest) {
       { name: 'Grilled Fish', description: 'Whole grilled fish with pepper sauce', price: 6000, category: 'Seafood' },
     ];
 
-    await db.aIScanLog.create({
-      data: {
+    const { error: logError } = await supabase
+      .from('ai_scan_logs')
+      .insert(toSnake({
         businessId,
         fileName: 'scanned-menu.jpg',
         itemsDetected: detectedItems.length,
         status: 'completed',
-      },
-    });
+      }));
+
+    if (logError) {
+      console.error('AI scan log error:', logError);
+      // Don't fail the request for a logging error
+    }
 
     return NextResponse.json({
       success: true,

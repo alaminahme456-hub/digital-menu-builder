@@ -1,28 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { verifyToken } from '@/lib/auth';
+import { createServerClient, getAuthUser, toCamel, toCamelList } from '@/lib/supabase';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
-async function authenticate(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  return verifyToken(authHeader.substring(7));
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const payload = await authenticate(request);
-    if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const businessId = request.nextUrl.searchParams.get('businessId');
     if (!businessId) return NextResponse.json({ error: 'Business ID required' }, { status: 400 });
 
-    const uploads = await db.menuUpload.findMany({
-      where: { businessId },
-      orderBy: { createdAt: 'desc' },
-    });
+    const token = request.headers.get('Authorization')?.substring(7) || '';
+    const supabase = createServerClient(token);
 
+    const { data, error } = await supabase
+      .from('menu_uploads')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Get uploads error:', error);
+      return NextResponse.json({ error: 'Failed to get uploads' }, { status: 500 });
+    }
+
+    const uploads = toCamelList(data || []);
     return NextResponse.json({ uploads });
   } catch (error) {
     console.error('Get uploads error:', error);
@@ -32,8 +35,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = await authenticate(request);
-    if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -55,17 +58,27 @@ export async function POST(request: NextRequest) {
 
     const url = `/uploads/${fileName}`;
 
-    const upload = await db.menuUpload.create({
-      data: {
-        fileName: file.name,
-        fileSize: buffer.length,
-        fileType: file.type,
-        url,
-        businessId,
-      },
-    });
+    const token = request.headers.get('Authorization')?.substring(7) || '';
+    const supabase = createServerClient(token);
 
-    return NextResponse.json({ upload }, { status: 201 });
+    const { data: upload, error } = await supabase
+      .from('menu_uploads')
+      .insert({
+        file_name: file.name,
+        file_size: buffer.length,
+        file_type: file.type,
+        url,
+        business_id: businessId,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Upload error:', error);
+      return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+    }
+
+    return NextResponse.json({ upload: toCamel(upload) }, { status: 201 });
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
@@ -74,14 +87,26 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const payload = await authenticate(request);
-    if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'Upload ID required' }, { status: 400 });
 
-    await db.menuUpload.delete({ where: { id } });
+    const token = request.headers.get('Authorization')?.substring(7) || '';
+    const supabase = createServerClient(token);
+
+    const { error } = await supabase
+      .from('menu_uploads')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Delete upload error:', error);
+      return NextResponse.json({ error: 'Failed to delete upload' }, { status: 500 });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Delete upload error:', error);
