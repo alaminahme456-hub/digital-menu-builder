@@ -15,6 +15,7 @@ import {
 import type { Business, MenuUpload } from '@/lib/types';
 import { formatPrice } from '@/lib/auth';
 import { useSwipeGesture, useReducedMotion, useCanAnimate, useBookDimensions } from './use-swipe-gesture';
+import { getFlipbookStyle } from '@/lib/template-styles';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -245,7 +246,9 @@ export default function UploadFlipbook({
     mono: '"Courier New", monospace',
     playfair: '"Playfair Display", Georgia, serif',
   };
-  const fontFamily = fontMap[business.fontFamily] || fontMap.inter;
+  // Template-driven styles
+  const ts = getFlipbookStyle(business.templateName || 'modern', primaryColor, secondaryColor);
+  const fontFamily = ts.fontOverride || fontMap[business.fontFamily] || fontMap.inter;
 
   const welcomeMessage = (business as Record<string, unknown>).welcomeMessage as string || business.description || '';
 
@@ -272,7 +275,7 @@ export default function UploadFlipbook({
   const renderCover = () => (
     <div
       className="flex flex-col items-center justify-center w-full h-full relative overflow-hidden"
-      style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`, fontFamily }}
+      style={{ background: ts.coverGradient, fontFamily }}
     >
       <div className="absolute inset-0 opacity-[0.06]" style={{
         backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 25px, rgba(255,255,255,0.1) 25px, rgba(255,255,255,0.1) 50px)`,
@@ -305,10 +308,11 @@ export default function UploadFlipbook({
   /*  Render: Welcome                                                    */
   /* ------------------------------------------------------------------ */
   const renderWelcome = () => (
-    <div className="flex flex-col items-center justify-center w-full h-full p-6 sm:p-8 text-center overflow-y-auto" style={{ fontFamily }}>
-      <div className="w-10 h-1 rounded-full mb-4 sm:mb-6" style={{ backgroundColor: primaryColor }} />
-      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">Welcome to {business.name}</h2>
-      <p className="text-gray-600 text-sm sm:text-base leading-relaxed max-w-sm">
+    <div className="flex flex-col items-center justify-center w-full h-full p-6 sm:p-8 text-center overflow-y-auto" style={{ fontFamily, backgroundColor: ts.pageBg }}>
+      <div className="w-10 h-1 rounded-full mb-4 sm:mb-6" style={{ backgroundColor: ts.welcomeAccent }} />
+      <h2 className="text-xl sm:text-2xl font-bold mb-3" style={{ color: ts.textColor }}>Welcome to {business.name}</h2>
+      <p className="text-sm sm:text-base leading-relaxed max-w-sm"
+        style={{ color: ts.subtextColor }}>
         {welcomeMessage || 'Thank you for visiting us. Explore our menu and discover our offerings.'}
       </p>
       {business.openingHours && (
@@ -355,9 +359,9 @@ export default function UploadFlipbook({
     const greeting = business.whatsappGreeting || 'Hello, I would like to place an order:';
 
     return (
-      <div className="flex flex-col items-center justify-center w-full h-full p-6 sm:p-8 text-center overflow-y-auto" style={{ fontFamily }}>
-        <div className="w-10 h-1 rounded-full mb-4 sm:mb-6" style={{ backgroundColor: primaryColor }} />
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Contact & Ordering</h2>
+      <div className="flex flex-col items-center justify-center w-full h-full p-6 sm:p-8 text-center overflow-y-auto" style={{ fontFamily, backgroundColor: ts.pageBg }}>
+        <div className="w-10 h-1 rounded-full mb-4 sm:mb-6" style={{ backgroundColor: ts.welcomeAccent }} />
+        <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6" style={{ color: ts.textColor }}>Contact & Ordering</h2>
 
         <div className="w-full max-w-xs space-y-2.5 text-sm">
           {business.phone && (
@@ -461,8 +465,8 @@ export default function UploadFlipbook({
   return (
     <div
       ref={bookRef}
-      className="fixed inset-0 z-[9999] bg-white overflow-hidden flipbook-container safe-top safe-bottom"
-      style={{ fontFamily }}
+      className="fixed inset-0 z-[9999] overflow-hidden flipbook-container safe-top safe-bottom"
+      style={{ fontFamily, backgroundColor: ts.pageBg }}
       onTouchStart={swipeHandlers.onTouchStart}
       onTouchMove={swipeHandlers.onTouchMove}
       onTouchEnd={swipeHandlers.onTouchEnd}

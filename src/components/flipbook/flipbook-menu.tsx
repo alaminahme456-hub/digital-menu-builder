@@ -10,6 +10,7 @@ import {
 import type { Business, MenuCategory, MenuItem } from '@/lib/types';
 import { formatPrice } from '@/lib/auth';
 import { useSwipeGesture, useReducedMotion, useCanAnimate, useBookDimensions } from './use-swipe-gesture';
+import { getFlipbookStyle } from '@/lib/template-styles';
 import ProductDetailModal from './product-detail-modal';
 import OrderBasket from './order-basket';
 
@@ -58,7 +59,7 @@ const animDurationMap: Record<string, string> = {
 };
 
 /* ------------------------------------------------------------------ */
-/*  Flipbook Menu Component — Always Fullscreen                        */
+/*  Flipbook Menu Component — Always Fullscreen, Template-Aware        */
 /* ------------------------------------------------------------------ */
 export default function FlipbookMenu({
   business,
@@ -111,7 +112,7 @@ export default function FlipbookMenu({
     return () => window.removeEventListener('keydown', handleKey);
   }, [goNext, goPrev, selectedItem]);
 
-  // Swipe — always active for navigation
+  // Swipe
   const swipeHandlers = useSwipeGesture(
     { onSwipeLeft: isOpened && !selectedItem ? goNext : undefined, onSwipeRight: isOpened && !selectedItem ? goPrev : undefined },
     30
@@ -164,13 +165,17 @@ export default function FlipbookMenu({
   const animDuration = animDurationMap[business.flipbookAnimSpeed] || '0.35s';
   const primaryColor = business.primaryColor || '#10b981';
   const secondaryColor = business.secondaryColor || '#059669';
+
   const fontMap: Record<string, React.CSSProperties['fontFamily']> = {
     inter: 'system-ui, -apple-system, sans-serif',
     serif: 'Georgia, "Times New Roman", serif',
     mono: '"Courier New", monospace',
     playfair: '"Playfair Display", Georgia, serif',
   };
-  const fontFamily = fontMap[business.fontFamily] || fontMap.inter;
+
+  // Template-driven styles
+  const ts = getFlipbookStyle(business.templateName || 'modern', primaryColor, secondaryColor);
+  const fontFamily = ts.fontOverride || fontMap[business.fontFamily] || fontMap.inter;
 
   const handlePageTap = (e: React.MouseEvent<HTMLDivElement>) => {
     if (selectedItem || !isOpened || !business.flipbookInteractions) return;
@@ -191,11 +196,11 @@ export default function FlipbookMenu({
   };
 
   /* ------------------------------------------------------------------ */
-  /*  Render: Cover                                                      */
+  /*  Render: Cover (template-styled)                                    */
   /* ------------------------------------------------------------------ */
   const renderCover = () => (
     <div className="flex flex-col items-center justify-center w-full h-full relative overflow-hidden"
-      style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`, fontFamily }}>
+      style={{ background: ts.coverGradient, fontFamily }}>
       <div className="absolute inset-0 opacity-[0.06]" style={{
         backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 25px, rgba(255,255,255,0.1) 25px, rgba(255,255,255,0.1) 50px)`,
       }} />
@@ -203,52 +208,55 @@ export default function FlipbookMenu({
         {business.logo ? (
           <img src={business.logo} alt={business.name} className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover shadow-2xl ring-3 ring-white/20" />
         ) : (
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-3xl font-bold text-white shadow-2xl ring-3 ring-white/20 bg-white/15">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-3xl font-bold shadow-2xl ring-3 ring-white/20"
+            style={{ color: ts.coverTextColor, backgroundColor: 'rgba(255,255,255,0.15)' }}>
             {business.name.charAt(0).toUpperCase()}
           </div>
         )}
-        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{business.name}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: ts.coverTextColor }}>{business.name}</h1>
         {business.description && (
-          <p className="text-white/70 text-sm sm:text-base max-w-xs">&ldquo;{business.description}&rdquo;</p>
+          <p className="text-sm sm:text-base max-w-xs" style={{ color: ts.coverSubtextColor }}>&ldquo;{business.description}&rdquo;</p>
         )}
-        <div className="w-12 h-0.5 bg-white/30 rounded-full mt-1" />
+        <div className="w-12 h-0.5 rounded-full mt-1" style={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
         <button onClick={handleOpenBook}
           className="mt-3 px-7 py-3 bg-white text-gray-900 rounded-full font-semibold text-sm shadow-lg active:scale-95 transition-all flex items-center gap-2">
           <BookOpen className="w-4 h-4" />Tap to Open Menu
         </button>
-        <p className="text-white/30 text-[10px] mt-1">{categories.length} categories &middot; {items.length} items</p>
+        <p className="text-[10px] mt-1" style={{ color: ts.coverSubtextColor }}>{categories.length} categories &middot; {items.length} items</p>
       </div>
     </div>
   );
 
   /* ------------------------------------------------------------------ */
-  /*  Render: Welcome                                                    */
+  /*  Render: Welcome (template-styled)                                  */
   /* ------------------------------------------------------------------ */
   const renderWelcome = () => (
-    <div className="flex flex-col items-center justify-center w-full h-full p-6 sm:p-8 text-center overflow-y-auto" style={{ fontFamily }}>
-      <div className="w-10 h-1 rounded-full mb-4" style={{ backgroundColor: primaryColor }} />
-      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">Welcome to {business.name}</h2>
+    <div className="flex flex-col items-center justify-center w-full h-full p-6 sm:p-8 text-center overflow-y-auto"
+      style={{ fontFamily, backgroundColor: ts.pageBg }}>
+      <div className="w-10 h-1 rounded-full mb-4" style={{ backgroundColor: ts.welcomeAccent }} />
+      <h2 className="text-xl sm:text-2xl font-bold mb-3" style={{ color: ts.textColor }}>Welcome to {business.name}</h2>
       {(business as Record<string, unknown>).welcomeMessage
-        ? <p className="text-gray-600 text-sm leading-relaxed max-w-sm">{(business as Record<string, unknown>).welcomeMessage as string}</p>
+        ? <p className="text-sm leading-relaxed max-w-sm" style={{ color: ts.subtextColor }}>{(business as Record<string, unknown>).welcomeMessage as string}</p>
         : business.description
-          ? <p className="text-gray-600 text-sm leading-relaxed max-w-sm">{business.description}</p>
-          : <p className="text-gray-600 text-sm leading-relaxed max-w-sm">Thank you for visiting. Explore our menu.</p>
+          ? <p className="text-sm leading-relaxed max-w-sm" style={{ color: ts.subtextColor }}>{business.description}</p>
+          : <p className="text-sm leading-relaxed max-w-sm" style={{ color: ts.subtextColor }}>Thank you for visiting. Explore our menu.</p>
       }
-      <p className="mt-6 text-xs text-gray-300">Swipe or tap arrows to navigate</p>
+      <p className="mt-6 text-xs" style={{ color: ts.subtextColor, opacity: 0.6 }}>Swipe or tap arrows to navigate</p>
     </div>
   );
 
   /* ------------------------------------------------------------------ */
-  /*  Render: Category                                                   */
+  /*  Render: Category (template-styled)                                 */
   /* ------------------------------------------------------------------ */
   const renderCategoryPage = (page: PageItem) => {
     if (!page.items) return null;
     return (
-      <div className="flex flex-col w-full h-full px-3 py-3 sm:px-5 sm:py-4 overflow-y-auto" style={{ fontFamily }}>
+      <div className="flex flex-col w-full h-full px-3 py-3 sm:px-5 sm:py-4 overflow-y-auto"
+        style={{ fontFamily, backgroundColor: ts.pageBg }}>
         <div className="flex items-center gap-2 mb-3 flex-shrink-0">
-          <div className="w-1 h-5 rounded-full" style={{ backgroundColor: primaryColor }} />
-          <h2 className="text-base sm:text-lg font-bold text-gray-900">{page.title}</h2>
-          <span className="text-[10px] text-gray-400 ml-auto">{page.items.length}</span>
+          <div className="w-1 h-5 rounded-full" style={{ backgroundColor: ts.welcomeAccent }} />
+          <h2 className="text-base sm:text-lg font-bold" style={{ color: ts.textColor }}>{page.title}</h2>
+          <span className="text-[10px] ml-auto" style={{ color: ts.subtextColor }}>{page.items.length}</span>
         </div>
         <div className="grid gap-1.5 sm:gap-2 flex-1 min-h-0 overflow-y-auto pb-16 no-scrollbar">
           {page.items.map((item) => (
@@ -261,22 +269,23 @@ export default function FlipbookMenu({
               disabled={!item.available || !business.flipbookInteractions}
               className={`flex gap-2 p-2 rounded-lg border text-left transition-all active:scale-[0.98] ${
                 item.available && business.flipbookInteractions
-                  ? 'hover:shadow-sm hover:border-gray-300 cursor-pointer'
+                  ? 'hover:shadow-sm cursor-pointer'
                   : 'opacity-40 cursor-default'
               }`}
+              style={{ backgroundColor: ts.cardBg, borderColor: ts.cardBorder }}
             >
               {item.image ? (
                 <img src={item.image} alt={item.name} className="w-11 h-11 sm:w-12 sm:h-12 rounded-md object-cover flex-shrink-0" loading="lazy" decoding="async" />
               ) : (
                 <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-md flex items-center justify-center flex-shrink-0 text-base font-bold"
-                  style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}>
+                  style={{ backgroundColor: `${ts.welcomeAccent}15`, color: ts.welcomeAccent }}>
                   {item.name.charAt(0)}
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-gray-900 text-[13px] truncate">{item.name}</h3>
-                {item.description && <p className="text-gray-500 text-[10px] mt-0.5 line-clamp-1">{item.description}</p>}
-                <p className="font-bold text-[11px] mt-0.5" style={{ color: primaryColor }}>{formatPrice(item.price)}</p>
+                <h3 className="font-semibold text-[13px] truncate" style={{ color: ts.textColor }}>{item.name}</h3>
+                {item.description && <p className="text-[10px] mt-0.5 line-clamp-1" style={{ color: ts.subtextColor }}>{item.description}</p>}
+                <p className="font-bold text-[11px] mt-0.5" style={{ color: ts.welcomeAccent }}>{formatPrice(item.price)}</p>
               </div>
             </button>
           ))}
@@ -286,13 +295,14 @@ export default function FlipbookMenu({
   };
 
   /* ------------------------------------------------------------------ */
-  /*  Render: Contact                                                    */
+  /*  Render: Contact (template-styled)                                 */
   /* ------------------------------------------------------------------ */
   const renderContactPage = () => (
-    <div className="flex flex-col items-center justify-center w-full h-full p-6 sm:p-8 text-center overflow-y-auto" style={{ fontFamily }}>
-      <div className="w-10 h-1 rounded-full mb-4" style={{ backgroundColor: primaryColor }} />
-      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Contact & Ordering</h2>
-      <div className="space-y-2 text-xs sm:text-sm text-gray-600 mb-6">
+    <div className="flex flex-col items-center justify-center w-full h-full p-6 sm:p-8 text-center overflow-y-auto"
+      style={{ fontFamily, backgroundColor: ts.pageBg }}>
+      <div className="w-10 h-1 rounded-full mb-4" style={{ backgroundColor: ts.welcomeAccent }} />
+      <h2 className="text-xl sm:text-2xl font-bold mb-4" style={{ color: ts.textColor }}>Contact & Ordering</h2>
+      <div className="space-y-2 text-xs sm:text-sm mb-6" style={{ color: ts.infoTextColor }}>
         {business.address && <p>{business.address}</p>}
         {business.phone && <p>{business.phone}</p>}
         {business.whatsapp && <p>{business.whatsapp}</p>}
@@ -305,12 +315,13 @@ export default function FlipbookMenu({
         </button>
       )}
       {!business.whatsappOrder && (
-        <div className="flex items-center gap-2 px-5 py-3 bg-gray-100 rounded-xl text-sm text-gray-400">
+        <div className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm"
+          style={{ color: ts.subtextColor, backgroundColor: ts.dark ? 'rgba(255,255,255,0.05)' : '#f3f4f6' }}>
           <MessageCircle className="w-4 h-4" />
           Ordering is currently unavailable
         </div>
       )}
-      <p className="mt-6 text-[10px] text-gray-300">MADE BY <span className="font-semibold">ALTECH</span></p>
+      <p className="mt-6 text-[10px]" style={{ color: ts.subtextColor, opacity: 0.4 }}>MADE BY <span className="font-semibold">ALTECH</span></p>
     </div>
   );
 
@@ -330,12 +341,12 @@ export default function FlipbookMenu({
   };
 
   /* ------------------------------------------------------------------ */
-  /*  Always Fullscreen — swipe anywhere on screen for navigation         */
+  /*  Always Fullscreen — template-styled background                      */
   /* ------------------------------------------------------------------ */
   return (
     <div ref={bookRef}
-      className="fixed inset-0 z-[9999] bg-white overflow-hidden flipbook-container safe-top safe-bottom"
-      style={{ fontFamily }}
+      className="fixed inset-0 z-[9999] overflow-hidden flipbook-container safe-top safe-bottom"
+      style={{ fontFamily, backgroundColor: ts.pageBg }}
       onTouchStart={swipeHandlers.onTouchStart}
       onTouchMove={swipeHandlers.onTouchMove}
       onTouchEnd={swipeHandlers.onTouchEnd}>
