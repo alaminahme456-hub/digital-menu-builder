@@ -244,13 +244,13 @@ export default function FlipbookMenu({
   const renderCategoryPage = (page: PageItem) => {
     if (!page.items) return null;
     return (
-      <div className="flex flex-col w-full h-full p-4 sm:p-6 overflow-y-auto" style={{ fontFamily }}>
-        <div className="flex items-center gap-2 mb-4 flex-shrink-0">
-          <div className="w-1 h-6 rounded-full" style={{ backgroundColor: primaryColor }} />
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900">{page.title}</h2>
+      <div className="flex flex-col w-full h-full px-3 py-3 sm:px-5 sm:py-4 overflow-y-auto" style={{ fontFamily }}>
+        <div className="flex items-center gap-2 mb-3 flex-shrink-0">
+          <div className="w-1 h-5 rounded-full" style={{ backgroundColor: primaryColor }} />
+          <h2 className="text-base sm:text-lg font-bold text-gray-900">{page.title}</h2>
           <span className="text-[10px] text-gray-400 ml-auto">{page.items.length}</span>
         </div>
-        <div className="grid gap-2 sm:gap-3 flex-1 min-h-0 overflow-y-auto pb-16 no-scrollbar">
+        <div className="grid gap-1.5 sm:gap-2 flex-1 min-h-0 overflow-y-auto pb-16 no-scrollbar">
           {page.items.map((item) => (
             <button
               key={item.id}
@@ -259,24 +259,24 @@ export default function FlipbookMenu({
                 if (business.flipbookInteractions && item.available) setSelectedItem(item);
               }}
               disabled={!item.available || !business.flipbookInteractions}
-              className={`flex gap-2.5 p-2.5 rounded-xl border text-left transition-all active:scale-[0.98] ${
+              className={`flex gap-2 p-2 rounded-lg border text-left transition-all active:scale-[0.98] ${
                 item.available && business.flipbookInteractions
                   ? 'hover:shadow-sm hover:border-gray-300 cursor-pointer'
                   : 'opacity-40 cursor-default'
               }`}
             >
               {item.image ? (
-                <img src={item.image} alt={item.name} className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0" loading="lazy" decoding="async" />
+                <img src={item.image} alt={item.name} className="w-11 h-11 sm:w-12 sm:h-12 rounded-md object-cover flex-shrink-0" loading="lazy" decoding="async" />
               ) : (
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg flex items-center justify-center flex-shrink-0 text-lg font-bold"
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-md flex items-center justify-center flex-shrink-0 text-base font-bold"
                   style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}>
                   {item.name.charAt(0)}
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-gray-900 text-sm truncate">{item.name}</h3>
-                {item.description && <p className="text-gray-500 text-[11px] mt-0.5 line-clamp-1">{item.description}</p>}
-                <p className="font-bold text-xs mt-1" style={{ color: primaryColor }}>{formatPrice(item.price)}</p>
+                <h3 className="font-semibold text-gray-900 text-[13px] truncate">{item.name}</h3>
+                {item.description && <p className="text-gray-500 text-[10px] mt-0.5 line-clamp-1">{item.description}</p>}
+                <p className="font-bold text-[11px] mt-0.5" style={{ color: primaryColor }}>{formatPrice(item.price)}</p>
               </div>
             </button>
           ))}
