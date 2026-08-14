@@ -1,13 +1,25 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+function getSupabaseConfig() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    throw new Error(
+      'Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+    );
+  }
+
+  return { url, anonKey };
+}
 
 /* ------------------------------------------------------------------ */
 /*  Server-side Supabase client with user context (RLS applied)        */
 /* ------------------------------------------------------------------ */
 export function createServerClient(token?: string): SupabaseClient {
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  const { url, anonKey } = getSupabaseConfig();
+
+  return createClient(url, anonKey, {
     global: {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     },

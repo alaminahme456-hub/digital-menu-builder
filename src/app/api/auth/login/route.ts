@@ -22,7 +22,11 @@ export async function POST(request: NextRequest) {
     }
 
     const user = data.user;
-    const token = data.session.access_token;
+    const token = data.session?.access_token;
+
+    if (!user || !token) {
+      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+    }
 
     // Fetch profile for name/role — use the session token for RLS
     const authClient = createServerClient(token);
@@ -43,6 +47,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Login error:', error);
-    return NextResponse.json({ error: 'Login failed' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Login failed';
+    const isConfigError = message.includes('Supabase is not configured');
+
+    return NextResponse.json(
+      { error: isConfigError ? message : 'Login failed' },
+      { status: isConfigError ? 503 : 500 }
+    );
   }
 }
