@@ -18,6 +18,7 @@ import {
   Upload,
   Check,
   FolderOpen,
+  Save,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -317,6 +318,7 @@ function ItemFormDialog({
   const isEditing = !!item;
   const [form, setForm] = useState<ItemFormData>(EMPTY_ITEM_FORM);
   const [loading, setLoading] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
@@ -428,6 +430,10 @@ function ItemFormDialog({
       }
 
       toast.success(`Item ${isEditing ? 'updated' : 'created'} successfully`);
+      if (isEditing) {
+        setJustSaved(true);
+        setTimeout(() => setJustSaved(false), 2000);
+      }
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Operation failed');
@@ -609,10 +615,26 @@ function ItemFormDialog({
           <Button
             onClick={handleSubmit}
             disabled={!form.name.trim() || !form.price || !form.categoryId || loading}
-            className="bg-charcoal hover:bg-charcoal-light"
+            className={
+              isEditing
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-semibold'
+                : 'bg-charcoal hover:bg-charcoal-light'
+            }
           >
-            {loading && <Loader2 className="size-4 animate-spin" />}
-            {isEditing ? 'Save Changes' : 'Add Item'}
+            {loading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : justSaved ? (
+              <Check className="size-4" />
+            ) : isEditing ? (
+              <Save className="size-4" />
+            ) : null}
+            {loading
+              ? 'Saving...'
+              : justSaved
+                ? 'Saved!'
+                : isEditing
+                  ? 'Save Changes'
+                  : 'Add Item'}
           </Button>
         </DialogFooter>
       </DialogContent>
