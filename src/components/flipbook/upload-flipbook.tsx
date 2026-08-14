@@ -4,8 +4,6 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
-  Maximize2,
-  Minimize2,
   BookOpen,
   Loader2,
   Phone,
@@ -152,7 +150,7 @@ function buildUploadPages(publishedUpload: MenuUpload, pdfPageImages: string[]):
 }
 
 /* ------------------------------------------------------------------ */
-/*  Upload Flipbook Component — Mobile First                            */
+/*  Upload Flipbook Component — Always Fullscreen                        */
 /* ------------------------------------------------------------------ */
 export default function UploadFlipbook({
   business,
@@ -162,7 +160,6 @@ export default function UploadFlipbook({
   const [currentPage, setCurrentPage] = useState(0);
   const [isOpening, setIsOpening] = useState(false);
   const [isOpened, setIsOpened] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animDirection, setAnimDirection] = useState<'next' | 'prev'>('next');
 
@@ -170,9 +167,6 @@ export default function UploadFlipbook({
   const prefersReducedMotion = useReducedMotion();
   const canAnimate = useCanAnimate();
   const shouldAnimate = business.flipbookAnimEnabled && !prefersReducedMotion && canAnimate;
-
-  // Dynamic book sizing
-  const bookDims = useBookDimensions(3 / 4);
 
   // Render PDF pages
   const { pageImages: pdfPageImages, loading: pdfLoading, error: pdfError } = usePdfPages(
@@ -213,13 +207,12 @@ export default function UploadFlipbook({
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') goNext();
       if (e.key === 'ArrowLeft') goPrev();
-      if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false);
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [goNext, goPrev, isFullscreen]);
+  }, [goNext, goPrev]);
 
-  // Swipe gesture
+  // Swipe gesture — always active
   const swipeHandlers = useSwipeGesture(
     {
       onSwipeLeft: isOpened ? goNext : undefined,
@@ -255,15 +248,6 @@ export default function UploadFlipbook({
   const fontFamily = fontMap[business.fontFamily] || fontMap.inter;
 
   const welcomeMessage = (business as Record<string, unknown>).welcomeMessage as string || business.description || '';
-
-  // Page tap zones
-  const handlePageTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isOpened || !business.flipbookInteractions) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    if (x < rect.width * 0.3) goPrev();
-    else if (x > rect.width * 0.7) goNext();
-  };
 
   /* ------------------------------------------------------------------ */
   /*  Transition class                                                  */
@@ -456,7 +440,7 @@ export default function UploadFlipbook({
   /* ------------------------------------------------------------------ */
   if (pdfLoading && isOpened) {
     return (
-      <div className="flipbook-container w-full h-full-dvh flex items-center justify-center bg-gray-100" style={{ fontFamily }}>
+      <div className="flipbook-container fixed inset-0 z-[9999] flex items-center justify-center bg-white" style={{ fontFamily }}>
         <div className="text-center gap-3 flex flex-col items-center">
           <Loader2 className="w-7 h-7 animate-spin" style={{ color: primaryColor }} />
           <p className="text-xs text-gray-400">Loading menu pages...</p>
@@ -466,120 +450,63 @@ export default function UploadFlipbook({
   }
 
   /* ------------------------------------------------------------------ */
-  /*  Fullscreen Mode                                                    */
-  /* ------------------------------------------------------------------ */
-  if (isFullscreen) {
-    return (
-      <div
-        ref={bookRef}
-        className="fixed inset-0 z-[9999] bg-white overflow-hidden flipbook-container safe-top safe-bottom"
-        style={{ fontFamily }}
-        onTouchStart={swipeHandlers.onTouchStart}
-        onTouchMove={swipeHandlers.onTouchMove}
-        onTouchEnd={swipeHandlers.onTouchEnd}
-      >
-        <button
-          onClick={() => setIsFullscreen(false)}
-          className="absolute top-3 right-3 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-md"
-          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
-        >
-          <Minimize2 className="w-5 h-5 text-gray-700" />
-        </button>
-
-        <div
-          className={`w-full h-full flex items-center justify-center ${getPageTransitionClass()} flip-page`}
-          onClick={handlePageTap}
-          style={{ '--anim-duration': animDuration } as React.CSSProperties}
-        >
-          <div className="w-full h-full max-w-lg mx-auto">
-            {renderPageContent()}
-          </div>
-        </div>
-
-        {isOpened && (
-          <FlipNavigation
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPrev={goPrev}
-            onNext={goNext}
-            showPageNumbers={business.flipbookPageNumbers}
-            primaryColor={primaryColor}
-          />
-        )}
-      </div>
-    );
-  }
-
-  /* ------------------------------------------------------------------ */
-  /*  Normal Mode — Mobile-First Full Screen                              */
+  /*  Always Fullscreen — swipe anywhere for navigation                   */
   /* ------------------------------------------------------------------ */
   return (
     <div
       ref={bookRef}
-      className="flipbook-container w-full h-full-dvh bg-gray-100 flex flex-col items-center justify-center safe-top safe-bottom"
+      className="fixed inset-0 z-[9999] bg-white overflow-hidden flipbook-container safe-top safe-bottom"
       style={{ fontFamily }}
       onTouchStart={swipeHandlers.onTouchStart}
       onTouchMove={swipeHandlers.onTouchMove}
       onTouchEnd={swipeHandlers.onTouchEnd}
     >
-      {/* Book */}
-      <div
-        className="relative bg-white shadow-2xl overflow-hidden rounded-lg sm:rounded-xl"
-        style={{
-          width: isFullscreen ? '100%' : `${bookDims.width}px`,
-          height: isFullscreen ? '100%' : `${bookDims.height}px`,
-          maxWidth: '100%',
-          maxHeight: '100%',
-          transition: shouldAnimate ? `all ${animDuration} cubic-bezier(0.4, 0, 0.2, 1)` : 'none',
-        }}
-      >
-        {/* Fullscreen button */}
-        {isOpened && business.flipbookFullscreen && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
-            className="absolute top-2 right-2 z-50 w-9 h-9 flex items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-md"
-          >
-            <Maximize2 className="w-4 h-4 text-gray-500" />
-          </button>
-        )}
-
-        {/* Close button */}
-        {isOpened && currentPage > 0 && (
-          <button
-            onClick={(e) => { e.stopPropagation(); handleCloseBook(); }}
-            className="absolute top-2 left-2 z-50 w-9 h-9 flex items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-md"
-          >
-            <BookOpen className="w-4 h-4 text-gray-500" />
-          </button>
-        )}
-
-        {/* Page content */}
-        <div
-          className={`w-full h-full cursor-pointer ${getPageTransitionClass()} flip-page`}
-          onClick={handlePageTap}
-          style={{ '--anim-duration': animDuration } as React.CSSProperties}
+      {/* Back to cover button */}
+      {isOpened && currentPage > 0 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleCloseBook(); }}
+          className="absolute top-3 left-3 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-md"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
         >
+          <BookOpen className="w-5 h-5 text-gray-700" />
+        </button>
+      )}
+
+      {/* Page content */}
+      <div
+        className={`w-full h-full flex items-center justify-center ${getPageTransitionClass()} flip-page`}
+        onClick={(e) => {
+          // Tap zones for navigation
+          if (!isOpened || !business.flipbookInteractions) return;
+          const rect = e.currentTarget.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          if (x < rect.width * 0.3) goPrev();
+          else if (x > rect.width * 0.7) goNext();
+        }}
+        style={{ '--anim-duration': animDuration } as React.CSSProperties}
+      >
+        <div className="w-full h-full max-w-lg mx-auto">
           {renderPageContent()}
         </div>
-
-        {/* Navigation */}
-        {isOpened && (
-          <FlipNavigation
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPrev={goPrev}
-            onNext={goNext}
-            showPageNumbers={business.flipbookPageNumbers}
-            primaryColor={primaryColor}
-          />
-        )}
       </div>
+
+      {/* Navigation */}
+      {isOpened && (
+        <FlipNavigation
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPrev={goPrev}
+          onNext={goNext}
+          showPageNumbers={business.flipbookPageNumbers}
+          primaryColor={primaryColor}
+        />
+      )}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  FlipNavigation — Thumb-reachable, safe-area aware                    */
+/*  FlipNavigation — Full-width swipe areas + bottom arrows              */
 /* ------------------------------------------------------------------ */
 interface FlipNavigationProps {
   currentPage: number;
@@ -593,35 +520,55 @@ interface FlipNavigationProps {
 function FlipNavigation({ currentPage, totalPages, onPrev, onNext, showPageNumbers, primaryColor }: FlipNavigationProps) {
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-between pointer-events-none"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)', paddingTop: '16px' }}
+      className="absolute bottom-0 left-0 right-0 z-40 pointer-events-none"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}
     >
-      {/* Prev */}
-      <button
+      {/* Left swipe zone */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-[30%] pointer-events-auto flex items-center justify-start"
         onClick={(e) => { e.stopPropagation(); onPrev(); }}
-        disabled={currentPage <= 1}
-        className="pointer-events-auto w-11 h-11 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md shadow-md disabled:opacity-20 disabled:cursor-not-allowed active:scale-90 transition-all ml-3"
-        aria-label="Previous page"
       >
-        <ChevronLeft className="w-5 h-5 text-gray-700" />
-      </button>
-
-      {/* Page counter */}
-      {showPageNumbers && (
-        <div className="pointer-events-none px-3.5 py-1.5 bg-white/80 backdrop-blur-md rounded-full text-[11px] font-semibold text-gray-500 shadow-sm">
-          {currentPage} / {totalPages - 1}
+        <div className="ml-2 flex items-center gap-1 opacity-40">
+          <ChevronLeft className="w-6 h-6 text-gray-500" />
         </div>
-      )}
+      </div>
 
-      {/* Next */}
-      <button
+      {/* Right swipe zone */}
+      <div
+        className="absolute right-0 top-0 bottom-0 w-[30%] pointer-events-auto flex items-center justify-end"
         onClick={(e) => { e.stopPropagation(); onNext(); }}
-        disabled={currentPage >= totalPages - 1}
-        className="pointer-events-auto w-11 h-11 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md shadow-md disabled:opacity-20 disabled:cursor-not-allowed active:scale-90 transition-all mr-3"
-        aria-label="Next page"
       >
-        <ChevronRight className="w-5 h-5 text-gray-700" />
-      </button>
+        <div className="mr-2 flex items-center gap-1 opacity-40">
+          <ChevronRight className="w-6 h-6 text-gray-500" />
+        </div>
+      </div>
+
+      {/* Bottom navigation bar */}
+      <div className="flex items-center justify-between px-3 pt-3">
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrev(); }}
+          disabled={currentPage <= 1}
+          className="pointer-events-auto w-12 h-12 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-gray-100 disabled:opacity-20 disabled:cursor-not-allowed active:scale-90 transition-all"
+          aria-label="Previous page"
+        >
+          <ChevronLeft className="w-5 h-5 text-gray-700" />
+        </button>
+
+        {showPageNumbers && (
+          <div className="px-4 py-2 bg-white/90 backdrop-blur-md rounded-full text-xs font-semibold text-gray-500 shadow-sm border border-gray-100">
+            {currentPage} / {totalPages - 1}
+          </div>
+        )}
+
+        <button
+          onClick={(e) => { e.stopPropagation(); onNext(); }}
+          disabled={currentPage >= totalPages - 1}
+          className="pointer-events-auto w-12 h-12 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-gray-100 disabled:opacity-20 disabled:cursor-not-allowed active:scale-90 transition-all"
+          aria-label="Next page"
+        >
+          <ChevronRight className="w-5 h-5 text-gray-700" />
+        </button>
+      </div>
     </div>
   );
 }

@@ -13,6 +13,7 @@ export function useSwipeGesture(handlers: SwipeHandlers, threshold = 40) {
   const touchStartTime = useRef<number>(0);
   const handlersRef = useRef(handlers);
   const [isSwiping, setIsSwiping] = useState(false);
+  const isScrolling = useRef(false);
 
   useEffect(() => {
     handlersRef.current = handlers;
@@ -23,7 +24,6 @@ export function useSwipeGesture(handlers: SwipeHandlers, threshold = 40) {
     const target = e.target as HTMLElement;
     if (
       target.closest('button, a, input, textarea, select, [role="slider"], [data-no-swipe], .no-swipe') ||
-      target.closest('[class*="overflow-y"], [class*="scroll"]') ||
       target.closest('[data-radix-popper-content-wrapper]') ||
       target.tagName === 'IMG'
     ) {
@@ -33,6 +33,7 @@ export function useSwipeGesture(handlers: SwipeHandlers, threshold = 40) {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     touchStartTime.current = Date.now();
+    isScrolling.current = false;
   }, []);
 
   const onTouchMove = useCallback((e: React.TouchEvent | TouchEvent) => {
@@ -41,14 +42,33 @@ export function useSwipeGesture(handlers: SwipeHandlers, threshold = 40) {
     const deltaX = Math.abs(e.touches[0].clientX - touchStartX.current);
     const deltaY = Math.abs(e.touches[0].clientY - touchStartY.current);
 
-    // If vertical scroll is dominant, don't prevent it
+    // If vertical scroll is dominant and the content is scrollable, allow scrolling
     if (deltaY > deltaX && deltaY > 10) {
-      touchStartX.current = null;
-      touchStartY.current = null;
-      return;
+      // Check if the target container is scrollable and has room to scroll
+      const target = e.target as HTMLElement;
+      const scrollContainer = target.closest('[class*="overflow-y"], [class*="scroll"]');
+      if (scrollContainer) {
+        const el = scrollContainer as HTMLElement;
+        const atTop = el.scrollTop <= 2;
+        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
+
+        // If there's room to scroll vertically, let it scroll naturally
+        if ((!atTop && !atBottom) || (deltaY > deltaX * 1.5)) {
+          touchStartX.current = null;
+          touchStartY.current = null;
+          isScrolling.current = true;
+          return;
+        }
+      } else {
+        // No scroll container — let vertical scroll happen
+        touchStartX.current = null;
+        touchStartY.current = null;
+        isScrolling.current = true;
+        return;
+      }
     }
 
-    // Prevent horizontal scroll bounce on iOS during horizontal swipe
+    // Horizontal swipe detected
     if (deltaX > deltaY && deltaX > 10) {
       setIsSwiping(true);
     }
