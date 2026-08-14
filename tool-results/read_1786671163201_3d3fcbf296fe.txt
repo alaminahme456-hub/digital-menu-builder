@@ -1,0 +1,599 @@
+     1→'use client';
+     2→
+     3→import React, { useState, useEffect, useMemo } from 'react';
+     4→import {
+     5→  Search,
+     6→  Store,
+     7→  MapPin,
+     8→  Phone,
+     9→  MessageCircle,
+    10→  Clock,
+    11→  UtensilsCrossed,
+    12→  X,
+    13→  ChefHat,
+    14→  AlertCircle,
+    15→  BookOpen,
+    16→  ShoppingCart,
+    17→  Trash2,
+    18→  Plus,
+    19→  Minus,
+    20→  Send,
+    21→} from 'lucide-react';
+    22→import { Badge } from '@/components/ui/badge';
+    23→import { Button } from '@/components/ui/button';
+    24→import { Skeleton } from '@/components/ui/skeleton';
+    25→import { formatPrice } from '@/lib/auth';
+    26→import { FlipbookMenu, UploadFlipbook } from '@/components/flipbook';
+    27→import type { Business, MenuCategory, MenuItem, MenuUpload } from '@/lib/types';
+    28→
+    29→/* ------------------------------------------------------------------ */
+    30→/*  Props                                                              */
+    31→/* ------------------------------------------------------------------ */
+    32→interface PublicMenuClientProps {
+    33→  business: Record<string, unknown>;
+    34→  categories: Record<string, unknown>[];
+    35→  items: Record<string, unknown>[];
+    36→  uploads: Record<string, unknown>[];
+    37→  slug: string;
+    38→}
+    39→
+    40→/* ------------------------------------------------------------------ */
+    41→/*  Template helpers                                                   */
+    42→/* ------------------------------------------------------------------ */
+    43→type TemplateName =
+    44→  | 'modern' | 'classic' | 'luxury' | 'minimal' | 'fastfood'
+    45→  | 'cafe' | 'pizza' | 'dark' | 'colorful' | 'elegant';
+    46→
+    47→function getTemplateClasses(template: string, primaryColor: string): string {
+    48→  const t = template as TemplateName;
+    49→  const base = 'min-h-screen';
+    50→  const overrides: Record<TemplateName, string> = {
+    51→    modern: 'bg-white text-gray-900',
+    52→    classic: 'bg-amber-50/50 text-gray-900 font-serif',
+    53→    luxury: 'bg-gray-950 text-gray-100',
+    54→    minimal: 'bg-white text-gray-900',
+    55→    fastfood: 'bg-yellow-50 text-gray-900',
+    56→    cafe: 'bg-orange-50/40 text-gray-900',
+    57→    pizza: 'bg-red-50/30 text-gray-900',
+    58→    dark: 'bg-[#1a1a2e] text-gray-100',
+    59→    colorful: 'bg-white text-gray-900',
+    60→    elegant: 'bg-stone-50 text-gray-800',
+    61→  };
+    62→  return `${base} ${overrides[t] ?? overrides.modern}`;
+    63→}
+    64→
+    65→function getHeaderBg(template: string, primaryColor: string): string {
+    66→  const t = template as TemplateName;
+    67→  const map: Record<TemplateName, string> = {
+    68→    modern:   `bg-gradient-to-br from-white via-white to-gray-50`,
+    69→    classic:  `bg-gradient-to-br from-amber-100 via-amber-50 to-orange-50`,
+    70→    luxury:   `bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900`,
+    71→    minimal:  `bg-white border-b border-gray-200`,
+    72→    fastfood: `bg-gradient-to-br from-yellow-400 via-orange-400 to-red-400`,
+    73→    cafe:     `bg-gradient-to-br from-amber-800 via-amber-700 to-yellow-800`,
+    74→    pizza:    `bg-gradient-to-br from-green-700 via-green-600 to-red-700`,
+    75→    dark:     `bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460]`,
+    76→    colorful: `bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400`,
+    77→    elegant:  `bg-gradient-to-br from-stone-100 via-stone-50 to-stone-100`,
+    78→  };
+    79→  return map[t] ?? map.modern;
+    80→}
+    81→
+    82→function getHeaderTextColor(template: string): string {
+    83→  const dark = ['luxury', 'dark', 'fastfood', 'cafe', 'pizza', 'colorful'];
+    84→  return dark.includes(template) ? 'text-white' : 'text-gray-900';
+    85→}
+    86→
+    87→function getCategoryBtnStyle(template: string, primaryColor: string, isActive: boolean): React.CSSProperties {
+    88→  const t = template as TemplateName;
+    89→  if (isActive) {
+    90→    if (t === 'luxury' || t === 'dark') return { backgroundColor: primaryColor, color: '#fff' };
+    91→    if (t === 'colorful') return { background: `linear-gradient(135deg, ${primaryColor}, #ec4899)`, color: '#fff' };
+    92→    return { backgroundColor: primaryColor, color: '#fff' };
+    93→  }
+    94→  if (t === 'luxury' || t === 'dark') return { backgroundColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' };
+    95→  return { backgroundColor: '#f3f4f6', color: '#374151' };
+    96→}
+    97→
+    98→/* ------------------------------------------------------------------ */
+    99→/*  WhatsApp order basket item                                          */
+   100→/* ------------------------------------------------------------------ */
+   101→interface BasketItem {
+   102→  id: string;
+   103→  name: string;
+   104→  price: number;
+   105→  quantity: number;
+   106→}
+   107→
+   108→/* ------------------------------------------------------------------ */
+   109→/*  Main Client Component                                               */
+   110→/* ------------------------------------------------------------------ */
+   111→export default function PublicMenuClient({ business: biz, categories: cats, items: rawItems, uploads, slug }: PublicMenuClientProps) {
+   112→  const business = biz as unknown as Business;
+   113→  const categories = cats as unknown as MenuCategory[];
+   114→  const items = rawItems as unknown as MenuItem[];
+   115→
+   116→  const [search, setSearch] = useState('');
+   117→  const [activeCategory, setActiveCategory] = useState<string>('');
+   118→  const [viewMode, setViewMode] = useState<'flipbook' | 'list'>(
+   119→    business.flipbookEnabled ? 'flipbook' : 'list'
+   120→  );
+   121→  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+   122→  const [basket, setBasket] = useState<BasketItem[]>([]);
+   123→
+   124→  // Set initial category — derive from categories instead of useEffect setState
+   125→  const effectiveActiveCategory = activeCategory || (categories.length > 0 ? categories[0].id : '');
+   126→
+   127→  // Track analytics view
+   128→  useEffect(() => {
+   129→    fetch('/api/analytics', {
+   130→      method: 'POST',
+   131→      headers: { 'Content-Type': 'application/json' },
+   132→      body: JSON.stringify({ eventType: 'view', businessId: business.id }),
+   133→    }).catch(() => {});
+   134→  }, [business.id]);
+   135→
+   136→  // Filter items
+   137→  const filteredItems = useMemo(() => {
+   138→    let result = items;
+   139→    if (effectiveActiveCategory) {
+   140→      result = result.filter((item) => item.categoryId === effectiveActiveCategory);
+   141→    }
+   142→    if (search.trim()) {
+   143→      const q = search.toLowerCase();
+   144→      result = result.filter(
+   145→        (item) =>
+   146→          item.name.toLowerCase().includes(q) ||
+   147→          item.description?.toLowerCase().includes(q)
+   148→      );
+   149→    }
+   150→    return result;
+   151→  }, [items, effectiveActiveCategory, search]);
+   152→
+   153→  // Basket helpers
+   154→  const addToBasket = (item: MenuItem) => {
+   155→    setBasket(prev => {
+   156→      const existing = prev.find(b => b.id === item.id);
+   157→      if (existing) {
+   158→        return prev.map(b => b.id === item.id ? { ...b, quantity: b.quantity + 1 } : b);
+   159→      }
+   160→      return [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1 }];
+   161→    });
+   162→    setSelectedItem(null);
+   163→  };
+   164→
+   165→  const updateBasketQty = (id: string, delta: number) => {
+   166→    setBasket(prev => prev.map(b => {
+   167→      if (b.id !== id) return b;
+   168→      const newQty = b.quantity + delta;
+   169→      return newQty > 0 ? { ...b, quantity: newQty } : b;
+   170→    }).filter(b => b.quantity > 0));
+   171→  };
+   172→
+   173→  const basketTotal = basket.reduce((sum, b) => sum + b.price * b.quantity, 0);
+   174→  const basketCount = basket.reduce((sum, b) => sum + b.quantity, 0);
+   175→
+   176→  const sendWhatsAppOrder = () => {
+   177→    const phone = business.whatsapp?.replace(/[^0-9]/g, '');
+   178→    if (!phone) return;
+   179→
+   180→    const greeting = business.whatsappGreeting || 'Hello, I would like to place an order:';
+   181→    const itemsStr = basket.map(b => `- ${b.name} x${b.quantity} (${formatPrice(b.price * b.quantity)})`).join('\n');
+   182→    const totalStr = `\n\nTotal: ${formatPrice(basketTotal)}`;
+   183→    const message = encodeURIComponent(`${greeting}\n\n${itemsStr}${totalStr}`);
+   184→    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+   185→  };
+   186→
+   187→  const primaryColor = business.primaryColor || '#10b981';
+   188→  const secondaryColor = business.secondaryColor || '#059669';
+   189→  const templateName = business.templateName || 'modern';
+   190→  const fontMap: Record<string, React.CSSProperties['fontFamily']> = {
+   191→    inter: 'system-ui, -apple-system, sans-serif',
+   192→    serif: 'Georgia, "Times New Roman", serif',
+   193→    mono: '"Courier New", monospace',
+   194→    playfair: '"Playfair Display", Georgia, serif',
+   195→  };
+   196→  const fontFamily = fontMap[business.fontFamily] || fontMap.inter;
+   197→
+   198→  /* ------------------------------------------------------------------ */
+   199→  /*  UNPUBLISHED                                                        */
+   200→  /* ------------------------------------------------------------------ */
+   201→  if (business.status !== 'published') {
+   202→    return (
+   203→      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+   204→        <div className="text-center max-w-sm">
+   205→          <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
+   206→            <ChefHat className="w-8 h-8 text-amber-600" />
+   207→          </div>
+   208→          <h2 className="text-xl font-bold text-gray-900 mb-2">This Digital Experience is Currently Unavailable</h2>
+   209→          <p className="text-gray-500 text-sm">
+   210→            This business is updating their digital catalog. Please check back soon.
+   211→          </p>
+   212→        </div>
+   213→      </div>
+   214→    );
+   215→  }
+   216→
+   217→  /* ------------------------------------------------------------------ */
+   218→  /*  PUBLISHED UPLOAD DETECTION                                         */
+   219→  /* ------------------------------------------------------------------ */
+   220→  const publishedUploads = uploads.filter((u: Record<string, unknown>) => u.published === true);
+   221→  const publishedUpload = publishedUploads.length > 0 ? publishedUploads[0] as unknown as MenuUpload : null;
+   222→
+   223→  const hasPublishedUpload = !!publishedUpload;
+   224→  const hasManualItems = items.length > 0;
+   225→
+   226→  /* ------------------------------------------------------------------ */
+   227→  /*  FLIPBOOK MODE — Published Upload Priority                           */
+   228→  /* ------------------------------------------------------------------ */
+   229→  if (viewMode === 'flipbook' && business.flipbookEnabled) {
+   230→    // If there's a published upload, use the upload flipbook
+   231→    if (hasPublishedUpload && publishedUpload) {
+   232→      return (
+   233→        <div className="min-h-screen bg-gray-100" style={{ fontFamily }}>
+   234→          <UploadFlipbook
+   235→            business={business}
+   236→            publishedUpload={publishedUpload}
+   237→            isPreview={false}
+   238→          />
+   239→        </div>
+   240→      );
+   241→    }
+   242→
+   243→    // Otherwise, use the standard manual menu flipbook
+   244→    return (
+   245→      <div className="min-h-screen bg-gray-100" style={{ fontFamily }}>
+   246→        {/* View mode switcher */}
+   247→        <div className="fixed top-3 right-3 z-[7000] flex gap-1 p-1 bg-white/90 backdrop-blur rounded-lg shadow-sm">
+   248→          <button
+   249→            onClick={() => setViewMode('flipbook')}
+   250→            className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+   251→            style={{ backgroundColor: primaryColor, color: '#fff' }}
+   252→          >
+   253→            Flipbook
+   254→          </button>
+   255→          <button
+   256→            onClick={() => setViewMode('list')}
+   257→            className="px-3 py-1.5 text-xs font-medium rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+   258→          >
+   259→            List
+   260→          </button>
+   261→        </div>
+   262→
+   263→        {/* WhatsApp Basket */}
+   264→        {business.whatsappOrder && basket.length > 0 && (
+   265→          <div className="fixed bottom-4 left-4 right-4 z-[7000] max-w-lg mx-auto">
+   266→            <div className="bg-white rounded-2xl shadow-2xl border p-4 flex items-center justify-between gap-3">
+   267→              <div className="flex-1 min-w-0">
+   268→                <p className="font-semibold text-sm">{basketCount} item{basketCount > 1 ? 's' : ''}</p>
+   269→                <p className="text-xs text-muted-foreground">{formatPrice(basketTotal)}</p>
+   270→              </div>
+   271→              <div className="flex gap-2">
+   272→                <Button size="sm" variant="outline" onClick={() => setBasket([])}>
+   273→                  <Trash2 className="h-4 w-4" />
+   274→                </Button>
+   275→                <Button size="sm" style={{ backgroundColor: '#25D366', color: '#fff' }} onClick={sendWhatsAppOrder}>
+   276→                  <Send className="mr-1 h-4 w-4" />
+   277→                  Order on WhatsApp
+   278→                </Button>
+   279→              </div>
+   280→            </div>
+   281→          </div>
+   282→        )}
+   283→
+   284→        <FlipbookMenu
+   285→          business={business}
+   286→          categories={categories}
+   287→          items={items}
+   288→          isPreview={false}
+   289→        />
+   290→      </div>
+   291→    );
+   292→  }
+   293→
+   294→  /* ------------------------------------------------------------------ */
+   295→  /*  LIST MODE                                                          */
+   296→  /* ------------------------------------------------------------------ */
+   297→  const headerTextColor = getHeaderTextColor(templateName);
+   298→
+   299→  // If there's a published upload, show it in a simple viewer (non-flipbook list mode)
+   300→  if (hasPublishedUpload && publishedUpload && !business.flipbookEnabled) {
+   301→    const isImage = publishedUpload.fileType?.startsWith('image/');
+   302→    return (
+   303→      <div className={getTemplateClasses(templateName, primaryColor)} style={{ fontFamily }}>
+   304→        {/* Header */}
+   305→        <div className={`${getHeaderBg(templateName, primaryColor)} ${headerTextColor} px-6 pt-8 pb-6`}>
+   306→          <div className="max-w-2xl mx-auto text-center">
+   307→            {business.logo ? (
+   308→              <img src={business.logo} alt={business.name} className="w-20 h-20 rounded-2xl object-cover mx-auto mb-4 shadow-lg ring-4 ring-white/20" />
+   309→            ) : (
+   310→              <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold shadow-lg ring-4 ring-white/20"
+   311→                style={{ backgroundColor: `${primaryColor}30`, color: headerTextColor === 'text-white' ? '#fff' : primaryColor }}>
+   312→                {business.name.charAt(0).toUpperCase()}
+   313→              </div>
+   314→            )}
+   315→            <h1 className="text-2xl font-bold mb-1">{business.name}</h1>
+   316→            {business.description && (
+   317→              <p className={`text-sm opacity-80 line-clamp-2 max-w-md mx-auto ${headerTextColor === 'text-white' ? 'text-white/70' : 'text-gray-500'}`}>
+   318→                {business.description}
+   319→              </p>
+   320→            )}
+   321→          </div>
+   322→        </div>
+   323→
+   324→        {/* Uploaded Menu Content */}
+   325→        <div className="max-w-2xl mx-auto p-4">
+   326→          <h2 className="text-lg font-bold mb-3 text-gray-900">Our Menu</h2>
+   327→          {isImage ? (
+   328→            <img src={publishedUpload.url} alt={publishedUpload.fileName} className="w-full rounded-xl shadow-md" />
+   329→          ) : (
+   330→            <div className="rounded-xl border border-gray-200 p-8 text-center">
+   331→              <p className="text-gray-500 mb-3">{publishedUpload.fileName}</p>
+   332→              <a href={publishedUpload.url} target="_blank" rel="noopener noreferrer"
+   333→                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium"
+   334→                style={{ backgroundColor: primaryColor }}
+   335→              >
+   336→                View PDF Menu
+   337→              </a>
+   338→            </div>
+   339→          )}
+   340→        </div>
+   341→
+   342→        {/* Footer */}
+   343→        <div className="text-center py-6 text-xs text-gray-400 border-t">
+   344→          Powered by <span className="font-semibold">BizFlip</span>
+   345→        </div>
+   346→      </div>
+   347→    );
+   348→  }
+   349→
+   350→  return (
+   351→    <div className={getTemplateClasses(templateName, primaryColor)} style={{ fontFamily }}>
+   352→      {/* View mode switcher */}
+   353→      {business.flipbookEnabled && (
+   354→        <div className="fixed top-3 right-3 z-50 flex gap-1 p-1 bg-white/90 backdrop-blur rounded-lg shadow-sm">
+   355→          <button
+   356→            onClick={() => setViewMode('flipbook')}
+   357→            className="px-3 py-1.5 text-xs font-medium rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+   358→          >
+   359→            Flipbook
+   360→          </button>
+   361→          <button
+   362→            onClick={() => setViewMode('list')}
+   363→            className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+   364→            style={{ backgroundColor: primaryColor, color: '#fff' }}
+   365→          >
+   366→            List
+   367→          </button>
+   368→        </div>
+   369→      )}
+   370→
+   371→      {/* Header */}
+   372→      <div className={`${getHeaderBg(templateName, primaryColor)} ${headerTextColor} px-6 pt-8 pb-6`}>
+   373→        <div className="max-w-2xl mx-auto text-center">
+   374→          {business.logo ? (
+   375→            <img
+   376→              src={business.logo}
+   377→              alt={business.name}
+   378→              className="w-20 h-20 rounded-2xl object-cover mx-auto mb-4 shadow-lg ring-4 ring-white/20"
+   379→            />
+   380→          ) : (
+   381→            <div
+   382→              className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold shadow-lg ring-4 ring-white/20"
+   383→              style={{ backgroundColor: `${primaryColor}30`, color: headerTextColor === 'text-white' ? '#fff' : primaryColor }}
+   384→            >
+   385→              {business.name.charAt(0).toUpperCase()}
+   386→            </div>
+   387→          )}
+   388→          <h1 className="text-2xl font-bold mb-1">{business.name}</h1>
+   389→          {business.description && (
+   390→            <p className={`text-sm opacity-80 line-clamp-2 max-w-md mx-auto ${headerTextColor === 'text-white' ? 'text-white/70' : 'text-gray-500'}`}>
+   391→              {business.description}
+   392→            </p>
+   393→          )}
+   394→          <div className={`flex flex-wrap items-center justify-center gap-3 mt-3 text-xs ${headerTextColor === 'text-white' ? 'text-white/60' : 'text-gray-400'}`}>
+   395→            {business.openingHours && (
+   396→              <span className="flex items-center gap-1">
+   397→                <Clock className="h-3 w-3" />
+   398→                {business.openingHours}
+   399→              </span>
+   400→            )}
+   401→            {business.address && (
+   402→              <span className="flex items-center gap-1">
+   403→                <MapPin className="h-3 w-3" />
+   404→                {business.address}
+   405→              </span>
+   406→            )}
+   407→            {business.whatsappOrder && (
+   408→              <span className="flex items-center gap-1">
+   409→                <MessageCircle className="h-3 w-3" />
+   410→                Order via WhatsApp
+   411→              </span>
+   412→            )}
+   413→          </div>
+   414→        </div>
+   415→      </div>
+   416→
+   417→      {/* Search */}
+   418→      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b px-4 py-3">
+   419→        <div className="max-w-2xl mx-auto">
+   420→          <div className="relative">
+   421→            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+   422→            <input
+   423→              type="text"
+   424→              placeholder="Search menu items..."
+   425→              value={search}
+   426→              onChange={(e) => setSearch(e.target.value)}
+   427→              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+   428→            />
+   429→            {search && (
+   430→              <button
+   431→                onClick={() => setSearch('')}
+   432→                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-gray-200 transition-colors"
+   433→              >
+   434→                <X className="h-3.5 w-3.5 text-gray-400" />
+   435→              </button>
+   436→            )}
+   437→          </div>
+   438→        </div>
+   439→      </div>
+   440→
+   441→      {/* Category Navigation */}
+   442→      {categories.length > 0 && (
+   443→        <div className="sticky top-[57px] z-20 bg-white/90 backdrop-blur border-b px-4 py-2">
+   444→          <div className="max-w-2xl mx-auto">
+   445→            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+   446→              {categories.map((cat) => (
+   447→                <button
+   448→                  key={cat.id}
+   449→                  onClick={() => setActiveCategory(cat.id)}
+   450→                  className="flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all"
+   451→                  style={getCategoryBtnStyle(templateName, primaryColor, effectiveActiveCategory === cat.id)}
+   452→                >
+   453→                  {cat.name}
+   454→                </button>
+   455→              ))}
+   456→            </div>
+   457→          </div>
+   458→        </div>
+   459→      )}
+   460→
+   461→      {/* Menu Items */}
+   462→      <div className="max-w-2xl mx-auto p-4">
+   463→        {search && filteredItems.length === 0 ? (
+   464→          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+   465→            <Search className="h-10 w-10 mb-2 opacity-50" />
+   466→            <p className="text-sm">No items match &ldquo;{search}&rdquo;</p>
+   467→          </div>
+   468→        ) : filteredItems.length === 0 ? (
+   469→          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+   470→            <UtensilsCrossed className="h-10 w-10 mb-2 opacity-50" />
+   471→            <p className="text-sm">No items in this category</p>
+   472→          </div>
+   473→        ) : (
+   474→          <div className="grid gap-3">
+   475→            {filteredItems.map((item) => (
+   476→              <div
+   477→                key={item.id}
+   478→                onClick={() => setSelectedItem(item)}
+   479→                className="flex gap-3 rounded-xl border border-gray-200/80 p-3 transition-shadow hover:shadow-md cursor-pointer"
+   480→              >
+   481→                {item.image ? (
+   482→                  <img
+   483→                    src={item.image}
+   484→                    alt={item.name}
+   485→                    className="h-20 w-20 rounded-lg object-cover flex-shrink-0"
+   486→                    loading="lazy"
+   487→                  />
+   488→                ) : (
+   489→                  <div
+   490→                    className="h-20 w-20 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl"
+   491→                    style={{ backgroundColor: `${primaryColor}10`, color: primaryColor }}
+   492→                  >
+   493→                    {item.name.charAt(0)}
+   494→                  </div>
+   495→                )}
+   496→                <div className="flex-1 min-w-0">
+   497→                  <div className="flex items-start justify-between gap-2">
+   498→                    <h3 className="font-semibold text-sm truncate">{item.name}</h3>
+   499→                    {!item.available && (
+   500→                      <Badge variant="secondary" className="text-[10px] flex-shrink-0">
+   501→                        Unavailable
+   502→                      </Badge>
+   503→                    )}
+   504→                  </div>
+   505→                  {item.description && (
+   506→                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{item.description}</p>
+   507→                  )}
+   508→                  <p className="text-sm font-bold mt-1.5" style={{ color: primaryColor }}>
+   509→                    {formatPrice(item.price)}
+   510→                  </p>
+   511→                </div>
+   512→              </div>
+   513→            ))}
+   514→          </div>
+   515→        )}
+   516→      </div>
+   517→
+   518→      {/* Product Detail Modal */}
+   519→      {selectedItem && (
+   520→        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setSelectedItem(null)}>
+   521→          <div className="absolute inset-0 bg-black/50" />
+   522→          <div className="relative bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+   523→            {selectedItem.image && (
+   524→              <img src={selectedItem.image} alt={selectedItem.name} className="w-full h-56 object-cover" />
+   525→            )}
+   526→            <div className="p-5">
+   527→              <div className="flex items-start justify-between mb-2">
+   528→                <h2 className="text-lg font-bold">{selectedItem.name}</h2>
+   529→                <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-gray-100 rounded-full">
+   530→                  <X className="h-5 w-5" />
+   531→                </button>
+   532→              </div>
+   533→              {selectedItem.description && (
+   534→                <p className="text-sm text-gray-500 mb-3">{selectedItem.description}</p>
+   535→              )}
+   536→              <p className="text-xl font-bold mb-4" style={{ color: primaryColor }}>
+   537→                {formatPrice(selectedItem.price)}
+   538→              </p>
+   539→              <div className="flex items-center justify-between">
+   540→                <div className="flex items-center gap-3">
+   541→                  <button
+   542→                    onClick={() => updateBasketQty(selectedItem.id, -1)}
+   543→                    className="w-9 h-9 rounded-full border flex items-center justify-center hover:bg-gray-50"
+   544→                  >
+   545→                    <Minus className="h-4 w-4" />
+   546→                  </button>
+   547→                  <span className="font-semibold text-lg w-8 text-center">
+   548→                    {basket.find(b => b.id === selectedItem.id)?.quantity || 0}
+   549→                  </span>
+   550→                  <button
+   551→                    onClick={() => updateBasketQty(selectedItem.id, 1)}
+   552→                    className="w-9 h-9 rounded-full border flex items-center justify-center hover:bg-gray-50"
+   553→                  >
+   554→                    <Plus className="h-4 w-4" />
+   555→                  </button>
+   556→                </div>
+   557→                <Button
+   558→                  onClick={() => addToBasket(selectedItem)}
+   559→                  disabled={!selectedItem.available}
+   560→                  style={{ backgroundColor: primaryColor, color: '#fff' }}
+   561→                >
+   562→                  <ShoppingCart className="mr-2 h-4 w-4" />
+   563→                  Add to Order
+   564→                </Button>
+   565→              </div>
+   566→            </div>
+   567→          </div>
+   568→        </div>
+   569→      )}
+   570→
+   571→      {/* WhatsApp Basket (list mode) */}
+   572→      {business.whatsappOrder && basket.length > 0 && (
+   573→        <div className="fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto">
+   574→          <div className="bg-white rounded-2xl shadow-2xl border p-4 flex items-center justify-between gap-3">
+   575→            <div className="flex-1 min-w-0">
+   576→              <p className="font-semibold text-sm">{basketCount} item{basketCount > 1 ? 's' : ''}</p>
+   577→              <p className="text-xs text-muted-foreground">{formatPrice(basketTotal)}</p>
+   578→            </div>
+   579→            <div className="flex gap-2">
+   580→              <Button size="sm" variant="outline" onClick={() => setBasket([])}>
+   581→                <Trash2 className="h-4 w-4" />
+   582→              </Button>
+   583→              <Button size="sm" style={{ backgroundColor: '#25D366', color: '#fff' }} onClick={sendWhatsAppOrder}>
+   584→                <Send className="mr-1 h-4 w-4" />
+   585→                Order on WhatsApp
+   586→              </Button>
+   587→            </div>
+   588→          </div>
+   589→        </div>
+   590→      )}
+   591→
+   592→      {/* Footer */}
+   593→      <div className="text-center py-6 text-xs text-gray-400 border-t">
+   594→        Powered by <span className="font-semibold">BizFlip</span>
+   595→      </div>
+   596→    </div>
+   597→  );
+   598→}
+   599→
