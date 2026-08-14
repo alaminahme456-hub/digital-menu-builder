@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Palette, Eye, Check, Loader2, Type, Paintbrush,
-  Smartphone, X
+  Smartphone, X, Sparkles, Crown, ChevronRight,
+  RotateCcw, ExternalLink, AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,25 @@ import { useAuthStore, useAppStore } from '@/lib/store';
 import { TEMPLATES, FONT_OPTIONS } from '@/lib/types';
 import { toast } from 'sonner';
 
+// ──────────────────────────────────────────────
+// Template metadata: style tags for each template
+// ──────────────────────────────────────────────
+const TEMPLATE_TAGS: Record<string, string[]> = {
+  modern: ['Clean', 'Contemporary'],
+  classic: ['Traditional', 'Elegant'],
+  luxury: ['Premium', 'Gold', 'Dark'],
+  minimal: ['Whitespace', 'Simple'],
+  fastfood: ['Bold', 'Vibrant'],
+  cafe: ['Warm', 'Cozy'],
+  pizza: ['Italian', 'Fun'],
+  dark: ['Sleek', 'Dark'],
+  colorful: ['Fun', 'Multi-color'],
+  elegant: ['Refined', 'Sophisticated'],
+};
+
+// ──────────────────────────────────────────────
 // Template style configs for CSS previews
+// ──────────────────────────────────────────────
 const TEMPLATE_STYLES: Record<string, {
   bg: string;
   headerBg: string;
@@ -75,15 +94,17 @@ const TEMPLATE_STYLES: Record<string, {
   },
 };
 
-// Mini template preview component
+// ──────────────────────────────────────────────
+// Mini template preview (card thumbnail)
+// ──────────────────────────────────────────────
 function TemplateMiniPreview({ templateName, width = 200, height = 260 }: { templateName: string; width?: number; height?: number }) {
   const style = TEMPLATE_STYLES[templateName] || TEMPLATE_STYLES.modern;
   const isGradient = style.headerBg.includes('gradient');
 
   const mockItems = [
-    { name: 'Grilled Chicken', price: '₦4,500' },
-    { name: 'Jollof Rice', price: '₦3,000' },
-    { name: 'Caesar Salad', price: '₦2,500' },
+    { name: 'Grilled Chicken', price: '\u20A64,500' },
+    { name: 'Jollof Rice', price: '\u20A63,000' },
+    { name: 'Caesar Salad', price: '\u20A62,500' },
   ];
 
   return (
@@ -139,14 +160,7 @@ function TemplateMiniPreview({ templateName, width = 200, height = 260 }: { temp
         {style.layout === 'grid' ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
             {mockItems.map((item, i) => (
-              <div
-                key={i}
-                style={{
-                  background: style.cardBg,
-                  borderRadius: style.borderRadius,
-                  padding: '4px',
-                }}
-              >
+              <div key={i} style={{ background: style.cardBg, borderRadius: style.borderRadius, padding: '4px' }}>
                 <div style={{ color: style.text, fontWeight: 600, fontSize: '6px' }}>{item.name}</div>
                 <div style={{ color: style.accent, fontWeight: 700, fontSize: '7px', marginTop: '2px' }}>{item.price}</div>
               </div>
@@ -155,17 +169,10 @@ function TemplateMiniPreview({ templateName, width = 200, height = 260 }: { temp
         ) : style.layout === 'cards' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {mockItems.map((item, i) => (
-              <div
-                key={i}
-                style={{
-                  background: style.cardBg,
-                  borderRadius: style.borderRadius,
-                  padding: '5px 6px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
+              <div key={i} style={{
+                background: style.cardBg, borderRadius: style.borderRadius, padding: '5px 6px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
                 <div style={{ color: style.text, fontWeight: 600, fontSize: '6px' }}>{item.name}</div>
                 <div style={{ color: style.accent, fontWeight: 700, fontSize: '7px' }}>{item.price}</div>
               </div>
@@ -174,15 +181,10 @@ function TemplateMiniPreview({ templateName, width = 200, height = 260 }: { temp
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
             {mockItems.map((item, i) => (
-              <div
-                key={i}
-                style={{
-                  borderBottom: `0.5px solid ${style.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
-                  paddingBottom: '3px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                }}
-              >
+              <div key={i} style={{
+                borderBottom: `0.5px solid ${style.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+                paddingBottom: '3px', display: 'flex', justifyContent: 'space-between',
+              }}>
                 <div style={{ color: style.text, fontWeight: 500, fontSize: '6px' }}>{item.name}</div>
                 <div style={{ color: style.accent, fontWeight: 600, fontSize: '6.5px' }}>{item.price}</div>
               </div>
@@ -194,20 +196,19 @@ function TemplateMiniPreview({ templateName, width = 200, height = 260 }: { temp
       {/* Second category hint */}
       <div style={{ padding: '2px 8px 0' }}>
         <div style={{
-          color: style.subtext,
-          fontSize: '6px',
-          fontWeight: 500,
-          textTransform: 'uppercase' as const,
-          letterSpacing: '0.3px',
+          color: style.subtext, fontSize: '6px', fontWeight: 500,
+          textTransform: 'uppercase' as const, letterSpacing: '0.3px',
         }}>
-          Drinks & Desserts ▸
+          Drinks &amp; Desserts &#x25B8;
         </div>
       </div>
     </div>
   );
 }
 
-// Full mobile preview for dialog
+// ──────────────────────────────────────────────
+// Full mobile preview for dialog (preview-only, no apply)
+// ──────────────────────────────────────────────
 function TemplateMobilePreview({ templateName, primaryColor, secondaryColor, fontFamily }: {
   templateName: string;
   primaryColor?: string;
@@ -233,15 +234,15 @@ function TemplateMobilePreview({ templateName, primaryColor, secondaryColor, fon
     {
       name: 'Main Course',
       items: [
-        { name: 'Grilled Chicken', description: 'Crispy chicken with vegetables', price: '₦4,500' },
-        { name: 'Jollof Rice', description: 'Classic Nigerian jollof rice', price: '₦3,000' },
+        { name: 'Grilled Chicken', description: 'Crispy chicken with vegetables', price: '\u20A64,500' },
+        { name: 'Jollof Rice', description: 'Classic Nigerian jollof rice', price: '\u20A63,000' },
       ],
     },
     {
       name: 'Drinks',
       items: [
-        { name: 'Chapman', description: 'Classic Nigerian cocktail', price: '₦1,500' },
-        { name: 'Fresh Juice', description: 'Freshly squeezed orange juice', price: '₦1,000' },
+        { name: 'Chapman', description: 'Classic Nigerian cocktail', price: '\u20A61,500' },
+        { name: 'Fresh Juice', description: 'Freshly squeezed orange juice', price: '\u20A61,000' },
       ],
     },
   ];
@@ -250,31 +251,21 @@ function TemplateMobilePreview({ templateName, primaryColor, secondaryColor, fon
     <div
       className="mx-auto"
       style={{
-        width: '280px',
-        maxWidth: '100%',
-        minHeight: '480px',
-        background: style.bg,
-        borderRadius: '16px',
-        overflow: 'hidden',
+        width: '280px', maxWidth: '100%', minHeight: '480px',
+        background: style.bg, borderRadius: '16px', overflow: 'hidden',
         boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
-        fontFamily: style.font,
-        fontSize: '12px',
-        lineHeight: 1.5,
+        fontFamily: style.font, fontSize: '12px', lineHeight: 1.5,
       }}
     >
-      {/* Phone notch area */}
       <div className="flex justify-center pt-2 pb-1" style={{ background: isGradient ? undefined : style.headerBg, backgroundImage: isGradient ? style.headerBg : undefined }}>
         <div className="w-16 h-1 rounded-full" style={{ background: style.dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)' }} />
       </div>
 
-      {/* Header */}
-      <div
-        style={{
-          background: isGradient ? undefined : style.headerBg,
-          backgroundImage: isGradient ? style.headerBg : undefined,
-          padding: '16px 20px 20px',
-        }}
-      >
+      <div style={{
+        background: isGradient ? undefined : style.headerBg,
+        backgroundImage: isGradient ? style.headerBg : undefined,
+        padding: '16px 20px 20px',
+      }}>
         <div style={{ color: style.headerText, fontWeight: 700, fontSize: '18px', letterSpacing: '1px' }}>
           MY RESTAURANT
         </div>
@@ -283,19 +274,14 @@ function TemplateMobilePreview({ templateName, primaryColor, secondaryColor, fon
         </div>
       </div>
 
-      {/* Menu content */}
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {mockCategories.map((cat) => (
           <div key={cat.name}>
             <div style={{
-              color: style.accent,
-              fontWeight: 700,
-              fontSize: '11px',
-              textTransform: 'uppercase' as const,
-              letterSpacing: '1px',
+              color: style.accent, fontWeight: 700, fontSize: '11px',
+              textTransform: 'uppercase' as const, letterSpacing: '1px',
               borderBottom: `2px solid ${style.accent}`,
-              paddingBottom: '4px',
-              marginBottom: '10px',
+              paddingBottom: '4px', marginBottom: '10px',
             }}>
               {cat.name}
             </div>
@@ -319,32 +305,193 @@ function TemplateMobilePreview({ templateName, primaryColor, secondaryColor, fon
   );
 }
 
+// ──────────────────────────────────────────────
+// Template Card Component
+// ──────────────────────────────────────────────
+function TemplateCard({
+  template,
+  isActive,
+  isApplying,
+  onPreview,
+  onApply,
+}: {
+  template: typeof TEMPLATES[number];
+  isActive: boolean;
+  isApplying: boolean;
+  onPreview: () => void;
+  onApply: () => void;
+}) {
+  const tags = TEMPLATE_TAGS[template.name] || [];
+
+  return (
+    <div
+      className={`group relative rounded-2xl transition-all duration-300 ${
+        isActive
+          ? 'ring-2 ring-emerald-500 shadow-lg shadow-emerald-500/15 bg-white dark:bg-gray-900'
+          : 'border border-gray-200 dark:border-gray-800 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-lg bg-white dark:bg-gray-900'
+      }`}
+    >
+      {/* Applied badge */}
+      {isActive && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
+          <Badge className="bg-emerald-500 text-white border-0 shadow-sm gap-1 px-3 py-1 text-xs font-semibold">
+            <Check className="h-3 w-3" />
+            Applied
+          </Badge>
+        </div>
+      )}
+
+      {/* Template preview area */}
+      <div
+        className="relative overflow-hidden rounded-t-2xl bg-gray-50 dark:bg-gray-800 p-4 flex justify-center cursor-pointer"
+        onClick={onPreview}
+      >
+        <TemplateMiniPreview templateName={template.name} width={180} height={220} />
+
+        {/* Hover overlay */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-200 flex items-center justify-center">
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+              <Eye className="h-4 w-4" />
+              Preview
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Info section */}
+      <div className="p-4 space-y-3">
+        {/* Name and tags */}
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+              {template.label.toUpperCase()}
+            </h3>
+            {isActive && (
+              <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="text-[10px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500"
+              >
+                {tag}
+                {tag !== tags[tags.length - 1] && (
+                  <span className="text-gray-300 dark:text-gray-600 ml-1.5">&bull;</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Description */}
+        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">
+          {template.description}
+        </p>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 pt-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 h-9 text-xs font-medium gap-1.5 rounded-lg border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+            onClick={onPreview}
+          >
+            <Eye className="h-3.5 w-3.5" />
+            Preview
+          </Button>
+          <Button
+            size="sm"
+            className={`flex-1 h-9 text-xs font-semibold gap-1.5 rounded-lg transition-all duration-200 ${
+              isActive
+                ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/50'
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md'
+            }`}
+            disabled={isActive || isApplying}
+            onClick={onApply}
+          >
+            {isApplying ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Applying...
+              </>
+            ) : isActive ? (
+              <>
+                <Check className="h-3.5 w-3.5" />
+                Applied
+              </>
+            ) : (
+              'Apply'
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Main Templates Component
+// ──────────────────────────────────────────────
 export default function Templates() {
   const { token } = useAuthStore();
-  const { currentBusiness } = useAppStore();
+  const { currentBusiness, setActiveTemplate, navigate } = useAppStore();
 
+  // Local UI state
   const [previewTemplate, setPreviewTemplate] = useState<string | null>(null);
-  const [applying, setApplying] = useState(false);
+  const [applyingTemplate, setApplyingTemplate] = useState<string | null>(null);
+  const [failedTemplate, setFailedTemplate] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [primaryColor, setPrimaryColor] = useState('#10b981');
   const [secondaryColor, setSecondaryColor] = useState('#f1f5f9');
   const [selectedFont, setSelectedFont] = useState('inter');
 
-  // Sync with current business data
+  // Track the applied template locally for instant UI updates
+  const [localActiveTemplate, setLocalActiveTemplate] = useState<string | null>(null);
+  const prevBusinessRef = useRef(currentBusiness);
+
+  // Sync colors/font from current business
   useEffect(() => {
     if (currentBusiness) {
       setPrimaryColor(currentBusiness.primaryColor || '#10b981');
       setSecondaryColor(currentBusiness.secondaryColor || '#f1f5f9');
       setSelectedFont(currentBusiness.fontFamily || 'inter');
+      // Initialize local template from business data
+      if (!localActiveTemplate) {
+        setLocalActiveTemplate(currentBusiness.templateName || 'modern');
+      }
     }
   }, [currentBusiness]);
 
-  const currentTemplate = currentBusiness?.templateName || 'modern';
+  // Reset local template when business changes
+  useEffect(() => {
+    if (prevBusinessRef.current?.id !== currentBusiness?.id) {
+      setLocalActiveTemplate(currentBusiness?.templateName || 'modern');
+      prevBusinessRef.current = currentBusiness;
+    }
+  }, [currentBusiness?.id]);
 
-  const applyTemplate = async (templateName: string) => {
+  // Current active template: prioritize local state (optimistic), fall back to business
+  const currentTemplate = localActiveTemplate || currentBusiness?.templateName || 'modern';
+
+  // ──────────────────────────────────────────────
+  // INSTANT APPLY — Optimistic UI + background save
+  // ──────────────────────────────────────────────
+  const applyTemplate = useCallback(async (templateName: string) => {
     if (!currentBusiness?.id || !token) return;
+    if (currentTemplate === templateName) return;
 
-    setApplying(true);
+    // 1. Instantly update local UI (optimistic)
+    const previousTemplate = currentTemplate;
+    setLocalActiveTemplate(templateName);
+    setFailedTemplate(null);
+    setActiveTemplate(templateName);
+
+    // 2. Start background save
+    setApplyingTemplate(templateName);
+
     try {
       const res = await fetch(`/api/businesses/${currentBusiness.id}`, {
         method: 'PUT',
@@ -355,22 +502,65 @@ export default function Templates() {
         body: JSON.stringify({ templateName }),
       });
 
-      if (res.ok) {
-        toast.success(`"${TEMPLATES.find(t => t.name === templateName)?.label}" template applied!`);
+      if (!res.ok) {
+        // Revert on failure
+        setLocalActiveTemplate(previousTemplate);
+        setActiveTemplate(previousTemplate);
+        setFailedTemplate(templateName);
+        toast.error('Unable to apply template. Please try again.');
       } else {
-        toast.error('Failed to apply template');
+        const data = await res.json();
+        const updatedBusiness = data.business;
+
+        // Update current business in store with new template info
+        if (updatedBusiness) {
+          useAppStore.getState().setCurrentBusiness({
+            ...currentBusiness,
+            templateName: updatedBusiness.templateName || templateName,
+            primaryColor: updatedBusiness.primaryColor || currentBusiness.primaryColor,
+            secondaryColor: updatedBusiness.secondaryColor || currentBusiness.secondaryColor,
+            fontFamily: updatedBusiness.fontFamily || currentBusiness.fontFamily,
+          });
+        }
+
+        // Log template application
+        try {
+          await fetch(`/api/businesses/${currentBusiness.id}/template-log`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              templateId: templateName,
+              businessId: currentBusiness.id,
+            }),
+          });
+        } catch {
+          // Logging failure is non-critical, silently ignore
+        }
+
+        toast.success(`"${TEMPLATES.find(t => t.name === templateName)?.label}" template applied!`, {
+          description: 'Your menu preview has been updated instantly.',
+          duration: 3000,
+        });
       }
     } catch {
-      toast.error('Failed to apply template');
+      // Network error — revert
+      setLocalActiveTemplate(previousTemplate);
+      setActiveTemplate(previousTemplate);
+      setFailedTemplate(templateName);
+      toast.error('Unable to apply template. Please try again.');
     } finally {
-      setApplying(false);
-      setPreviewTemplate(null);
+      setApplyingTemplate(null);
     }
-  };
+  }, [currentBusiness, token, currentTemplate, setActiveTemplate]);
 
+  // ──────────────────────────────────────────────
+  // Customization save
+  // ──────────────────────────────────────────────
   const applyCustomization = async () => {
     if (!currentBusiness?.id || !token) return;
-
     setSaving(true);
     try {
       const res = await fetch(`/api/businesses/${currentBusiness.id}`, {
@@ -379,14 +569,20 @@ export default function Templates() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          primaryColor,
-          secondaryColor,
-          fontFamily: selectedFont,
-        }),
+        body: JSON.stringify({ primaryColor, secondaryColor, fontFamily: selectedFont }),
       });
 
       if (res.ok) {
+        const data = await res.json();
+        const updatedBusiness = data.business;
+        if (updatedBusiness) {
+          useAppStore.getState().setCurrentBusiness({
+            ...currentBusiness,
+            primaryColor: updatedBusiness.primaryColor,
+            secondaryColor: updatedBusiness.secondaryColor,
+            fontFamily: updatedBusiness.fontFamily,
+          });
+        }
         toast.success('Customization applied successfully!');
       } else {
         toast.error('Failed to apply changes');
@@ -398,6 +594,14 @@ export default function Templates() {
     }
   };
 
+  // ──────────────────────────────────────────────
+  // Preview as Customer navigation
+  // ──────────────────────────────────────────────
+  const goToCustomerPreview = () => {
+    navigate('/preview');
+  };
+
+  // No business selected
   if (!currentBusiness) {
     return (
       <Card>
@@ -411,106 +615,51 @@ export default function Templates() {
 
   return (
     <div className="space-y-6">
-      {/* Template Gallery */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5 text-emerald-500" />
+      {/* ── Header with Preview as Customer ── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-emerald-500" />
             Design Templates
-          </CardTitle>
-          <CardDescription>
-            Choose a template for your menu. Click Preview to see how it looks, then Apply to activate it.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {TEMPLATES.map((template) => {
-              const isActive = currentTemplate === template.name;
-              return (
-                <div
-                  key={template.name}
-                  className={`group relative rounded-xl border-2 p-3 transition-all duration-200 hover:shadow-lg cursor-pointer ${
-                    isActive
-                      ? 'border-emerald-500 shadow-emerald-500/10 bg-emerald-50/50 dark:bg-emerald-950/10'
-                      : 'border-border hover:border-emerald-300'
-                  }`}
-                >
-                  {/* Active badge */}
-                  {isActive && (
-                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10">
-                      <Badge className="bg-emerald-500 text-white border-0 shadow-sm gap-1 px-2.5">
-                        <Check className="h-3 w-3" />
-                        Active
-                      </Badge>
-                    </div>
-                  )}
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Choose a template and apply it instantly. Your menu preview updates in real-time.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          className="gap-2 rounded-lg"
+          onClick={goToCustomerPreview}
+        >
+          <ExternalLink className="h-4 w-4" />
+          <span className="hidden sm:inline">Preview as Customer</span>
+          <span className="sm:hidden">Preview</span>
+        </Button>
+      </div>
 
-                  {/* Preview */}
-                  <div className="flex justify-center mb-3">
-                    <TemplateMiniPreview templateName={template.name} width={180} height={230} />
-                  </div>
+      {/* ── Template Gallery ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        {TEMPLATES.map((template) => (
+          <TemplateCard
+            key={template.name}
+            template={template}
+            isActive={currentTemplate === template.name}
+            isApplying={applyingTemplate === template.name}
+            onPreview={() => setPreviewTemplate(template.name)}
+            onApply={() => applyTemplate(template.name)}
+          />
+        ))}
+      </div>
 
-                  {/* Info */}
-                  <div className="space-y-2">
-                    <div>
-                      <h3 className="text-sm font-semibold text-center">{template.label}</h3>
-                      <p className="text-xs text-muted-foreground text-center mt-0.5 line-clamp-2">
-                        {template.description}
-                      </p>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 h-8 text-xs gap-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPreviewTemplate(template.name);
-                        }}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        Preview
-                      </Button>
-                      <Button
-                        size="sm"
-                        className={`flex-1 h-8 text-xs ${
-                          isActive
-                            ? 'bg-muted text-muted-foreground hover:bg-muted'
-                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                        }`}
-                        disabled={isActive || applying}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          applyTemplate(template.name);
-                        }}
-                      >
-                        {applying && previewTemplate === template.name ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : isActive ? (
-                          <Check className="h-3.5 w-3.5" />
-                        ) : null}
-                        {isActive ? 'Applied' : 'Apply'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Customization Panel */}
-      <Card>
+      {/* ── Customization Panel ── */}
+      <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <Paintbrush className="h-5 w-5 text-emerald-500" />
             Customize Design
           </CardTitle>
           <CardDescription>
-            Fine-tune your menu&apos;s colors and typography.
+            Fine-tune your menu&apos;s colors and typography. Changes apply to the current template.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -645,7 +794,7 @@ export default function Templates() {
           {/* Apply Button */}
           <div className="flex justify-end mt-6">
             <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 rounded-lg"
               onClick={applyCustomization}
               disabled={saving}
             >
@@ -665,7 +814,18 @@ export default function Templates() {
         </CardContent>
       </Card>
 
-      {/* Template Preview Dialog */}
+      {/* ── Draft vs Published info ── */}
+      <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 p-4 flex items-start gap-3">
+        <Crown className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-200">Draft Mode</h4>
+          <p className="text-xs text-blue-700 dark:text-blue-300 mt-1 leading-relaxed">
+            Templates are applied to your draft menu first. The public menu visible to customers will update after you click <strong>Publish</strong> in the top bar. This lets you preview and experiment before going live.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Template Preview Dialog (Preview only — does NOT apply) ── */}
       <Dialog open={!!previewTemplate} onOpenChange={(open) => !open && setPreviewTemplate(null)}>
         <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -675,6 +835,9 @@ export default function Templates() {
             </DialogTitle>
             <DialogDescription>
               {TEMPLATES.find(t => t.name === previewTemplate)?.description}
+              <span className="block mt-1 text-xs text-muted-foreground">
+                Previewing only — this will not change your current template.
+              </span>
             </DialogDescription>
           </DialogHeader>
 
@@ -690,20 +853,25 @@ export default function Templates() {
           </div>
 
           <div className="flex items-center justify-end gap-3">
-            <Button variant="outline" onClick={() => setPreviewTemplate(null)}>
+            <Button variant="outline" onClick={() => setPreviewTemplate(null)} className="rounded-lg">
               Close
             </Button>
             <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
-              disabled={currentTemplate === previewTemplate || applying}
-              onClick={() => previewTemplate && applyTemplate(previewTemplate)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 rounded-lg"
+              disabled={currentTemplate === previewTemplate || !!applyingTemplate}
+              onClick={() => {
+                if (previewTemplate) {
+                  applyTemplate(previewTemplate);
+                  setPreviewTemplate(null);
+                }
+              }}
             >
-              {applying ? (
+              {applyingTemplate ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Check className="h-4 w-4" />
               )}
-              Apply This Template
+              {currentTemplate === previewTemplate ? 'Currently Applied' : 'Apply This Template'}
             </Button>
           </div>
         </DialogContent>

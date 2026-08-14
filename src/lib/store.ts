@@ -27,10 +27,19 @@ interface AppStore {
     name: string;
     logo: string | null;
     status: string;
+    primaryColor?: string;
+    secondaryColor?: string;
+    fontFamily?: string;
+    templateName?: string;
   } | null;
   businesses: Array<{ id: string; slug: string; name: string; logo: string | null; status: string }>;
   setCurrentBusiness: (business: AppStore['currentBusiness']) => void;
   setBusinesses: (businesses: AppStore['businesses']) => void;
+
+  // Template state — drives instant reactivity across Templates, Preview, etc.
+  activeTemplate: string | null;
+  templateAppliedAt: string | null;
+  setActiveTemplate: (templateName: string | null) => void;
 
   // UI
   sidebarOpen: boolean;
@@ -65,6 +74,12 @@ export const useAppStore = create<AppStore>()((set) => ({
   businesses: [],
   setCurrentBusiness: (business) => set({ currentBusiness: business }),
   setBusinesses: (businesses) => set({ businesses }),
+  activeTemplate: null,
+  templateAppliedAt: null,
+  setActiveTemplate: (templateName) => set({
+    activeTemplate: templateName,
+    templateAppliedAt: templateName ? new Date().toISOString() : null,
+  }),
   sidebarOpen: true,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   previewMode: null,

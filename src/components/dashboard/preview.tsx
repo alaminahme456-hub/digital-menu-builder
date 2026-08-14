@@ -11,6 +11,7 @@ import {
   MessageCircle,
   BookOpen,
   List,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -26,7 +27,7 @@ type PreviewStyle = 'flipbook' | 'list';
 
 export default function PreviewPanel() {
   const { token } = useAuthStore();
-  const { currentBusiness, previewMode, setPreviewMode } = useAppStore();
+  const { currentBusiness, previewMode, setPreviewMode, activeTemplate, templateAppliedAt } = useAppStore();
   const [mode, setMode] = useState<PreviewMode>(previewMode || 'mobile');
   const [previewStyle, setPreviewStyle] = useState<PreviewStyle>('flipbook');
   const [business, setBusiness] = useState<Business | null>(null);
@@ -34,6 +35,7 @@ export default function PreviewPanel() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('');
+  const [dataVersion, setDataVersion] = useState(0);
 
   // Sync with store
   useEffect(() => {
@@ -42,13 +44,27 @@ export default function PreviewPanel() {
     }
   }, [previewMode]);
 
+  // ──────────────────────────────────────────────
+  // INSTANT REACTIVITY: When template is applied
+  // from Templates page, re-fetch business data
+  // ──────────────────────────────────────────────
+  useEffect(() => {
+    if (templateAppliedAt && currentBusiness?.id) {
+      // Small delay to let the DB update settle
+      const timer = setTimeout(() => {
+        setDataVersion((v) => v + 1);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [templateAppliedAt, currentBusiness?.id]);
+
   const handleModeChange = (value: string) => {
     const newMode = value as PreviewMode;
     setMode(newMode);
     setPreviewMode(newMode);
   };
 
-  // Fetch business data
+  // Fetch business data (re-fetches on dataVersion change)
   useEffect(() => {
     if (!currentBusiness?.id || !token) return;
     setLoading(true);
@@ -88,7 +104,13 @@ export default function PreviewPanel() {
       }
     }
     fetchData();
-  }, [currentBusiness?.id, token]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentBusiness?.id, token, dataVersion]);
+
+  // Manual refresh button
+  const handleRefresh = () => {
+    setDataVersion((v) => v + 1);
+  };
 
   const fontMap: Record<string, string> = {
     inter: 'font-sans',
@@ -101,6 +123,9 @@ export default function PreviewPanel() {
   const primaryColor = business?.primaryColor || '#10b981';
   const secondaryColor = business?.secondaryColor || '#064e3b';
   const templateName = business?.templateName || 'modern';
+
+  // Use activeTemplate from store for instant preview (optimistic)
+  const effectiveTemplate = activeTemplate || templateName;
 
   const filteredItems = items.filter((item) => item.categoryId === activeCategory);
 
@@ -187,6 +212,15 @@ export default function PreviewPanel() {
           </div>
         </div>
 
+        {/* Template indicator badge */}
+        {activeTemplate && activeTemplate !== templateName && (
+          <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-4 py-2 text-center">
+            <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+              Previewing with &quot;{activeTemplate}&quot; template (draft)
+            </span>
+          </div>
+        )}
+
         {/* Category Navigation */}
         {categories.length > 0 && (
           <div className="sticky top-0 z-10 bg-white border-b px-4 py-2">
@@ -271,7 +305,7 @@ export default function PreviewPanel() {
 
         {/* Footer */}
         <div className="text-center py-4 text-xs text-muted-foreground border-t">
-          Powered by MenuQR
+          Powered by BizFlip
         </div>
       </div>
     );
@@ -288,9 +322,14 @@ export default function PreviewPanel() {
       );
     }
 
+    // Build business with effective template for instant preview
+    const effectiveBusiness = activeTemplate
+      ? { ...business, templateName: activeTemplate }
+      : business;
+
     return (
       <FlipbookMenu
-        business={business}
+        business={effectiveBusiness}
         categories={categories}
         items={items}
         isPreview={true}
@@ -385,7 +424,31 @@ export default function PreviewPanel() {
             List
           </button>
         </div>
+
+        {/* Refresh button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          className="gap-1.5"
+          title="Refresh preview"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Refresh</span>
+        </Button>
       </div>
+
+      {/* Template indicator */}
+      {activeTemplate && activeTemplate !== templateName && (
+        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+          <Badge variant="outline" className="bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-xs">
+            Draft
+          </Badge>
+          <span className="text-xs text-amber-700 dark:text-amber-300">
+            Showing &quot;{activeTemplate}&quot; template — <strong>Publish</strong> to make it live
+          </span>
+        </div>
+      )}
 
       {/* Mobile Frame */}
       {mode === 'mobile' && (
@@ -427,7 +490,7 @@ export default function PreviewPanel() {
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
                   <span className="truncate">
-                    menuqr.app/menu/{currentBusiness?.slug || '...'}
+                    bizflip.app/p/{currentBusiness?.slug || '...'}
                   </span>
                 </div>
               </div>
@@ -443,10 +506,12 @@ export default function PreviewPanel() {
 
       {/* Info text */}
       <p className="text-xs text-muted-foreground text-center">
-        {mode === 'mobile' && 'Previewing in mobile viewport (375px)'}
+        {mode === 'mobile' && 'Previewing in mobile viewport (390px)'}
         {mode === 'desktop' && 'Previewing in desktop viewport (1280px)'}
-        {' · '}
+        {' \u00B7 '}
         {previewStyle === 'flipbook' ? 'Flipbook mode' : 'List mode'}
+        {' \u00B7 '}
+        Template: <strong>{effectiveTemplate}</strong>
       </p>
     </div>
   );
