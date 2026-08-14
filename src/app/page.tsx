@@ -16,6 +16,7 @@ import MenuManager from '@/components/dashboard/menu-manager';
 import UploadMenu from '@/components/dashboard/upload-menu';
 import AIScanner from '@/components/dashboard/ai-scanner';
 import Templates from '@/components/dashboard/templates';
+import BookCoverTemplates from '@/components/dashboard/book-cover-templates';
 import QRCode from '@/components/dashboard/qr-code';
 import Preview from '@/components/dashboard/preview';
 import Analytics from '@/components/dashboard/analytics';
@@ -193,6 +194,8 @@ export default function Home() {
         return <AIScanner />;
       case 'templates':
         return <Templates />;
+      case 'design-studio':
+        return <BookCoverTemplates />;
       case 'qr-code':
         return <QRCode />;
       case 'preview':

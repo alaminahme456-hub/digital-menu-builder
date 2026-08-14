@@ -14,6 +14,12 @@ interface AuthState {
   logout: () => void;
 }
 
+export interface CoverCustomization {
+  coverImage: string | null;
+  coverTagline: string;
+  coverAccent: string;
+}
+
 interface AppStore {
   // Navigation
   currentRoute: string;
@@ -31,15 +37,29 @@ interface AppStore {
     secondaryColor?: string;
     fontFamily?: string;
     templateName?: string;
+    coverTemplateId?: string | null;
   } | null;
   businesses: Array<{ id: string; slug: string; name: string; logo: string | null; status: string }>;
   setCurrentBusiness: (business: AppStore['currentBusiness']) => void;
   setBusinesses: (businesses: AppStore['businesses']) => void;
 
-  // Template state — drives instant reactivity across Templates, Preview, etc.
+  // Menu Template state — drives instant reactivity across Templates, Preview, etc.
   activeTemplate: string | null;
   templateAppliedAt: string | null;
   setActiveTemplate: (templateName: string | null) => void;
+
+  // Cover Template state — drives instant reactivity for book covers
+  activeCoverTemplate: string | null;
+  coverTemplateAppliedAt: string | null;
+  setActiveCoverTemplate: (coverTemplateId: string | null) => void;
+
+  // Cover customization
+  coverCustomization: CoverCustomization;
+  setCoverCustomization: (customization: Partial<CoverCustomization>) => void;
+
+  // Cover favorites (persisted locally)
+  coverFavorites: string[];
+  toggleCoverFavorite: (templateId: string) => void;
 
   // UI
   sidebarOpen: boolean;
@@ -61,27 +81,71 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-export const useAppStore = create<AppStore>()((set) => ({
-  currentRoute: typeof window !== 'undefined' ? (window.location.hash.slice(1) || '/') : '/',
-  routeParams: {},
-  navigate: (route, params = {}) => {
-    if (typeof window !== 'undefined') {
-      window.location.hash = route;
+export const useAppStore = create<AppStore>()(
+  persist(
+    (set) => ({
+      currentRoute: typeof window !== 'undefined' ? (window.location.hash.slice(1) || '/') : '/',
+      routeParams: {},
+      navigate: (route, params = {}) => {
+        if (typeof window !== 'undefined') {
+          window.location.hash = route;
+        }
+        set({ currentRoute: route, routeParams: params });
+      },
+      currentBusiness: null,
+      businesses: [],
+      setCurrentBusiness: (business) => set({ currentBusiness: business }),
+      setBusinesses: (businesses) => set({ businesses }),
+
+      // Menu template state
+      activeTemplate: null,
+      templateAppliedAt: null,
+      setActiveTemplate: (templateName) => set({
+        activeTemplate: templateName,
+        templateAppliedAt: templateName ? new Date().toISOString() : null,
+      }),
+
+      // Cover template state
+      activeCoverTemplate: null,
+      coverTemplateAppliedAt: null,
+      setActiveCoverTemplate: (coverTemplateId) => set({
+        activeCoverTemplate: coverTemplateId,
+        coverTemplateAppliedAt: coverTemplateId ? new Date().toISOString() : null,
+      }),
+
+      // Cover customization
+      coverCustomization: {
+        coverImage: null,
+        coverTagline: '',
+        coverAccent: '#C9A84C',
+      },
+      setCoverCustomization: (customization) => set((state) => ({
+        coverCustomization: { ...state.coverCustomization, ...customization },
+      })),
+
+      // Cover favorites
+      coverFavorites: [],
+      toggleCoverFavorite: (templateId) => set((state) => {
+        const exists = state.coverFavorites.includes(templateId);
+        return {
+          coverFavorites: exists
+            ? state.coverFavorites.filter((id) => id !== templateId)
+            : [...state.coverFavorites, templateId],
+        };
+      }),
+
+      // UI
+      sidebarOpen: true,
+      setSidebarOpen: (open) => set({ sidebarOpen: open }),
+      previewMode: null,
+      setPreviewMode: (mode) => set({ previewMode: mode }),
+    }),
+    {
+      name: 'menu-builder-app',
+      partialize: (state) => ({
+        coverFavorites: state.coverFavorites,
+        coverCustomization: state.coverCustomization,
+      }),
     }
-    set({ currentRoute: route, routeParams: params });
-  },
-  currentBusiness: null,
-  businesses: [],
-  setCurrentBusiness: (business) => set({ currentBusiness: business }),
-  setBusinesses: (businesses) => set({ businesses }),
-  activeTemplate: null,
-  templateAppliedAt: null,
-  setActiveTemplate: (templateName) => set({
-    activeTemplate: templateName,
-    templateAppliedAt: templateName ? new Date().toISOString() : null,
-  }),
-  sidebarOpen: true,
-  setSidebarOpen: (open) => set({ sidebarOpen: open }),
-  previewMode: null,
-  setPreviewMode: (mode) => set({ previewMode: mode }),
-}));
+  )
+);

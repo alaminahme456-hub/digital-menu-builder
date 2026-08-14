@@ -22,6 +22,7 @@ import {
   GlobeLock,
   Loader2,
   BookOpen,
+  Paintbrush,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +59,7 @@ const navItems: NavItem[] = [
   { label: 'Content', href: '#/menu-manager', icon: UtensilsCrossed },
   { label: 'Upload', href: '#/upload-menu', icon: Upload },
   { label: 'AI Scanner', href: '#/ai-scanner', icon: Camera },
+  { label: 'Design Studio', href: '#/design-studio', icon: Paintbrush },
   { label: 'Templates', href: '#/templates', icon: Palette },
   { label: 'QR Code', href: '#/qr-code', icon: QrCode },
   { label: 'Preview', href: '#/preview', icon: Eye },
@@ -73,6 +75,8 @@ function getPageName(route: string): string {
     const target = n.href.replace('#', '');
     return normalized === target || normalized.startsWith(target + '/');
   });
+  // Map legacy routes to their new names
+  if (normalized === '/design-studio') return 'Design Studio';
   return item?.label || 'Dashboard';
 }
 

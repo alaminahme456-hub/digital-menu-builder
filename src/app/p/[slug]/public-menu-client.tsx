@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatPrice } from '@/lib/auth';
 import { FlipbookMenu, UploadFlipbook } from '@/components/flipbook';
+import PublicCover from '@/components/public-menu/public-cover';
 import type { Business, MenuCategory, MenuItem, MenuUpload } from '@/lib/types';
 
 /* ------------------------------------------------------------------ */
@@ -120,6 +121,7 @@ export default function PublicMenuClient({ business: biz, categories: cats, item
   );
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [basket, setBasket] = useState<BasketItem[]>([]);
+  const [coverOpen, setCoverOpen] = useState(true);
 
   // Set initial category — derive from categories instead of useEffect setState
   const effectiveActiveCategory = activeCategory || (categories.length > 0 ? categories[0].id : '');
@@ -195,9 +197,20 @@ export default function PublicMenuClient({ business: biz, categories: cats, item
   };
   const fontFamily = fontMap[business.fontFamily] || fontMap.inter;
 
+  // Show cover overlay if not yet opened
+  const showCover = coverOpen && business.status === 'published';
+
   /* ------------------------------------------------------------------ */
   /*  UNPUBLISHED                                                        */
   /* ------------------------------------------------------------------ */
+  if (showCover) {
+    return (
+      <>
+        <PublicCover business={business} onOpen={() => setCoverOpen(false)} />
+      </>
+    );
+  }
+
   if (business.status !== 'published') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
