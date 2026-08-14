@@ -30,6 +30,14 @@ export async function POST(request: NextRequest) {
     }
 
     const user = data.user;
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Registration did not return a user. Please try again.' },
+        { status: 502 }
+      );
+    }
+
     const token = data.session?.access_token || null;
 
     // If no session (email confirmation required), tell frontend
@@ -57,6 +65,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Register error:', error);
-    return NextResponse.json({ error: 'Registration failed' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Registration failed';
+    const isConfigError = message.includes('Supabase is not configured');
+
+    return NextResponse.json(
+      { error: isConfigError ? message : 'Registration failed' },
+      { status: isConfigError ? 503 : 500 }
+    );
   }
 }
