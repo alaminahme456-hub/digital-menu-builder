@@ -348,7 +348,8 @@ export default function SettingsPanel({ initialTab = 'business' }: SettingsPanel
       bizForm.whatsappOrder !== (bizInitial.whatsappOrder ?? false) ||
       bizForm.seoEnabled !== (bizInitial.seoEnabled ?? false));
 
-  return (
+return (
+    <>
     <Tabs defaultValue={initialTab} className="space-y-6">
       <TabsList>
         <TabsTrigger value="business">Business Settings</TabsTrigger>
@@ -1108,5 +1109,6 @@ export default function SettingsPanel({ initialTab = 'business' }: SettingsPanel
         Developed by <span className="font-semibold text-charcoal/40">ALTECH</span>
       </p>
     </div>
+    </>
   );
 }
