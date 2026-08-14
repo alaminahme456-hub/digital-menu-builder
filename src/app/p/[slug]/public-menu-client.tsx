@@ -230,7 +230,7 @@ export default function PublicMenuClient({ business: biz, categories: cats, item
     // If there's a published upload, use the upload flipbook
     if (hasPublishedUpload && publishedUpload) {
       return (
-        <div className="min-h-screen bg-gray-100" style={{ fontFamily }}>
+        <div className="bg-gray-100" style={{ fontFamily }}>
           <UploadFlipbook
             business={business}
             publishedUpload={publishedUpload}
@@ -242,9 +242,9 @@ export default function PublicMenuClient({ business: biz, categories: cats, item
 
     // Otherwise, use the standard manual menu flipbook
     return (
-      <div className="min-h-screen bg-gray-100" style={{ fontFamily }}>
-        {/* View mode switcher */}
-        <div className="fixed top-3 right-3 z-[7000] flex gap-1 p-1 bg-white/90 backdrop-blur rounded-lg shadow-sm">
+      <div className="bg-gray-100" style={{ fontFamily }}>
+        {/* View mode switcher — hidden on mobile for clean experience */}
+        <div className="fixed top-3 right-3 z-[7000] hidden sm:flex gap-1 p-1 bg-white/90 backdrop-blur rounded-lg shadow-sm">
           <button
             onClick={() => setViewMode('flipbook')}
             className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
@@ -260,10 +260,9 @@ export default function PublicMenuClient({ business: biz, categories: cats, item
           </button>
         </div>
 
-        {/* WhatsApp Basket */}
         {business.whatsappOrder && basket.length > 0 && (
-          <div className="fixed bottom-4 left-4 right-4 z-[7000] max-w-lg mx-auto">
-            <div className="bg-white rounded-2xl shadow-2xl border p-4 flex items-center justify-between gap-3">
+          <div className="fixed bottom-0 left-0 right-0 z-[7000] safe-bottom p-3 max-w-lg mx-auto">
+            <div className="bg-white rounded-2xl shadow-2xl border p-3 flex items-center justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm">{basketCount} item{basketCount > 1 ? 's' : ''}</p>
                 <p className="text-xs text-muted-foreground">{formatPrice(basketTotal)}</p>

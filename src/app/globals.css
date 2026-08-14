@@ -3,6 +3,75 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ------------------------------------------------------------------ */
+/*  Mobile Viewport & Safe Area Support                                  */
+/* ------------------------------------------------------------------ */
+@supports (height: 100dvh) {
+  .h-full-dvh {
+    height: 100dvh;
+  }
+  .min-h-full-dvh {
+    min-height: 100dvh;
+  }
+}
+@supports not (height: 100dvh) {
+  .h-full-dvh {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+  .min-h-full-dvh {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Safe area insets for notched phones */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-left {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.safe-right {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Prevent overscroll bounce on iOS */
+.flipbook-container {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+/* GPU-accelerated page transitions */
+.flip-page {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Smooth slide transition for low-end devices */
+@keyframes slide-in-right {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slide-in-left {
+  from { transform: translateX(-30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-slide-right {
+  animation: slide-in-right var(--anim-duration, 0.3s) ease-out;
+}
+.animate-slide-left {
+  animation: slide-in-left var(--anim-duration, 0.3s) ease-out;
+}
+
+@custom-variant dark (&:is(.dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

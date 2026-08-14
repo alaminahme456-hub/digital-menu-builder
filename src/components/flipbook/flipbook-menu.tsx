@@ -7,11 +7,10 @@ import {
   Maximize2,
   Minimize2,
   BookOpen,
-  Loader2,
 } from 'lucide-react';
 import type { Business, MenuCategory, MenuItem } from '@/lib/types';
 import { formatPrice } from '@/lib/auth';
-import { useSwipeGesture, useReducedMotion, useCanAnimate } from './use-swipe-gesture';
+import { useSwipeGesture, useReducedMotion, useCanAnimate, useBookDimensions } from './use-swipe-gesture';
 import ProductDetailModal from './product-detail-modal';
 import OrderBasket from './order-basket';
 
@@ -37,16 +36,10 @@ interface PageItem {
 /* ------------------------------------------------------------------ */
 function buildPages(categories: MenuCategory[], items: MenuItem[], business: Business): PageItem[] {
   const pages: PageItem[] = [];
-
-  // Cover page
   pages.push({ type: 'cover', title: business.name });
-
-  // Welcome page
   if (business.description) {
     pages.push({ type: 'welcome', title: 'Welcome' });
   }
-
-  // Category pages
   for (const cat of categories) {
     const catItems = items
       .filter((item) => item.categoryId === cat.id)
@@ -55,21 +48,18 @@ function buildPages(categories: MenuCategory[], items: MenuItem[], business: Bus
       pages.push({ type: 'category', categoryId: cat.id, title: cat.name, items: catItems });
     }
   }
-
-  // Contact/Ordering page
   pages.push({ type: 'contact', title: 'Contact & Ordering' });
-
   return pages;
 }
 
 const animDurationMap: Record<string, string> = {
-  slow: '0.8s',
-  medium: '0.5s',
-  fast: '0.3s',
+  slow: '0.6s',
+  medium: '0.35s',
+  fast: '0.2s',
 };
 
 /* ------------------------------------------------------------------ */
-/*  Flipbook Menu Component                                            */
+/*  Flipbook Menu Component — Mobile First                              */
 /* ------------------------------------------------------------------ */
 export default function FlipbookMenu({
   business,
@@ -91,20 +81,17 @@ export default function FlipbookMenu({
   const canAnimate = useCanAnimate();
   const shouldAnimate = business.flipbookAnimEnabled && !prefersReducedMotion && canAnimate;
 
-  const pages = useMemo(
-    () => buildPages(categories, items, business),
-    [categories, items, business]
-  );
+  // Dynamic book sizing
+  const bookDims = useBookDimensions(3 / 4);
+
+  const pages = useMemo(() => buildPages(categories, items, business), [categories, items, business]);
   const totalPages = pages.length;
 
   const goNext = useCallback(() => {
     if (currentPage < totalPages - 1 && !isAnimating) {
       setAnimDirection('next');
       setIsAnimating(true);
-      setTimeout(() => {
-        setCurrentPage((p) => p + 1);
-        setIsAnimating(false);
-      }, shouldAnimate ? 100 : 0);
+      setTimeout(() => { setCurrentPage((p) => p + 1); setIsAnimating(false); }, shouldAnimate ? 80 : 0);
     }
   }, [currentPage, totalPages, isAnimating, shouldAnimate]);
 
@@ -112,18 +99,15 @@ export default function FlipbookMenu({
     if (currentPage > 0 && !isAnimating) {
       setAnimDirection('prev');
       setIsAnimating(true);
-      setTimeout(() => {
-        setCurrentPage((p) => p - 1);
-        setIsAnimating(false);
-      }, shouldAnimate ? 100 : 0);
+      setTimeout(() => { setCurrentPage((p) => p - 1); setIsAnimating(false); }, shouldAnimate ? 80 : 0);
     }
   }, [currentPage, isAnimating, shouldAnimate]);
 
-  // Keyboard navigation
+  // Keyboard
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goNext();
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goPrev();
+      if (e.key === 'ArrowRight') goNext();
+      if (e.key === 'ArrowLeft') goPrev();
       if (e.key === 'Escape') {
         if (isFullscreen) setIsFullscreen(false);
         if (selectedItem) setSelectedItem(null);
@@ -131,90 +115,61 @@ export default function FlipbookMenu({
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [currentPage, totalPages, isOpened, isFullscreen, selectedItem, goNext, goPrev]);
+  }, [goNext, goPrev, isFullscreen, selectedItem]);
 
-  // Swipe gesture
+  // Swipe
   const swipeHandlers = useSwipeGesture(
-    {
-      onSwipeLeft: isOpened && !selectedItem ? goNext : undefined,
-      onSwipeRight: isOpened && !selectedItem ? goPrev : undefined,
-    },
-    40
+    { onSwipeLeft: isOpened && !selectedItem ? goNext : undefined, onSwipeRight: isOpened && !selectedItem ? goPrev : undefined },
+    30
   );
 
   const handleOpenBook = () => {
     setIsOpening(true);
-    setTimeout(() => {
-      setIsOpened(true);
-      setIsOpening(false);
-      setCurrentPage(1); // Skip to first content page
-    }, shouldAnimate ? 700 : 50);
+    setTimeout(() => { setIsOpened(true); setIsOpening(false); setCurrentPage(1); }, shouldAnimate ? 500 : 30);
   };
 
-  const handleCloseBook = () => {
-    setIsOpened(false);
-    setCurrentPage(0);
-  };
+  const handleCloseBook = () => { setIsOpened(false); setCurrentPage(0); };
 
-  // Basket functions
+  // Basket
   const addToBasket = useCallback((item: MenuItem, qty: number) => {
     setBasket((prev) => {
       const next = new Map(prev);
-      const existing = next.get(item.id) || 0;
-      if (qty <= 0) {
-        next.delete(item.id);
-      } else {
-        next.set(item.id, qty);
-      }
+      if (qty <= 0) next.delete(item.id);
+      else next.set(item.id, qty);
       return next;
     });
   }, []);
 
   const basketTotal = useMemo(() => {
-    let total = 0;
-    let count = 0;
+    let total = 0, count = 0;
     basket.forEach((qty, id) => {
       const item = items.find((i) => i.id === id);
-      if (item) {
-        total += item.price * qty;
-        count += qty;
-      }
+      if (item) { total += item.price * qty; count += qty; }
     });
     return { total, count };
   }, [basket, items]);
 
-  const openWhatsApp = useCallback(
-    (singleItem?: MenuItem, singleQty?: number) => {
-      const phone = business.whatsapp || '';
-      if (!phone) return;
+  const openWhatsApp = useCallback((singleItem?: MenuItem, singleQty?: number) => {
+    const phone = business.whatsapp || '';
+    if (!phone) return;
+    let message: string;
+    if (singleItem && singleQty) {
+      message = `${business.whatsappGreeting}\n\n${singleItem.name} x ${singleQty} - ${formatPrice(singleItem.price * singleQty)}\n\nTotal: ${formatPrice(singleItem.price * singleQty)}`;
+    } else {
+      const lines: string[] = [`${business.whatsappGreeting}`, ''];
+      basket.forEach((qty, id) => {
+        const item = items.find((i) => i.id === id);
+        if (item) lines.push(`${item.name} x ${qty} - ${formatPrice(item.price * qty)}`);
+      });
+      lines.push('', `Total: ${formatPrice(basketTotal.total)}`, '', 'Please confirm my order.');
+      message = lines.join('\n');
+    }
+    window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+  }, [business, items, basket, basketTotal.total]);
 
-      let message: string;
-      if (singleItem && singleQty) {
-        message = `${business.whatsappGreeting}\n\n${singleItem.name} x ${singleQty} - ${formatPrice(singleItem.price * singleQty)}\n\nTotal: ${formatPrice(singleItem.price * singleQty)}\n\nPlease confirm my order. Thank you!`;
-      } else {
-        const lines: string[] = [`${business.whatsappGreeting}`, ''];
-        basket.forEach((qty, id) => {
-          const item = items.find((i) => i.id === id);
-          if (item) {
-            lines.push(`${item.name} x ${qty} - ${formatPrice(item.price * qty)}`);
-          }
-        });
-        lines.push('', `Total: ${formatPrice(basketTotal.total)}`, '', 'Please confirm my order. Thank you!');
-        message = lines.join('\n');
-      }
-
-      const encoded = encodeURIComponent(message);
-      const cleanPhone = phone.replace(/[^0-9]/g, '');
-      window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
-    },
-    [business, items, basket, basketTotal.total]
-  );
-
-  const animDuration = animDurationMap[business.flipbookAnimSpeed] || '0.5s';
+  const animDuration = animDurationMap[business.flipbookAnimSpeed] || '0.35s';
   const primaryColor = business.primaryColor || '#10b981';
   const secondaryColor = business.secondaryColor || '#059669';
-
-  // Font mapping
   const fontMap: Record<string, React.CSSProperties['fontFamily']> = {
     inter: 'system-ui, -apple-system, sans-serif',
     serif: 'Georgia, "Times New Roman", serif',
@@ -223,173 +178,111 @@ export default function FlipbookMenu({
   };
   const fontFamily = fontMap[business.fontFamily] || fontMap.inter;
 
-  /* ------------------------------------------------------------------ */
-  /*  Page Tap Zones (left half = prev, right half = next)              */
-  /* ------------------------------------------------------------------ */
   const handlePageTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (selectedItem) return;
-    if (!isOpened) return;
-    if (!business.flipbookInteractions) return;
+    if (selectedItem || !isOpened || !business.flipbookInteractions) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    if (x < rect.width * 0.35) {
-      goPrev();
-    } else if (x > rect.width * 0.65) {
-      goNext();
+    if (x < rect.width * 0.3) goPrev();
+    else if (x > rect.width * 0.7) goNext();
+  };
+
+  const getPageTransitionClass = () => {
+    if (!isOpened) return '';
+    if (isOpening) return shouldAnimate ? 'animate-page-flip-open' : '';
+    if (isAnimating) {
+      if (shouldAnimate) return animDirection === 'next' ? 'animate-page-flip-next' : 'animate-page-flip-prev';
+      return animDirection === 'next' ? 'animate-slide-right' : 'animate-slide-left';
     }
+    return '';
   };
 
   /* ------------------------------------------------------------------ */
-  /*  Render: Cover Page                                                 */
+  /*  Render: Cover                                                      */
   /* ------------------------------------------------------------------ */
   const renderCover = () => (
-    <div
-      className="flex flex-col items-center justify-center min-h-full relative overflow-hidden"
-      style={{
-        background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
-        fontFamily,
-      }}
-    >
-      {/* Decorative pattern */}
-      <div className="absolute inset-0 opacity-[0.07]" style={{
-        backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 30px, rgba(255,255,255,0.1) 30px, rgba(255,255,255,0.1) 60px)`,
+    <div className="flex flex-col items-center justify-center w-full h-full relative overflow-hidden"
+      style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`, fontFamily }}>
+      <div className="absolute inset-0 opacity-[0.06]" style={{
+        backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 25px, rgba(255,255,255,0.1) 25px, rgba(255,255,255,0.1) 50px)`,
       }} />
-      
-      <div className="relative z-10 flex flex-col items-center gap-5 px-8">
-        {/* Logo */}
+      <div className="relative z-10 flex flex-col items-center gap-4 px-6 text-center">
         {business.logo ? (
-          <img
-            src={business.logo}
-            alt={business.name}
-            className="w-24 h-24 rounded-2xl object-cover shadow-2xl ring-4 ring-white/20"
-          />
+          <img src={business.logo} alt={business.name} className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover shadow-2xl ring-3 ring-white/20" />
         ) : (
-          <div className="w-24 h-24 rounded-2xl flex items-center justify-center text-4xl font-bold text-white shadow-2xl ring-4 ring-white/20 bg-white/15 backdrop-blur-sm">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-3xl font-bold text-white shadow-2xl ring-3 ring-white/20 bg-white/15">
             {business.name.charAt(0).toUpperCase()}
           </div>
         )}
-
-        {/* Name */}
-        <h1 className="text-3xl md:text-4xl font-bold text-white text-center tracking-tight">
-          {business.name}
-        </h1>
-
-        {/* Tagline */}
+        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{business.name}</h1>
         {business.description && (
-          <p className="text-white/75 text-base md:text-lg text-center max-w-sm leading-relaxed italic">
-            &ldquo;{business.description}&rdquo;
-          </p>
+          <p className="text-white/70 text-sm sm:text-base max-w-xs">&ldquo;{business.description}&rdquo;</p>
         )}
-
-        {/* Decorative line */}
-        <div className="w-16 h-0.5 bg-white/40 rounded-full" />
-
-        {/* Open Button */}
-        <button
-          onClick={handleOpenBook}
-          className="mt-4 px-8 py-3.5 bg-white text-gray-900 rounded-full font-semibold text-base shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 flex items-center gap-2"
-        >
-          <BookOpen className="w-5 h-5" />
-          Tap to Open Menu
+        <div className="w-12 h-0.5 bg-white/30 rounded-full mt-1" />
+        <button onClick={handleOpenBook}
+          className="mt-3 px-7 py-3 bg-white text-gray-900 rounded-full font-semibold text-sm shadow-lg active:scale-95 transition-all flex items-center gap-2">
+          <BookOpen className="w-4 h-4" />Tap to Open Menu
         </button>
-
-        <p className="text-white/40 text-xs mt-2">{categories.length} categories &middot; {items.length} items</p>
+        <p className="text-white/30 text-[10px] mt-1">{categories.length} categories &middot; {items.length} items</p>
       </div>
     </div>
   );
 
   /* ------------------------------------------------------------------ */
-  /*  Render: Welcome Page                                               */
+  /*  Render: Welcome                                                    */
   /* ------------------------------------------------------------------ */
   const renderWelcome = () => (
-    <div className="flex flex-col items-center justify-center min-h-full p-8 text-center" style={{ fontFamily }}>
-      <div className="w-12 h-1 rounded-full mb-6" style={{ backgroundColor: primaryColor }} />
-      <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">Welcome to {business.name}</h2>
+    <div className="flex flex-col items-center justify-center w-full h-full p-6 sm:p-8 text-center overflow-y-auto" style={{ fontFamily }}>
+      <div className="w-10 h-1 rounded-full mb-4" style={{ backgroundColor: primaryColor }} />
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">Welcome to {business.name}</h2>
       {(business as Record<string, unknown>).welcomeMessage
-        ? (
-          <p className="text-gray-600 text-base leading-relaxed max-w-md">{(business as Record<string, unknown>).welcomeMessage as string}</p>
-        )
+        ? <p className="text-gray-600 text-sm leading-relaxed max-w-sm">{(business as Record<string, unknown>).welcomeMessage as string}</p>
         : business.description
-          ? (
-            <p className="text-gray-600 text-base leading-relaxed max-w-md">{business.description}</p>
-          )
-          : (
-            <p className="text-gray-600 text-base leading-relaxed max-w-md">
-              Thank you for visiting us. Explore our menu and discover our offerings.
-            </p>
-          )
+          ? <p className="text-gray-600 text-sm leading-relaxed max-w-sm">{business.description}</p>
+          : <p className="text-gray-600 text-sm leading-relaxed max-w-sm">Thank you for visiting. Explore our menu.</p>
       }
-      {business.openingHours && (
-        <div className="mt-6 px-4 py-2 bg-gray-50 rounded-lg text-sm text-gray-500">
-          Opening Hours: {business.openingHours}
-        </div>
-      )}
-      <div className="mt-8 text-sm text-gray-400">
-        Swipe or tap arrows to navigate
-      </div>
+      <p className="mt-6 text-xs text-gray-300">Swipe or tap arrows</p>
     </div>
   );
 
   /* ------------------------------------------------------------------ */
-  /*  Render: Category Page                                              */
+  /*  Render: Category                                                   */
   /* ------------------------------------------------------------------ */
   const renderCategoryPage = (page: PageItem) => {
     if (!page.items) return null;
     return (
-      <div className="min-h-full p-6 md:p-8 flex flex-col" style={{ fontFamily }}>
-        {/* Category header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: primaryColor }} />
-          <h2 className="text-2xl font-bold text-gray-900">{page.title}</h2>
-          <span className="text-sm text-gray-400 ml-auto">{page.items.length} items</span>
+      <div className="flex flex-col w-full h-full p-4 sm:p-6 overflow-y-auto" style={{ fontFamily }}>
+        <div className="flex items-center gap-2 mb-4 flex-shrink-0">
+          <div className="w-1 h-6 rounded-full" style={{ backgroundColor: primaryColor }} />
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900">{page.title}</h2>
+          <span className="text-[10px] text-gray-400 ml-auto">{page.items.length}</span>
         </div>
-
-        {/* Items grid */}
-        <div className="grid gap-3 flex-1">
-          {page.items.map((item, idx) => (
+        <div className="grid gap-2 sm:gap-3 flex-1 min-h-0 overflow-y-auto pb-16 no-scrollbar">
+          {page.items.map((item) => (
             <button
               key={item.id}
               onClick={(e) => {
                 e.stopPropagation();
-                if (business.flipbookInteractions && item.available) {
-                  setSelectedItem(item);
-                }
+                if (business.flipbookInteractions && item.available) setSelectedItem(item);
               }}
               disabled={!item.available || !business.flipbookInteractions}
-              className={`flex gap-3 p-3 rounded-xl border text-left transition-all duration-200 ${
+              className={`flex gap-2.5 p-2.5 rounded-xl border text-left transition-all active:scale-[0.98] ${
                 item.available && business.flipbookInteractions
-                  ? 'hover:shadow-md hover:border-gray-300 active:scale-[0.98] cursor-pointer'
-                  : 'opacity-50 cursor-default'
+                  ? 'hover:shadow-sm hover:border-gray-300 cursor-pointer'
+                  : 'opacity-40 cursor-default'
               }`}
-              style={{ animationDelay: `${idx * 60}ms` }}
             >
-              {/* Item image */}
               {item.image ? (
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-16 h-16 md:w-20 md:h-20 rounded-lg object-cover flex-shrink-0 shadow-sm"
-                  loading="lazy"
-                />
+                <img src={item.image} alt={item.name} className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0" loading="lazy" decoding="async" />
               ) : (
-                <div
-                  className="w-16 h-16 md:w-20 md:h-20 rounded-lg flex items-center justify-center flex-shrink-0 text-xl font-bold text-white"
-                  style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}
-                >
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg flex items-center justify-center flex-shrink-0 text-lg font-bold"
+                  style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}>
                   {item.name.charAt(0)}
                 </div>
               )}
-              {/* Item info */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-gray-900 text-sm md:text-base truncate">{item.name}</h3>
-                </div>
-                {item.description && (
-                  <p className="text-gray-500 text-xs mt-0.5 line-clamp-2 leading-relaxed">{item.description}</p>
-                )}
-                <p className="font-bold text-sm mt-1.5" style={{ color: primaryColor }}>
-                  {formatPrice(item.price)}
-                </p>
+                <h3 className="font-semibold text-gray-900 text-sm truncate">{item.name}</h3>
+                {item.description && <p className="text-gray-500 text-[11px] mt-0.5 line-clamp-1">{item.description}</p>}
+                <p className="font-bold text-xs mt-1" style={{ color: primaryColor }}>{formatPrice(item.price)}</p>
               </div>
             </button>
           ))}
@@ -399,142 +292,69 @@ export default function FlipbookMenu({
   };
 
   /* ------------------------------------------------------------------ */
-  /*  Render: Contact Page                                               */
+  /*  Render: Contact                                                    */
   /* ------------------------------------------------------------------ */
   const renderContactPage = () => (
-    <div className="flex flex-col items-center justify-center min-h-full p-8 text-center" style={{ fontFamily }}>
-      <div className="w-12 h-1 rounded-full mb-6" style={{ backgroundColor: primaryColor }} />
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">Contact & Ordering</h2>
-      
-      <div className="space-y-3 text-sm text-gray-600 mb-8">
+    <div className="flex flex-col items-center justify-center w-full h-full p-6 sm:p-8 text-center overflow-y-auto" style={{ fontFamily }}>
+      <div className="w-10 h-1 rounded-full mb-4" style={{ backgroundColor: primaryColor }} />
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Contact & Ordering</h2>
+      <div className="space-y-2 text-xs sm:text-sm text-gray-600 mb-6">
         {business.address && <p>{business.address}</p>}
-        {business.phone && <p>Phone: {business.phone}</p>}
-        {business.whatsapp && <p>WhatsApp: {business.whatsapp}</p>}
+        {business.phone && <p>{business.phone}</p>}
+        {business.whatsapp && <p>{business.whatsapp}</p>}
       </div>
-
       {business.whatsappOrder && business.whatsapp && basketTotal.count > 0 && (
-        <button
-          onClick={() => openWhatsApp()}
-          className="px-8 py-3 rounded-full text-white font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200"
-          style={{ backgroundColor: '#25D366' }}
-        >
+        <button onClick={() => openWhatsApp()}
+          className="px-7 py-3 rounded-full text-white font-semibold text-sm shadow-lg active:scale-95 transition-all"
+          style={{ backgroundColor: '#25D366' }}>
           Order on WhatsApp ({formatPrice(basketTotal.total)})
         </button>
       )}
-
-      <div className="mt-8 text-xs text-gray-400">
-        Powered by <span className="font-semibold">BizFlip</span>
-      </div>
+      <p className="mt-6 text-[10px] text-gray-300">Powered by <span className="font-semibold">BizFlip</span></p>
     </div>
   );
 
   /* ------------------------------------------------------------------ */
-  /*  Render: Current Page Content                                       */
+  /*  Render: Current Page                                               */
   /* ------------------------------------------------------------------ */
   const renderPageContent = () => {
     const page = pages[currentPage];
     if (!page) return null;
-
     switch (page.type) {
-      case 'cover':
-        return renderCover();
-      case 'welcome':
-        return renderWelcome();
-      case 'category':
-        return renderCategoryPage(page);
-      case 'contact':
-        return renderContactPage();
-      default:
-        return null;
+      case 'cover': return renderCover();
+      case 'welcome': return renderWelcome();
+      case 'category': return renderCategoryPage(page);
+      case 'contact': return renderContactPage();
+      default: return null;
     }
   };
 
   /* ------------------------------------------------------------------ */
-  /*  Page Transition Styles                                            */
-  /* ------------------------------------------------------------------ */
-  const getPageTransitionClass = () => {
-    if (!shouldAnimate || !isOpened) return '';
-
-    if (isOpening) {
-      return 'animate-page-flip-open';
-    }
-
-    if (isAnimating) {
-      return animDirection === 'next'
-        ? 'animate-page-flip-next'
-        : 'animate-page-flip-prev';
-    }
-
-    return '';
-  };
-
-  /* ------------------------------------------------------------------ */
-  /*  Fullscreen Mode                                                    */
+  /*  Fullscreen                                                        */
   /* ------------------------------------------------------------------ */
   if (isFullscreen) {
     return (
-      <div
-        ref={bookRef}
-        className="fixed inset-0 z-[9999] bg-white overflow-hidden"
+      <div ref={bookRef} className="fixed inset-0 z-[9999] bg-white overflow-hidden flipbook-container safe-top safe-bottom"
         style={{ fontFamily }}
         onTouchStart={swipeHandlers.onTouchStart}
-        onTouchEnd={swipeHandlers.onTouchEnd}
-      >
-        {/* Exit button */}
-        <button
-          onClick={() => setIsFullscreen(false)}
-          className="absolute top-3 right-3 z-50 p-2 bg-white/90 backdrop-blur rounded-full shadow-md hover:shadow-lg transition-all"
-        >
+        onTouchMove={swipeHandlers.onTouchMove}
+        onTouchEnd={swipeHandlers.onTouchEnd}>
+        <button onClick={() => setIsFullscreen(false)}
+          className="absolute top-3 right-3 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-md"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}>
           <Minimize2 className="w-5 h-5 text-gray-700" />
         </button>
-
-        {/* Page content */}
-        <div
-          className={`w-full h-full ${getPageTransitionClass()}`}
-          onClick={handlePageTap}
-          style={{
-            transition: shouldAnimate ? `transform ${animDuration} ease-in-out` : 'none',
-            animationDuration: animDuration,
-          }}
-        >
-          {renderPageContent()}
+        <div className={`w-full h-full flex items-center justify-center ${getPageTransitionClass()} flip-page`}
+          onClick={handlePageTap} style={{ '--anim-duration': animDuration } as React.CSSProperties}>
+          <div className="w-full h-full max-w-lg mx-auto">{renderPageContent()}</div>
         </div>
-
-        {/* Navigation */}
-        {isOpened && (
-          <FlipNavigation
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPrev={goPrev}
-            onNext={goNext}
-            showPageNumbers={business.flipbookPageNumbers}
-            primaryColor={primaryColor}
-          />
-        )}
-
-        {/* Basket */}
-        <OrderBasket
-          items={items}
-          basket={basket}
-          onUpdate={addToBasket}
-          onClear={() => setBasket(new Map())}
-          onOrder={openWhatsApp}
-          business={business}
-          basketTotal={basketTotal}
-        />
-
-        {/* Product detail modal */}
+        {isOpened && <FlipNavigation currentPage={currentPage} totalPages={totalPages} onPrev={goPrev} onNext={goNext}
+          showPageNumbers={business.flipbookPageNumbers} primaryColor={primaryColor} />}
+        <OrderBasket items={items} basket={basket} onUpdate={addToBasket} onClear={() => setBasket(new Map())}
+          onOrder={openWhatsApp} business={business} basketTotal={basketTotal} />
         {selectedItem && (
-          <ProductDetailModal
-            item={selectedItem}
-            business={business}
-            onClose={() => setSelectedItem(null)}
-            onAddToBasket={addToBasket}
-            onOrderDirect={(item, qty) => {
-              openWhatsApp(item, qty);
-              setSelectedItem(null);
-            }}
-          />
+          <ProductDetailModal item={selectedItem} business={business} onClose={() => setSelectedItem(null)}
+            onAddToBasket={addToBasket} onOrderDirect={(item, qty) => { openWhatsApp(item, qty); setSelectedItem(null); }} />
         )}
       </div>
     );
@@ -544,101 +364,51 @@ export default function FlipbookMenu({
   /*  Normal Mode                                                        */
   /* ------------------------------------------------------------------ */
   return (
-    <div className="w-full" style={{ fontFamily }}>
-      {/* Book container */}
-      <div
-        ref={bookRef}
-        className={`relative w-full max-w-2xl mx-auto bg-white shadow-2xl overflow-hidden ${
-          isPreview ? '' : 'min-h-[70vh] md:min-h-[80vh]'
-        }`}
+    <div className="flipbook-container w-full h-full-dvh bg-gray-100 flex flex-col items-center justify-center safe-top safe-bottom"
+      style={{ fontFamily }}>
+      <div ref={bookRef}
+        className="relative bg-white shadow-2xl overflow-hidden rounded-lg sm:rounded-xl"
         style={{
-          aspectRatio: isOpened ? undefined : '3/4',
+          width: `${bookDims.width}px`,
+          height: `${bookDims.height}px`,
+          maxWidth: '100%',
+          maxHeight: '100%',
           transition: shouldAnimate ? `all ${animDuration} cubic-bezier(0.4, 0, 0.2, 1)` : 'none',
         }}
         onTouchStart={swipeHandlers.onTouchStart}
-        onTouchEnd={swipeHandlers.onTouchEnd}
-      >
-        {/* Fullscreen button */}
+        onTouchMove={swipeHandlers.onTouchMove}
+        onTouchEnd={swipeHandlers.onTouchEnd}>
         {isOpened && business.flipbookFullscreen && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsFullscreen(true);
-            }}
-            className="absolute top-3 right-3 z-50 p-2 bg-white/90 backdrop-blur rounded-full shadow-md hover:shadow-lg transition-all"
-          >
-            <Maximize2 className="w-4 h-4 text-gray-600" />
+          <button onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
+            className="absolute top-2 right-2 z-50 w-9 h-9 flex items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-md">
+            <Maximize2 className="w-4 h-4 text-gray-500" />
           </button>
         )}
-
-        {/* Page content */}
-        <div
-          className={`w-full h-full cursor-pointer ${getPageTransitionClass()}`}
-          onClick={handlePageTap}
-          style={{
-            transition: shouldAnimate ? `transform ${animDuration} ease-in-out, opacity ${animDuration} ease-in-out` : 'none',
-            animationDuration: animDuration,
-          }}
-        >
+        {isOpened && currentPage > 0 && (
+          <button onClick={(e) => { e.stopPropagation(); handleCloseBook(); }}
+            className="absolute top-2 left-2 z-50 w-9 h-9 flex items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-md">
+            <BookOpen className="w-4 h-4 text-gray-500" />
+          </button>
+        )}
+        <div className={`w-full h-full cursor-pointer ${getPageTransitionClass()} flip-page`}
+          onClick={handlePageTap} style={{ '--anim-duration': animDuration } as React.CSSProperties}>
           {renderPageContent()}
         </div>
-
-        {/* Navigation */}
-        {isOpened && (
-          <FlipNavigation
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPrev={goPrev}
-            onNext={goNext}
-            showPageNumbers={business.flipbookPageNumbers}
-            primaryColor={primaryColor}
-          />
-        )}
-
-        {/* Back to cover button */}
-        {isOpened && currentPage > 0 && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCloseBook();
-            }}
-            className="absolute top-3 left-3 z-50 p-2 bg-white/90 backdrop-blur rounded-full shadow-md hover:shadow-lg transition-all"
-          >
-            <BookOpen className="w-4 h-4 text-gray-600" />
-          </button>
-        )}
+        {isOpened && <FlipNavigation currentPage={currentPage} totalPages={totalPages} onPrev={goPrev} onNext={goNext}
+          showPageNumbers={business.flipbookPageNumbers} primaryColor={primaryColor} />}
       </div>
-
-      {/* Basket */}
-      <OrderBasket
-        items={items}
-        basket={basket}
-        onUpdate={addToBasket}
-        onClear={() => setBasket(new Map())}
-        onOrder={openWhatsApp}
-        business={business}
-        basketTotal={basketTotal}
-      />
-
-      {/* Product detail modal */}
+      <OrderBasket items={items} basket={basket} onUpdate={addToBasket} onClear={() => setBasket(new Map())}
+        onOrder={openWhatsApp} business={business} basketTotal={basketTotal} />
       {selectedItem && (
-        <ProductDetailModal
-          item={selectedItem}
-          business={business}
-          onClose={() => setSelectedItem(null)}
-          onAddToBasket={addToBasket}
-          onOrderDirect={(item, qty) => {
-            openWhatsApp(item, qty);
-            setSelectedItem(null);
-          }}
-        />
+        <ProductDetailModal item={selectedItem} business={business} onClose={() => setSelectedItem(null)}
+          onAddToBasket={addToBasket} onOrderDirect={(item, qty) => { openWhatsApp(item, qty); setSelectedItem(null); }} />
       )}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Flip Navigation Component                                           */
+/*  FlipNavigation — Mobile thumb-reachable                             */
 /* ------------------------------------------------------------------ */
 interface FlipNavigationProps {
   currentPage: number;
@@ -649,41 +419,23 @@ interface FlipNavigationProps {
   primaryColor: string;
 }
 
-function FlipNavigation({
-  currentPage,
-  totalPages,
-  onPrev,
-  onNext,
-  showPageNumbers,
-  primaryColor,
-}: FlipNavigationProps) {
+function FlipNavigation({ currentPage, totalPages, onPrev, onNext, showPageNumbers, primaryColor }: FlipNavigationProps) {
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-gradient-to-t from-black/20 to-transparent pointer-events-none">
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onPrev();
-        }}
-        disabled={currentPage <= 1}
-        className="pointer-events-auto p-2 rounded-full bg-white/90 backdrop-blur shadow-md hover:shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
-      >
+    <div className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-between pointer-events-none"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)', paddingTop: '16px' }}>
+      <button onClick={(e) => { e.stopPropagation(); onPrev(); }} disabled={currentPage <= 1}
+        className="pointer-events-auto w-11 h-11 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md shadow-md disabled:opacity-20 disabled:cursor-not-allowed active:scale-90 transition-all ml-3"
+        aria-label="Previous page">
         <ChevronLeft className="w-5 h-5 text-gray-700" />
       </button>
-
       {showPageNumbers && (
-        <div className="pointer-events-none px-3 py-1.5 bg-white/80 backdrop-blur rounded-full text-xs font-medium text-gray-600">
+        <div className="pointer-events-none px-3.5 py-1.5 bg-white/80 backdrop-blur-md rounded-full text-[11px] font-semibold text-gray-500 shadow-sm">
           {currentPage} / {totalPages - 1}
         </div>
       )}
-
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onNext();
-        }}
-        disabled={currentPage >= totalPages - 1}
-        className="pointer-events-auto p-2 rounded-full bg-white/90 backdrop-blur shadow-md hover:shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
-      >
+      <button onClick={(e) => { e.stopPropagation(); onNext(); }} disabled={currentPage >= totalPages - 1}
+        className="pointer-events-auto w-11 h-11 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md shadow-md disabled:opacity-20 disabled:cursor-not-allowed active:scale-90 transition-all mr-3"
+        aria-label="Next page">
         <ChevronRight className="w-5 h-5 text-gray-700" />
       </button>
     </div>
