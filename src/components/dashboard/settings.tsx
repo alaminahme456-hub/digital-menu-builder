@@ -658,7 +658,7 @@ export default function SettingsPanel({ initialTab = 'business' }: SettingsPanel
           <Button
             onClick={handleSaveBusiness}
             disabled={bizSaving || bizLoading || !hasBizChanges}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-charcoal hover:bg-charcoal-light"
           >
             {bizSaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -786,7 +786,7 @@ export default function SettingsPanel({ initialTab = 'business' }: SettingsPanel
           <Button
             onClick={handleSaveAccount}
             disabled={accSaving || accLoading}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-charcoal hover:bg-charcoal-light"
           >
             {accSaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

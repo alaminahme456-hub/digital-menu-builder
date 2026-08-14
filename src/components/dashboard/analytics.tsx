@@ -106,8 +106,8 @@ export default function AnalyticsPanel() {
       label: 'Total Views',
       value: analytics?.totalViews ?? 0,
       icon: Eye,
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-50 dark:bg-emerald-950/50',
+      color: 'text-charcoal',
+      bg: 'bg-ivory dark:bg-emerald-950/50',
     },
     {
       label: 'QR Scans',
@@ -169,7 +169,7 @@ export default function AnalyticsPanel() {
               variant={dateRange === key ? 'default' : 'outline'}
               size="sm"
               onClick={() => setDateRange(key)}
-              className={dateRange === key ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+              className={dateRange === key ? 'bg-charcoal hover:bg-charcoal-light' : ''}
             >
               {label}
             </Button>
@@ -309,7 +309,7 @@ export default function AnalyticsPanel() {
                         </div>
                         <div className="h-2 rounded-full bg-muted overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                            className="h-full rounded-full bg-ivory0 transition-all duration-500"
                             style={{
                               width: `${categoryData[0]?.views ? (cat.views / categoryData[0].views) * 100 : 0}%`,
                               minWidth: cat.views > 0 ? '8px' : '0',
@@ -372,7 +372,7 @@ export default function AnalyticsPanel() {
                             <div className="flex items-center justify-end gap-2">
                               <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden hidden sm:block">
                                 <div
-                                  className="h-full rounded-full bg-emerald-500"
+                                  className="h-full rounded-full bg-ivory0"
                                   style={{
                                     width: `${analytics.mostViewedItems[0]?.views ? (item.views / analytics.mostViewedItems[0].views) * 100 : 0}%`,
                                     minWidth: item.views > 0 ? '4px' : '0',

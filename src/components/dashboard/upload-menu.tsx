@@ -247,7 +247,7 @@ export default function UploadMenu() {
           <div
             className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 cursor-pointer ${
               dragOver
-                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20'
+                ? 'border-emerald-500 bg-ivory dark:bg-emerald-950/20'
                 : 'border-muted-foreground/25 hover:border-emerald-400 hover:bg-muted/50'
             } ${uploading ? 'pointer-events-none opacity-60' : ''}`}
             onDragOver={(e) => {
@@ -281,14 +281,14 @@ export default function UploadMenu() {
             ) : (
               <div className="space-y-3">
                 <div className="mx-auto w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <Upload className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+                  <Upload className="h-7 w-7 text-charcoal dark:text-emerald-400" />
                 </div>
                 <div>
                   <p className="text-sm font-medium">
                     {dragOver ? 'Drop your file here' : 'Drag and drop your menu file here'}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    or <span className="text-emerald-600 dark:text-emerald-400 font-medium underline">browse files</span>
+                    or <span className="text-charcoal dark:text-emerald-400 font-medium underline">browse files</span>
                   </p>
                 </div>
                 <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
@@ -333,7 +333,7 @@ export default function UploadMenu() {
                   key={upload.id}
                   className={`flex items-center gap-4 p-4 rounded-lg border transition-colors ${
                     upload.published
-                      ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20'
+                      ? 'bg-gold/15 bg-ivory/50 dark:border-emerald-800 dark:bg-emerald-950/20'
                       : 'border-border hover:bg-muted/50'
                   }`}
                 >
@@ -362,7 +362,7 @@ export default function UploadMenu() {
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium truncate">{upload.fileName}</p>
                       {upload.published ? (
-                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border-0 shrink-0">
+                        <Badge className="bg-emerald-100 text-gold-dark dark:bg-emerald-900/40 dark:text-emerald-400 border-0 shrink-0">
                           <CheckCircle2 className="h-3 w-3 mr-0.5" />
                           Published
                         </Badge>
@@ -403,7 +403,7 @@ export default function UploadMenu() {
                     <Button
                       variant={upload.published ? 'outline' : 'default'}
                       size="sm"
-                      className={`h-8 text-xs ${!upload.published ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                      className={`h-8 text-xs ${!upload.published ? 'bg-charcoal hover:bg-charcoal-light text-white' : ''}`}
                       onClick={() => handleTogglePublish(upload)}
                     >
                       {upload.published ? 'Unpublish' : 'Publish'}
@@ -471,7 +471,7 @@ export default function UploadMenu() {
                     href={previewUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-emerald-600 hover:underline mt-1 inline-block"
+                    className="text-sm text-charcoal hover:underline mt-1 inline-block"
                   >
                     Open PDF in new tab
                   </a>

@@ -71,7 +71,7 @@ function StatCard({ icon: Icon, label, value, trend, colorClass, bgColorClass, l
               <p className="text-3xl font-bold tracking-tight text-slate-900">{value}</p>
             )}
             {trend && !loading && (
-              <div className={`flex items-center gap-1 text-xs font-medium ${trend.positive ? 'text-emerald-600' : 'text-red-500'}`}>
+              <div className={`flex items-center gap-1 text-xs font-medium ${trend.positive ? 'text-green-600' : 'text-red-500'}`}>
                 <TrendingUp className={`size-3 ${trend.positive ? '' : 'rotate-180'}`} />
                 {trend.value}
               </div>
@@ -226,7 +226,7 @@ export default function Overview() {
         </div>
         <Button
           onClick={() => navigate('#/menu-manager')}
-          className="mt-3 sm:mt-0 bg-emerald-600 hover:bg-emerald-700 text-white"
+          className="mt-3 sm:mt-0 bg-charcoal hover:bg-charcoal-light text-white"
         >
           <Plus className="size-4" />
           Add Menu Item
@@ -235,13 +235,13 @@ export default function Overview() {
 
       {/* Getting Started Section (shown when business has 0 items) */}
       {hasNoItems && currentBusiness && (
-        <Card className="border-emerald-200 bg-emerald-50/50">
+        <Card className="border-gold/15 bg-champagne/30">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="size-5 text-emerald-600" />
-              <CardTitle className="text-lg text-emerald-900">Get Started</CardTitle>
+              <Sparkles className="size-5 text-gold" />
+              <CardTitle className="text-lg text-charcoal">Get Started</CardTitle>
             </div>
-            <CardDescription className="text-emerald-700/80">
+            <CardDescription className="text-charcoal/50">
               Follow these steps to set up your digital menu and start receiving orders.
             </CardDescription>
           </CardHeader>
@@ -250,19 +250,19 @@ export default function Overview() {
               const Icon = step.icon;
               return (
                 <div key={step.step} className="flex items-start gap-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-charcoal text-sm font-bold text-white">
                     {step.step}
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-2">
-                        <Icon className="size-4 text-emerald-600" />
+                        <Icon className="size-4 text-charcoal" />
                         <h4 className="font-semibold text-slate-900">{step.title}</h4>
                       </div>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 shrink-0"
+                        className="border-gold/20 text-gold-dark hover:bg-gold/10 hover:text-charcoal shrink-0"
                         onClick={() => navigate(step.href)}
                       >
                         {index === 0 ? 'Start' : 'Go'}
@@ -272,7 +272,7 @@ export default function Overview() {
                     <p className="text-sm text-slate-600">{step.description}</p>
                   </div>
                   {index < gettingStartedSteps.length - 1 && (
-                    <div className="absolute left-5 top-14 hidden h-8 w-px bg-emerald-200 sm:block" />
+                    <div className="absolute left-5 top-14 hidden h-8 w-px bg-gold/15 sm:block" />
                   )}
                 </div>
               );
@@ -292,8 +292,8 @@ export default function Overview() {
               ? { value: `${(currentBusiness as any)?._count?.categories ?? 0} categories`, positive: true }
               : undefined
           }
-          colorClass="text-emerald-600"
-          bgColorClass="bg-emerald-50"
+          colorClass="text-charcoal"
+          bgColorClass="bg-ivory"
           loading={loading}
         />
         <StatCard
@@ -321,15 +321,15 @@ export default function Overview() {
           icon={CircleCheck}
           label="Menu Status"
           value={loading ? '' : ''}
-          colorClass={isPublished ? 'text-emerald-600' : 'text-amber-600'}
-          bgColorClass={isPublished ? 'bg-emerald-50' : 'bg-amber-50'}
+          colorClass={isPublished ? 'text-charcoal' : 'text-amber-600'}
+          bgColorClass={isPublished ? 'bg-ivory' : 'bg-amber-50'}
           loading={loading}
         >
           {!loading && (
             <Badge
               className={`mt-1 text-xs ${
                 isPublished
-                  ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100'
+                  ? 'bg-charcoal/5 text-charcoal hover:bg-gold/10'
                   : 'bg-amber-100 text-amber-700 hover:bg-amber-100'
               }`}
             >
@@ -341,14 +341,14 @@ export default function Overview() {
 
       {/* Public Experience Card */}
       {currentBusiness && (
-        <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-teal-50/50">
+        <Card className="bg-gold/15 bg-gradient-to-r from-champagne/30 to-ivory">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Globe className="size-5 text-emerald-600" />
-                <CardTitle className="text-lg text-emerald-900">Public Experience</CardTitle>
+                <Globe className="size-5 text-charcoal" />
+                <CardTitle className="text-lg text-charcoal">Public Experience</CardTitle>
               </div>
-              <Badge className={isPublished ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-100 text-amber-700'}>
+              <Badge className={isPublished ? 'bg-charcoal hover:bg-charcoal-light text-white' : 'bg-amber-100 text-amber-700'}>
                 {isPublished ? 'Published' : 'Unpublished'}
               </Badge>
             </div>
@@ -356,7 +356,7 @@ export default function Overview() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Public URL */}
-            <div className="rounded-lg border border-emerald-200 bg-white/80 px-4 py-3">
+            <div className="rounded-lg border bg-gold/15 bg-white/80 px-4 py-3">
               <p className="text-xs text-slate-500 mb-1">Your Public URL</p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 text-sm font-medium text-slate-900 truncate">
@@ -365,7 +365,7 @@ export default function Overview() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 shrink-0"
+                  className="border-gold/20 text-gold-dark hover:bg-gold/10 shrink-0"
                   onClick={() => {
                     navigator.clipboard.writeText(getPublicBusinessUrl(currentBusiness.slug));
                     toast.success('Link copied!');
@@ -379,7 +379,7 @@ export default function Overview() {
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-charcoal hover:bg-charcoal-light text-white"
                 onClick={() => window.open(getPublicBusinessUrl(currentBusiness.slug), '_blank')}
               >
                 <ExternalLink className="mr-1.5 size-3.5" />
@@ -498,7 +498,7 @@ export default function Overview() {
                 <button
                   key={action.href}
                   onClick={() => navigate(action.href)}
-                  className="flex w-full items-center gap-3 rounded-lg border border-transparent p-3 text-left transition-all hover:border-slate-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                  className="flex w-full items-center gap-3 rounded-lg border border-transparent p-3 text-left transition-all hover:border-slate-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
                 >
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
                     <Icon className="size-5 text-slate-600" />

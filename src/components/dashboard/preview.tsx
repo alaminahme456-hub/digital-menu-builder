@@ -347,7 +347,7 @@ export default function PreviewPanel() {
             <button
               onClick={() => setPreviewStyle('flipbook')}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                previewStyle === 'flipbook' ? 'bg-emerald-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+                previewStyle === 'flipbook' ? 'bg-charcoal text-white' : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
@@ -356,7 +356,7 @@ export default function PreviewPanel() {
             <button
               onClick={() => setPreviewStyle('list')}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                previewStyle === 'list' ? 'bg-emerald-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+                previewStyle === 'list' ? 'bg-charcoal text-white' : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               <List className="w-3.5 h-3.5" />
@@ -408,7 +408,7 @@ export default function PreviewPanel() {
           <button
             onClick={() => setPreviewStyle('flipbook')}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              previewStyle === 'flipbook' ? 'bg-emerald-600 text-white' : 'text-gray-600 hover:bg-muted'
+              previewStyle === 'flipbook' ? 'bg-charcoal text-white' : 'text-gray-600 hover:bg-muted'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
@@ -417,7 +417,7 @@ export default function PreviewPanel() {
           <button
             onClick={() => setPreviewStyle('list')}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              previewStyle === 'list' ? 'bg-emerald-600 text-white' : 'text-gray-600 hover:bg-muted'
+              previewStyle === 'list' ? 'bg-charcoal text-white' : 'text-gray-600 hover:bg-muted'
             }`}
           >
             <List className="w-3.5 h-3.5" />

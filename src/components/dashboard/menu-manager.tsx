@@ -147,8 +147,8 @@ function ItemRowSkeleton() {
 function EmptyCategoriesState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center gap-4 px-4 py-16 text-center">
-      <div className="flex size-16 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/40">
-        <FolderOpen className="size-8 text-emerald-600 dark:text-emerald-400" />
+      <div className="flex size-16 items-center justify-center rounded-2xl bg-ivory dark:bg-emerald-950/40">
+        <FolderOpen className="size-8 text-charcoal dark:text-emerald-400" />
       </div>
       <div>
         <p className="text-sm font-semibold text-foreground">
@@ -158,7 +158,7 @@ function EmptyCategoriesState({ onAdd }: { onAdd: () => void }) {
           Create your first menu category to get started
         </p>
       </div>
-      <Button onClick={onAdd} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+      <Button onClick={onAdd} className="gap-2 bg-charcoal hover:bg-charcoal-light">
         <Plus className="size-4" />
         Add Category
       </Button>
@@ -178,7 +178,7 @@ function EmptyItemsState({ onAdd }: { onAdd: () => void }) {
           Add your first menu item to this category
         </p>
       </div>
-      <Button onClick={onAdd} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+      <Button onClick={onAdd} className="gap-2 bg-charcoal hover:bg-charcoal-light">
         <Plus className="size-4" />
         Add Item
       </Button>
@@ -284,7 +284,7 @@ function AddCategoryDialog({
           <Button
             onClick={handleSubmit}
             disabled={!name.trim() || loading}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-charcoal hover:bg-charcoal-light"
           >
             {loading && <Loader2 className="size-4 animate-spin" />}
             Create Category
@@ -463,7 +463,7 @@ function ItemFormDialog({
                 onClick={() => fileInputRef.current?.click()}
                 className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors ${
                   dragOver
-                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30'
+                    ? 'border-emerald-500 bg-ivory dark:bg-emerald-950/30'
                     : form.image
                       ? 'border-transparent bg-muted/50'
                       : 'border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/50'
@@ -609,7 +609,7 @@ function ItemFormDialog({
           <Button
             onClick={handleSubmit}
             disabled={!form.name.trim() || !form.price || !form.categoryId || loading}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-charcoal hover:bg-charcoal-light"
           >
             {loading && <Loader2 className="size-4 animate-spin" />}
             {isEditing ? 'Save Changes' : 'Add Item'}
@@ -897,13 +897,13 @@ export default function MenuManager() {
         key={cat.id}
         className={`group relative flex items-center gap-2 rounded-lg px-3 py-2.5 transition-colors ${
           isActive
-            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+            ? 'bg-ivory text-gold-dark dark:bg-emerald-950/40 dark:text-emerald-400'
             : 'text-foreground hover:bg-muted'
         }`}
       >
         {/* Active indicator */}
         {isActive && (
-          <div className="absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r-full bg-emerald-600" />
+          <div className="absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r-full bg-charcoal" />
         )}
 
         {/* Reorder buttons */}
@@ -936,13 +936,13 @@ export default function MenuManager() {
                 if (e.key === 'Enter') handleRenameCategory();
                 if (e.key === 'Escape') setEditingCategory(null);
               }}
-              className="h-7 border-emerald-300 bg-white text-sm dark:border-emerald-700 dark:bg-background"
+              className="h-7 border-gold/20 bg-white text-sm dark:border-emerald-700 dark:bg-background"
               autoFocus
             />
             <button
               type="button"
               onClick={handleRenameCategory}
-              className="rounded p-1 text-emerald-600 hover:bg-emerald-100 dark:text-emerald-400 dark:hover:bg-emerald-900/40"
+              className="rounded p-1 text-charcoal hover:bg-gold/10 dark:text-emerald-400 dark:hover:bg-emerald-900/40"
             >
               <Check className="size-3.5" />
             </button>
@@ -971,7 +971,7 @@ export default function MenuManager() {
             variant={isActive ? 'default' : 'secondary'}
             className={`shrink-0 text-[10px] px-1.5 py-0 ${
               isActive
-                ? 'bg-emerald-600 text-white hover:bg-emerald-600'
+                ? 'bg-charcoal text-white hover:bg-charcoal'
                 : ''
             }`}
           >
@@ -1090,7 +1090,7 @@ export default function MenuManager() {
               </p>
             )}
           </div>
-          <span className="shrink-0 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+          <span className="shrink-0 text-sm font-bold text-charcoal dark:text-emerald-400">
             {formatPrice(item.price)}
           </span>
         </div>
@@ -1195,7 +1195,7 @@ export default function MenuManager() {
       </div>
 
       {/* Price */}
-      <span className="shrink-0 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+      <span className="shrink-0 text-sm font-bold text-charcoal dark:text-emerald-400">
         {formatPrice(item.price)}
       </span>
 
@@ -1278,7 +1278,7 @@ export default function MenuManager() {
             size="sm"
             onClick={openAddItem}
             disabled={!selectedCategoryId}
-            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+            className="gap-1.5 bg-charcoal hover:bg-charcoal-light"
           >
             <Plus className="size-4" />
             <span className="hidden sm:inline">Add Item</span>

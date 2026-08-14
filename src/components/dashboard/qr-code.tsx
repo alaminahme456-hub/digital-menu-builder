@@ -239,7 +239,7 @@ export default function QRCodePanel() {
             <div className="absolute -top-2 -right-2">
               <Badge
                 variant={isPublished ? 'default' : 'secondary'}
-                className={isPublished ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                className={isPublished ? 'bg-charcoal hover:bg-charcoal-light' : ''}
               >
                 {isPublished ? 'Published' : 'Draft'}
               </Badge>
@@ -252,7 +252,7 @@ export default function QRCodePanel() {
               <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span className="text-sm text-muted-foreground truncate flex-1">{menuUrl}</span>
               <Button variant="ghost" size="sm" onClick={handleCopyLink} className="h-7 px-2">
-                {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? <Check className="h-3.5 w-3.5 text-charcoal" /> : <Copy className="h-3.5 w-3.5" />}
               </Button>
             </div>
           </div>
@@ -269,7 +269,7 @@ export default function QRCodePanel() {
             </Button>
             <Button variant="outline" size="sm" onClick={handleCopyLink}>
               {copied ? (
-                <Check className="mr-1.5 h-4 w-4 text-emerald-600" />
+                <Check className="mr-1.5 h-4 w-4 text-charcoal" />
               ) : (
                 <Copy className="mr-1.5 h-4 w-4" />
               )}
@@ -302,7 +302,7 @@ export default function QRCodePanel() {
                 <p className="text-sm text-muted-foreground truncate">{menuUrl}</p>
               </div>
             </div>
-            <Badge variant={isPublished ? 'default' : 'outline'} className={isPublished ? 'bg-emerald-600 hover:bg-emerald-700 flex-shrink-0' : 'flex-shrink-0'}>
+            <Badge variant={isPublished ? 'default' : 'outline'} className={isPublished ? 'bg-charcoal hover:bg-charcoal-light flex-shrink-0' : 'flex-shrink-0'}>
               {business?.status || 'draft'}
             </Badge>
           </div>
@@ -313,7 +313,7 @@ export default function QRCodePanel() {
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">QR Status</span>
-            <Badge variant={isPublished ? 'default' : 'secondary'} className={isPublished ? 'bg-emerald-600 hover:bg-emerald-700' : ''}>
+            <Badge variant={isPublished ? 'default' : 'secondary'} className={isPublished ? 'bg-charcoal hover:bg-charcoal-light' : ''}>
               {isPublished ? 'Active' : 'Not Active'}
             </Badge>
           </div>

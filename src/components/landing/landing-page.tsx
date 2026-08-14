@@ -1,26 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  QrCode,
-  Smartphone,
-  Palette,
-  BarChart3,
-  MessageSquare,
-  Camera,
-  Sparkles,
-  Menu,
   ArrowRight,
   Check,
+  QrCode,
+  Sparkles,
+  BookOpen,
+  Palette,
+  BarChart3,
+  Globe,
+  Shield,
   Zap,
   Star,
-  Globe,
   ChevronRight,
-  Users,
-  Shield,
+  UtensilsCrossed,
+  ShoppingBag,
+  Building2,
+  Scissors,
+  Store,
+  Hotel,
+  CalendarDays,
+  Briefcase,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { useAppStore } from '@/lib/store';
 
 const NAV_LINKS = [
@@ -30,152 +33,92 @@ const NAV_LINKS = [
   { label: 'Pricing', href: '#pricing' },
 ];
 
-const FEATURES = [
+const BUSINESS_TYPES = [
   {
-    icon: Smartphone,
-    title: 'Mobile-Friendly Menus',
-    description:
-      'Beautiful menus that look perfect on any device. Your customers will love the smooth, touch-optimized experience.',
+    icon: UtensilsCrossed,
+    name: 'Restaurants',
+    description: 'Menus and online ordering.',
+    accent: '#C9A84C',
   },
   {
-    icon: QrCode,
-    title: 'QR Code Generation',
-    description:
-      'Instantly generate branded QR codes that link directly to your digital menu. Print-ready for tables and flyers.',
+    icon: ShoppingBag,
+    name: 'Fashion',
+    description: 'Collections and product catalogs.',
+    accent: '#8B6F47',
   },
   {
-    icon: Camera,
-    title: 'AI Menu Scanner',
-    description:
-      'Snap a photo of your physical menu and let AI extract every item, price, and description automatically.',
+    icon: Hotel,
+    name: 'Hotels',
+    description: 'Rooms, facilities and services.',
+    accent: '#6B8E6B',
   },
   {
-    icon: Palette,
-    title: 'Beautiful Templates',
-    description:
-      'Choose from 10+ professionally designed templates. Customize colors, fonts, and layouts to match your brand.',
+    icon: Scissors,
+    name: 'Salons',
+    description: 'Services and pricing.',
+    accent: '#B07AA1',
   },
   {
-    icon: MessageSquare,
-    title: 'WhatsApp Ordering',
-    description:
-      'Let customers place orders directly through WhatsApp. Seamless integration with your existing workflow.',
+    icon: Store,
+    name: 'Retail',
+    description: 'Digital product catalogs.',
+    accent: '#7A8EB0',
   },
   {
-    icon: BarChart3,
-    title: 'Analytics Dashboard',
-    description:
-      'Track QR scans, page views, and popular items. Make data-driven decisions to grow your business.',
+    icon: Building2,
+    name: 'Real Estate',
+    description: 'Property showcases.',
+    accent: '#8B8B6B',
+  },
+  {
+    icon: CalendarDays,
+    name: 'Events',
+    description: 'Programs and packages.',
+    accent: '#B07A7A',
+  },
+  {
+    icon: Briefcase,
+    name: 'Services',
+    description: 'Professional service catalogs.',
+    accent: '#6B8B8B',
   },
 ];
 
 const STEPS = [
   {
-    number: 1,
-    title: 'Create Account',
-    description: 'Sign up for free in seconds. No credit card required to get started.',
-    icon: Users,
+    number: '01',
+    title: 'Create',
+    description: 'Create your business experience in minutes.',
   },
   {
-    number: 2,
-    title: 'Build Your Menu',
-    description: 'Add items, categories, and photos. Or scan your existing menu with AI.',
-    icon: Menu,
+    number: '02',
+    title: 'Customize',
+    description: 'Choose a premium template and add your content.',
   },
   {
-    number: 3,
-    title: 'Share QR Code',
-    description: 'Print your QR code and place it on tables. Customers scan and browse instantly.',
-    icon: QrCode,
+    number: '03',
+    title: 'Publish',
+    description: 'Generate your public URL and QR code.',
+  },
+  {
+    number: '04',
+    title: 'Share',
+    description: 'Customers scan, explore and interact.',
   },
 ];
 
-const TEMPLATE_PREVIEWS = [
-  {
-    name: 'Modern',
-    description: 'Clean and contemporary design',
-    colors: ['#10b981', '#059669', '#f0fdf4'],
-    pattern: 'grid',
-  },
-  {
-    name: 'Classic Restaurant',
-    description: 'Traditional elegant styling',
-    colors: ['#78350f', '#92400e', '#fef3c7'],
-    pattern: 'list',
-  },
-  {
-    name: 'Luxury',
-    description: 'Premium gold and dark theme',
-    colors: ['#1f2937', '#d97706', '#fbbf24'],
-    pattern: 'cards',
-  },
-  {
-    name: 'Minimal',
-    description: 'Whitespace-focused simplicity',
-    colors: ['#ffffff', '#f3f4f6', '#111827'],
-    pattern: 'simple',
-  },
-];
-
-const PRICING_TIERS = [
-  {
-    name: 'Free',
-    price: '$0',
-    period: 'forever',
-    description: 'Perfect for getting started',
-    features: [
-      '1 Business',
-      'Up to 25 menu items',
-      '1 QR code',
-      'Basic template',
-      'Mobile-responsive menu',
-    ],
-    cta: 'Get Started Free',
-    highlighted: false,
-  },
-  {
-    name: 'Pro',
-    price: '$19',
-    period: '/month',
-    description: 'For growing restaurants',
-    features: [
-      '5 Businesses',
-      'Unlimited menu items',
-      'Unlimited QR codes',
-      'All premium templates',
-      'WhatsApp ordering',
-      'AI menu scanner',
-      'Analytics dashboard',
-      'Custom domain support',
-    ],
-    cta: 'Start Free Trial',
-    highlighted: true,
-  },
-  {
-    name: 'Enterprise',
-    price: '$49',
-    period: '/month',
-    description: 'For restaurant chains',
-    features: [
-      'Unlimited businesses',
-      'Unlimited everything',
-      'All templates & features',
-      'White-label branding',
-      'API access',
-      'Priority support',
-      'Team collaboration',
-      'Advanced analytics & exports',
-    ],
-    cta: 'Contact Sales',
-    highlighted: false,
-  },
+const TEMPLATE_SHOWCASE = [
+  { name: 'AURELIA', style: 'Luxury / Elegant', color: '#1A1A1A', accent: '#C9A84C' },
+  { name: 'NOIR', style: 'Dark / Editorial', color: '#0D0D0D', accent: '#FFFFFF' },
+  { name: 'MONO', style: 'Minimal / Modern', color: '#FFFFFF', accent: '#1A1A1A' },
+  { name: 'FORMA', style: 'Architectural / Premium', color: '#F5F0EB', accent: '#2D2D2D' },
 ];
 
 export default function LandingPage() {
   const navigate = useAppStore((s) => s.navigate);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const scrollToSection = (href: string) => {
+  const scrollTo = (href: string) => {
     const el = document.querySelector(href);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
@@ -184,524 +127,471 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-lg">
-        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          {/* Logo */}
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-2"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
-              <QrCode className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-gray-900">
-              Menu<span className="text-emerald-600">QR</span>
-            </span>
-          </button>
+    <div className="min-h-screen bg-ivory overflow-x-hidden">
+      {/* ── NAVIGATION ── */}
+      <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-black/[0.06]">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            {/* Logo */}
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="flex items-center gap-2.5"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-charcoal text-white">
+                <BookOpen className="h-4 w-4" />
+              </div>
+              <span className="text-lg font-bold tracking-tight text-charcoal">
+                BIZFLIP
+              </span>
+            </button>
 
-          {/* Desktop nav links */}
-          <div className="hidden items-center gap-8 md:flex">
+            {/* Desktop nav */}
+            <div className="hidden md:flex items-center gap-8">
+              {NAV_LINKS.map((link) => (
+                <button
+                  key={link.href}
+                  onClick={() => scrollTo(link.href)}
+                  className="text-[13px] font-medium tracking-wide uppercase text-charcoal/60 hover:text-charcoal transition-colors"
+                >
+                  {link.label}
+                </button>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/login')}
+                className="hidden sm:flex text-[13px] font-medium text-charcoal/70 hover:text-charcoal"
+              >
+                Sign In
+              </Button>
+              <Button
+                onClick={() => navigate('/register')}
+                className="bg-charcoal hover:bg-charcoal-light text-white text-[13px] font-medium h-9 px-5 rounded-lg"
+              >
+                Create Your Experience
+              </Button>
+
+              {/* Mobile menu toggle */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden flex flex-col gap-1.5 p-2"
+                aria-label="Toggle menu"
+              >
+                <span className={`block h-[1.5px] w-5 bg-charcoal transition-all ${mobileMenuOpen ? 'rotate-45 translate-y-[4px]' : ''}`} />
+                <span className={`block h-[1.5px] w-5 bg-charcoal transition-all ${mobileMenuOpen ? '-rotate-45 -translate-y-[2px]' : ''}`} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-black/[0.06] bg-white px-6 py-4">
             {NAV_LINKS.map((link) => (
               <button
                 key={link.href}
-                onClick={() => scrollToSection(link.href)}
-                className="text-sm font-medium text-gray-600 transition-colors hover:text-emerald-600"
+                onClick={() => scrollTo(link.href)}
+                className="block w-full text-left py-3 text-sm font-medium text-charcoal/70 border-b border-black/[0.04] last:border-0"
               >
                 {link.label}
               </button>
             ))}
           </div>
-
-          {/* Desktop auth buttons */}
-          <div className="hidden items-center gap-3 md:flex">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/login')}
-              className="text-gray-600 hover:text-emerald-600"
-            >
-              Sign In
-            </Button>
-            <Button
-              onClick={() => navigate('/register')}
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
-            >
-              Get Started
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden rounded-md p-2 text-gray-600 hover:bg-gray-100"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        </nav>
-
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="border-t border-gray-100 bg-white px-4 py-4 md:hidden">
-            <div className="flex flex-col gap-3">
-              {NAV_LINKS.map((link) => (
-                <button
-                  key={link.href}
-                  onClick={() => scrollToSection(link.href)}
-                  className="rounded-md px-3 py-2 text-left text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-emerald-600"
-                >
-                  {link.label}
-                </button>
-              ))}
-              <hr className="border-gray-100" />
-              <Button
-                variant="ghost"
-                onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
-                className="justify-start text-gray-600"
-              >
-                Sign In
-              </Button>
-              <Button
-                onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
-                className="bg-emerald-600 text-white hover:bg-emerald-700"
-              >
-                Get Started
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
         )}
-      </header>
+      </nav>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        {/* Background decorations */}
-        <div className="pointer-events-none absolute -top-40 right-0 h-[500px] w-[500px] rounded-full bg-emerald-100/60 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-40 left-0 h-[400px] w-[400px] rounded-full bg-emerald-50/80 blur-3xl" />
+      {/* ── HERO SECTION ── */}
+      <section className="relative min-h-screen flex items-center noise-bg bg-charcoal overflow-hidden pt-16">
+        {/* Subtle radial light */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] rounded-full bg-gold/[0.03] blur-[120px]" />
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-gold/10 to-transparent" />
+        </div>
 
-        <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-24 lg:px-8 lg:pt-32">
-          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-            {/* Hero text */}
-            <div className="mx-auto max-w-2xl text-center lg:mx-0 lg:text-left">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700">
-                <Sparkles className="h-4 w-4" />
-                AI-Powered Menu Builder
+        <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-8 py-20 lg:py-32">
+          <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+            {/* Left: Copy */}
+            <div className="max-w-xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/[0.06] px-4 py-1.5 mb-8">
+                <Sparkles className="h-3.5 w-3.5 text-gold" />
+                <span className="text-[11px] font-medium tracking-widest uppercase text-gold-light">
+                  Digital Experience Platform
+                </span>
               </div>
-              <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl">
-                Create Your Digital Menu in{' '}
-                <span className="text-emerald-600">Minutes</span>
+
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.08] tracking-tight text-white font-editorial">
+                Your Business,{' '}
+                <span className="text-gradient-gold">Beautifully</span>{' '}
+                Presented.
               </h1>
-              <p className="mt-6 text-lg leading-relaxed text-gray-600 sm:text-xl">
-                Build stunning QR code menus for your restaurant. No design skills needed.
-                Scan your existing menu with AI, customize with beautiful templates, and share instantly.
+
+              <p className="mt-6 text-lg text-white/50 leading-relaxed max-w-md">
+                Create a stunning digital menu, catalog, portfolio, service list or product showcase.
+                Share it instantly with one QR code.
               </p>
-              <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
+
+              <div className="mt-10 flex flex-wrap items-center gap-4">
                 <Button
-                  size="lg"
                   onClick={() => navigate('/register')}
-                  className="h-12 bg-emerald-600 px-8 text-base font-semibold text-white hover:bg-emerald-700"
+                  className="bg-white hover:bg-white/90 text-charcoal text-[14px] font-semibold h-12 px-8 rounded-xl shadow-premium-lg group"
                 >
-                  Sign Up Free
-                  <ArrowRight className="h-5 w-5" />
+                  Create Your Experience
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </Button>
                 <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => navigate('/login')}
-                  className="h-12 px-8 text-base font-semibold border-gray-300 hover:border-emerald-300 hover:text-emerald-600"
+                  variant="ghost"
+                  onClick={() => scrollTo('#how-it-works')}
+                  className="text-white/60 hover:text-white text-[14px] font-medium h-12 px-6"
                 >
-                  See Demo
+                  Explore Demo
+                  <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </div>
-              <div className="mt-8 flex items-center justify-center gap-6 text-sm text-gray-500 lg:justify-start">
-                <span className="flex items-center gap-1.5">
-                  <Check className="h-4 w-4 text-emerald-500" />
-                  Free forever plan
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Check className="h-4 w-4 text-emerald-500" />
-                  No credit card
-                </span>
+
+              {/* Trust line */}
+              <div className="mt-12 flex items-center gap-6 text-sm text-white/30">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  <span>SSL Secured</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  <span>Instant Setup</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  <span>Works Everywhere</span>
+                </div>
               </div>
             </div>
 
-            {/* Hero visual - Phone mockup */}
-            <div className="relative mx-auto w-full max-w-md lg:mx-0 lg:max-w-none">
-              <div className="relative">
-                {/* Phone frame */}
-                <div className="mx-auto w-[280px] rounded-[2.5rem] border-[8px] border-gray-800 bg-gray-800 p-2 shadow-2xl sm:w-[320px]">
-                  <div className="overflow-hidden rounded-[2rem] bg-white">
-                    {/* Status bar mock */}
-                    <div className="flex items-center justify-between bg-emerald-600 px-5 py-2">
-                      <span className="text-xs font-medium text-white">9:41</span>
-                      <div className="flex gap-1.5">
-                        <div className="h-2.5 w-2.5 rounded-full bg-white/40" />
-                        <div className="h-2.5 w-2.5 rounded-full bg-white/40" />
-                        <div className="h-2.5 w-2.5 rounded-full bg-white/40" />
+            {/* Right: 3D Book Preview */}
+            <div className="hidden lg:flex justify-center">
+              <div className="relative" style={{ perspective: '1200px' }}>
+                {/* Book shadow */}
+                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-[280px] h-[20px] bg-black/30 rounded-[50%] blur-xl" />
+
+                {/* Book */}
+                <div
+                  className="relative w-[320px] h-[420px] rounded-lg overflow-hidden shadow-2xl"
+                  style={{
+                    transform: 'rotateY(-12deg) rotateX(2deg)',
+                    transformStyle: 'preserve-3d',
+                  }}
+                >
+                  {/* Book cover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#2D2D2D] to-[#1A1A1A]">
+                    {/* Gold line accent */}
+                    <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-gold/40 via-gold to-gold/40" />
+                    <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-gold/40 via-gold to-gold/40" />
+
+                    {/* Cover content */}
+                    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                      {/* Logo circle */}
+                      <div className="w-16 h-16 rounded-full border border-gold/30 flex items-center justify-center mb-6 bg-gold/[0.06]">
+                        <BookOpen className="h-7 w-7 text-gold" />
                       </div>
-                    </div>
-                    {/* Menu header mock */}
-                    <div className="bg-emerald-600 px-5 pb-6 pt-3">
-                      <h3 className="text-lg font-bold text-white">La Bella Cucina</h3>
-                      <p className="text-xs text-emerald-100">Italian Restaurant</p>
-                    </div>
-                    {/* Menu items mock */}
-                    <div className="space-y-3 bg-gray-50 p-4">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex gap-3 rounded-lg bg-white p-3 shadow-sm">
-                          <div className="h-14 w-14 shrink-0 rounded-lg bg-emerald-100" />
-                          <div className="flex-1">
-                            <div className="h-3.5 w-24 rounded bg-gray-200" />
-                            <div className="mt-1.5 h-2.5 w-32 rounded bg-gray-100" />
-                            <div className="mt-2 h-3 w-12 rounded bg-emerald-100" />
+
+                      <h3 className="text-white text-xl font-bold tracking-wider font-editorial">
+                        BIZFLIP
+                      </h3>
+                      <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mt-2">
+                        Digital Experience
+                      </p>
+
+                      {/* Decorative line */}
+                      <div className="w-12 h-px bg-gold/30 my-8" />
+
+                      {/* Mock business content */}
+                      <div className="space-y-4 w-full">
+                        <div className="h-2 w-3/4 mx-auto bg-white/[0.06] rounded-full" />
+                        <div className="h-2 w-1/2 mx-auto bg-white/[0.04] rounded-full" />
+                        <div className="grid grid-cols-2 gap-2 mt-6">
+                          <div className="aspect-square rounded bg-white/[0.04] flex items-center justify-center">
+                            <div className="w-6 h-6 rounded bg-gold/10" />
+                          </div>
+                          <div className="aspect-square rounded bg-white/[0.04] flex items-center justify-center">
+                            <div className="w-6 h-6 rounded bg-gold/10" />
                           </div>
                         </div>
-                      ))}
+                        <div className="space-y-2 mt-4">
+                          <div className="h-1.5 w-full bg-white/[0.04] rounded-full" />
+                          <div className="h-1.5 w-2/3 mx-auto bg-white/[0.04] rounded-full" />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-                {/* Floating QR code badge */}
-                <div className="absolute -right-4 bottom-20 flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-white bg-white shadow-lg sm:-right-6 sm:h-24 sm:w-24">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-emerald-600 sm:h-16 sm:w-16">
-                    <QrCode className="h-8 w-8 text-white sm:h-10 sm:w-10" />
-                  </div>
-                </div>
-                {/* Floating stats badge */}
-                <div className="absolute -left-4 top-24 flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-lg sm:-left-8">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
-                    <BarChart3 className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">2.4k</p>
-                    <p className="text-xs text-gray-500">QR Scans</p>
-                  </div>
+
+                  {/* Page edge effect (right side) */}
+                  <div className="absolute top-2 right-0 w-[3px] h-[calc(100%-16px)] rounded-l bg-white/[0.03]" />
+                  <div className="absolute top-3 right-[3px] w-[2px] h-[calc(100%-24px)] rounded-l bg-white/[0.02]" />
+                  <div className="absolute top-4 right-[5px] w-[1px] h-[calc(100%-32px)] rounded-l bg-white/[0.01]" />
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Bottom fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-ivory to-transparent" />
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="bg-gray-50 py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700">
-              <Zap className="h-4 w-4" />
-              Features
-            </div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Everything You Need to Go Digital
+      {/* ── BUILT FOR EVERY BUSINESS ── */}
+      <section id="features" className="py-24 lg:py-32">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          {/* Section header */}
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-gold mb-4">
+              Versatile Platform
+            </p>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-charcoal font-editorial">
+              One Platform. Every Business.
             </h2>
-            <p className="mt-4 text-lg text-gray-600">
-              Powerful tools to create, manage, and share your digital menu with ease.
+            <p className="mt-4 text-charcoal/50 text-lg leading-relaxed">
+              From restaurants to real estate, BizFlip adapts to your industry.
             </p>
           </div>
 
-          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((feature) => {
-              const Icon = feature.icon;
+          {/* Business cards grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {BUSINESS_TYPES.map((biz) => {
+              const Icon = biz.icon;
               return (
-                <Card
-                  key={feature.title}
-                  className="group border-gray-200 bg-white py-0 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg"
+                <div
+                  key={biz.name}
+                  className="group relative bg-white rounded-xl p-6 border border-black/[0.06] hover:border-black/[0.12] transition-all duration-300 hover:shadow-premium cursor-pointer"
                 >
-                  <CardContent className="p-6">
-                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <h3 className="mb-2 text-lg font-semibold text-gray-900">
-                      {feature.title}
-                    </h3>
-                    <p className="text-sm leading-relaxed text-gray-600">
-                      {feature.description}
-                    </p>
-                  </CardContent>
-                </Card>
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
+                    style={{ backgroundColor: `${biz.accent}10` }}
+                  >
+                    <Icon className="h-5 w-5" style={{ color: biz.accent }} />
+                  </div>
+                  <h3 className="text-base font-semibold text-charcoal tracking-tight">
+                    {biz.name}
+                  </h3>
+                  <p className="mt-1.5 text-sm text-charcoal/40 leading-relaxed">
+                    {biz.description}
+                  </p>
+                  <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowRight className="h-4 w-4 text-charcoal/30" />
+                  </div>
+                </div>
               );
             })}
           </div>
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section id="how-it-works" className="bg-white py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700">
-              <Globe className="h-4 w-4" />
+      {/* ── HOW IT WORKS ── */}
+      <section id="how-it-works" className="py-24 lg:py-32 bg-white border-y border-black/[0.04]">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-gold mb-4">
+              Simple Process
+            </p>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-charcoal font-editorial">
               How It Works
-            </div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Up and Running in 3 Simple Steps
             </h2>
-            <p className="mt-4 text-lg text-gray-600">
-              No technical skills required. Get your digital menu live in under 10 minutes.
-            </p>
           </div>
 
-          <div className="relative mt-16">
-            {/* Connecting line (desktop) */}
-            <div className="absolute left-0 right-0 top-16 hidden h-0.5 bg-gradient-to-r from-emerald-200 via-emerald-400 to-emerald-200 md:block" />
-
-            <div className="grid gap-8 md:grid-cols-3 md:gap-6">
-              {STEPS.map((step) => {
-                const Icon = step.icon;
-                return (
-                  <div key={step.number} className="relative text-center">
-                    <div className="relative z-10 mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-white bg-emerald-600 shadow-lg">
-                      <Icon className="h-7 w-7 text-white" />
-                    </div>
-                    <div className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-                      {step.number}
-                    </div>
-                    <h3 className="mt-3 text-lg font-semibold text-gray-900">
-                      {step.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-gray-600">
-                      {step.description}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Templates Preview Section */}
-      <section id="templates" className="bg-gray-50 py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700">
-              <Palette className="h-4 w-4" />
-              Templates
-            </div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Beautiful Templates for Every Style
-            </h2>
-            <p className="mt-4 text-lg text-gray-600">
-              Choose a template that matches your restaurant&#39;s vibe, then make it yours.
-            </p>
-          </div>
-
-          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {TEMPLATE_PREVIEWS.map((template) => (
-              <Card
-                key={template.name}
-                className="group cursor-pointer border-gray-200 bg-white py-0 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg"
-              >
-                <CardContent className="p-0">
-                  {/* Template preview */}
-                  <div
-                    className="relative flex h-44 items-end p-4"
-                    style={{
-                      background: `linear-gradient(135deg, ${template.colors[0]} 0%, ${template.colors[1]} 100%)`,
-                    }}
-                  >
-                    {/* Mock menu items */}
-                    <div className="w-full space-y-2">
-                      <div className="h-2.5 w-20 rounded-full bg-white/30" />
-                      <div className="h-2 w-32 rounded-full bg-white/20" />
-                      <div className="mt-3 h-2.5 w-16 rounded-full bg-white/30" />
-                      <div className="h-2 w-28 rounded-full bg-white/20" />
-                    </div>
-                  </div>
-                  {/* Template info */}
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900">{template.name}</h3>
-                    <p className="mt-1 text-sm text-gray-500">{template.description}</p>
-                    <button className="mt-3 flex items-center gap-1 text-sm font-medium text-emerald-600 opacity-0 transition-opacity group-hover:opacity-100">
-                      Preview
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing" className="bg-white py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700">
-              <Star className="h-4 w-4" />
-              Pricing
-            </div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Simple, Transparent Pricing
-            </h2>
-            <p className="mt-4 text-lg text-gray-600">
-              Start free and scale as your business grows. No hidden fees.
-            </p>
-          </div>
-
-          <div className="mt-16 grid gap-8 lg:grid-cols-3">
-            {PRICING_TIERS.map((tier) => (
-              <Card
-                key={tier.name}
-                className={
-                  tier.highlighted
-                    ? 'relative border-emerald-300 bg-white py-0 shadow-xl'
-                    : 'border-gray-200 bg-white py-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg'
-                }
-              >
-                {tier.highlighted && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-emerald-600 px-4 py-1 text-xs font-semibold text-white">
-                    Most Popular
-                  </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+            {STEPS.map((step, i) => (
+              <div key={step.number} className="relative">
+                {/* Connector line */}
+                {i < STEPS.length - 1 && (
+                  <div className="hidden lg:block absolute top-8 left-[calc(50%+40px)] w-[calc(100%-80px)] h-px bg-gradient-to-r from-charcoal/10 to-transparent" />
                 )}
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900">{tier.name}</h3>
-                  <p className="mt-1 text-sm text-gray-500">{tier.description}</p>
-                  <div className="mt-6 flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-gray-900">{tier.price}</span>
-                    <span className="text-sm text-gray-500">{tier.period}</span>
+
+                <div className="text-center">
+                  <div className="text-5xl font-bold text-charcoal/[0.06] font-editorial mb-4">
+                    {step.number}
                   </div>
-                  <ul className="mt-6 space-y-3">
-                    {tier.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-3">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                        <span className="text-sm text-gray-600">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    className={
-                      tier.highlighted
-                        ? 'mt-8 w-full bg-emerald-600 text-white hover:bg-emerald-700'
-                        : 'mt-8 w-full'
-                    }
-                    variant={tier.highlighted ? 'default' : 'outline'}
-                    onClick={() => navigate('/register')}
-                  >
-                    {tier.cta}
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </CardContent>
-              </Card>
+                  <h3 className="text-lg font-semibold text-charcoal tracking-tight">
+                    {step.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-charcoal/40 leading-relaxed">
+                    {step.description}
+                  </p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 py-20 sm:py-28">
-        <div className="pointer-events-none absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyem0wLTMwVjBoLTEydjRoMTJ6TTI0IDI0aDEydi0ySDI0djJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
-        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-            Ready to Ditch Your Paper Menu?
+      {/* ── TEMPLATE SHOWCASE ── */}
+      <section id="templates" className="py-24 lg:py-32">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-gold mb-4">
+              Premium Design
+            </p>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-charcoal font-editorial">
+              Designed to Make an Impression.
+            </h2>
+            <p className="mt-4 text-charcoal/50 text-lg leading-relaxed">
+              Every template is crafted to elevate your brand and captivate your audience.
+            </p>
+          </div>
+
+          {/* Template cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {TEMPLATE_SHOWCASE.map((tpl) => (
+              <div
+                key={tpl.name}
+                className="group relative bg-white rounded-xl overflow-hidden border border-black/[0.06] hover:shadow-premium-lg transition-all duration-500 cursor-pointer"
+              >
+                {/* Template preview */}
+                <div
+                  className="aspect-[4/3] flex flex-col items-center justify-center relative"
+                  style={{ backgroundColor: tpl.color }}
+                >
+                  {/* Mock header */}
+                  <div className="absolute top-0 left-0 right-0 h-12 opacity-10"
+                    style={{ backgroundColor: tpl.accent }}
+                  />
+                  {/* Mock content lines */}
+                  <div className="space-y-2">
+                    <div className="h-2 w-16 rounded-full" style={{ backgroundColor: `${tpl.accent}30` }} />
+                    <div className="h-1.5 w-12 rounded-full" style={{ backgroundColor: `${tpl.accent}20` }} />
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <div className="w-8 h-8 rounded" style={{ backgroundColor: `${tpl.accent}15` }} />
+                    <div className="w-8 h-8 rounded" style={{ backgroundColor: `${tpl.accent}15` }} />
+                  </div>
+
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-sm font-medium flex items-center gap-2">
+                      Preview <ArrowRight className="h-3.5 w-3.5" />
+                    </span>
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold tracking-wider text-charcoal">
+                        {tpl.name}
+                      </h3>
+                      <p className="text-[11px] text-charcoal/40 mt-0.5">
+                        {tpl.style}
+                      </p>
+                    </div>
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tpl.accent }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURES ── */}
+      <section className="py-24 lg:py-32 bg-charcoal noise-bg relative">
+        <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-gold mb-4">
+              Powerful Features
+            </p>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white font-editorial">
+              Everything You Need.
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { icon: Palette, title: 'Premium Templates', desc: 'Professionally designed templates for every industry.' },
+              { icon: QrCode, title: 'QR Code Generation', desc: 'Instant branded QR codes, print-ready.' },
+              { icon: BarChart3, title: 'Analytics', desc: 'Track views, scans, and customer engagement.' },
+              { icon: Globe, title: 'Public URLs', desc: 'Custom shareable links for your business.' },
+              { icon: Shield, title: 'Secure & Reliable', desc: 'Enterprise-grade security and uptime.' },
+              { icon: Zap, title: 'Instant Updates', desc: 'Changes go live the moment you save.' },
+            ].map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <div
+                  key={feature.title}
+                  className="group p-6 rounded-xl border border-white/[0.06] hover:border-white/[0.12] bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-300"
+                >
+                  <Icon className="h-5 w-5 text-gold mb-4" />
+                  <h3 className="text-base font-semibold text-white tracking-tight">{feature.title}</h3>
+                  <p className="mt-2 text-sm text-white/40 leading-relaxed">{feature.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── SOCIAL PROOF ── */}
+      <section className="py-20 lg:py-28">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8 text-center">
+          <div className="flex items-center justify-center gap-1 mb-6">
+            {[...Array(5)].map((_, i) => (
+              <Star key={i} className="h-5 w-5 fill-gold text-gold" />
+            ))}
+          </div>
+          <blockquote className="text-xl sm:text-2xl text-charcoal/70 font-medium leading-relaxed max-w-2xl mx-auto font-editorial">
+            &ldquo;BizFlip transformed how we present our menu. Our customers love the elegant digital experience.&rdquo;
+          </blockquote>
+          <div className="mt-6">
+            <p className="text-sm font-semibold text-charcoal">Alexandra Chen</p>
+            <p className="text-sm text-charcoal/40">The Grand Hotel</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section className="py-24 lg:py-32 bg-charcoal noise-bg relative">
+        <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-8 text-center">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white font-editorial max-w-2xl mx-auto">
+            Turn Every Scan Into{' '}
+            <span className="text-gradient-gold">an Experience.</span>
           </h2>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-emerald-100">
-            Join thousands of restaurants that have gone digital with MenuQR.
-            Start your free account today and see the difference.
+          <p className="mt-6 text-lg text-white/40 max-w-lg mx-auto">
+            Join thousands of businesses creating stunning digital experiences.
           </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Button
-              size="lg"
               onClick={() => navigate('/register')}
-              className="h-12 bg-white px-8 text-base font-semibold text-emerald-700 hover:bg-emerald-50"
+              className="bg-white hover:bg-white/90 text-charcoal text-[14px] font-semibold h-12 px-8 rounded-xl shadow-premium-lg group"
             >
-              Start Building for Free
-              <ArrowRight className="h-5 w-5" />
+              Start Free Today
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/login')}
+              className="text-white/60 hover:text-white text-[14px] font-medium h-12 px-6"
+            >
+              Sign In
             </Button>
           </div>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-emerald-200">
-            <span className="flex items-center gap-1.5">
-              <Shield className="h-4 w-4" />
-              SSL Secured
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Check className="h-4 w-4" />
-              No credit card required
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Zap className="h-4 w-4" />
-              Setup in minutes
-            </span>
-          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-100 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Brand */}
-            <div className="sm:col-span-2 lg:col-span-1">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
-                  <QrCode className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-lg font-bold text-gray-900">
-                  Menu<span className="text-emerald-600">QR</span>
-                </span>
+      {/* ── FOOTER ── */}
+      <footer className="border-t border-black/[0.06] py-12">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-charcoal text-white">
+                <BookOpen className="h-3.5 w-3.5" />
               </div>
-              <p className="mt-4 max-w-xs text-sm leading-relaxed text-gray-500">
-                Create beautiful, scannable digital menus for your restaurant in minutes.
-                Powered by AI.
-              </p>
+              <span className="text-sm font-bold tracking-tight text-charcoal">BIZFLIP</span>
             </div>
-
-            {/* Product links */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900">Product</h4>
-              <ul className="mt-4 space-y-3">
-                {['Features', 'Templates', 'Pricing', 'AI Scanner'].map((item) => (
-                  <li key={item}>
-                    <button className="text-sm text-gray-500 transition-colors hover:text-emerald-600">
-                      {item}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Company links */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900">Company</h4>
-              <ul className="mt-4 space-y-3">
-                {['About', 'Blog', 'Careers', 'Contact'].map((item) => (
-                  <li key={item}>
-                    <button className="text-sm text-gray-500 transition-colors hover:text-emerald-600">
-                      {item}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Legal links */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900">Legal</h4>
-              <ul className="mt-4 space-y-3">
-                {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((item) => (
-                  <li key={item}>
-                    <button className="text-sm text-gray-500 transition-colors hover:text-emerald-600">
-                      {item}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-gray-100 pt-8 sm:flex-row">
-            <p className="text-sm text-gray-500">
-              &copy; {new Date().getFullYear()} MenuQR. All rights reserved.
+            <p className="text-[12px] text-charcoal/30">
+              Your business, beautifully presented.
             </p>
-            <div className="flex items-center gap-1 text-sm text-gray-500">
-              Made with
-              <span className="text-emerald-500" aria-label="love">
-                &hearts;
-              </span>{' '}
-              for restaurants everywhere
-            </div>
+            <p className="text-[12px] text-charcoal/30">
+              &copy; {new Date().getFullYear()} BizFlip. All rights reserved.
+            </p>
           </div>
         </div>
       </footer>

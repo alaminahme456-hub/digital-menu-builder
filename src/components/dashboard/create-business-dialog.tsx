@@ -81,7 +81,7 @@ export default function CreateBusinessDialog({ open, onOpenChange }: { open: boo
       <DialogContent className="sm:max-w-[525px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Store className="h-5 w-5 text-emerald-600" />
+            <Store className="h-5 w-5 text-gold" />
             Create Your Business
           </DialogTitle>
           <DialogDescription>
@@ -170,7 +170,7 @@ export default function CreateBusinessDialog({ open, onOpenChange }: { open: boo
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button type="submit" disabled={loading} className="bg-charcoal hover:bg-charcoal-light text-white">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Business
             </Button>

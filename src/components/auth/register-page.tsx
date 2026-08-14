@@ -2,20 +2,14 @@
 
 import React, { useState, type FormEvent } from 'react';
 import {
-  QrCode,
+  BookOpen,
   Loader2,
   ArrowLeft,
   CheckCircle,
   Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -105,17 +99,14 @@ export default function RegisterPage() {
         return;
       }
 
-      // If email confirmation required, show message instead of auto-login
       if (data.requiresConfirmation || !data.token) {
         toast.success('Account created! Please check your email to verify your account.');
         navigate('/login');
         return;
       }
 
-      // Auto-login after registration
       setAuth(data.token, data.user);
 
-      // Fetch businesses and set current
       try {
         const bizRes = await fetch('/api/businesses', {
           headers: { Authorization: `Bearer ${data.token}` },
@@ -148,234 +139,245 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex min-h-screen flex-col lg:flex-row">
+    <div className="min-h-screen bg-ivory">
+      <div className="flex min-h-screen">
         {/* Left branding panel */}
-        <div className="relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 px-6 py-10 text-white lg:w-1/2 lg:px-12 lg:py-12">
-          {/* Decorative elements */}
-          <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/5" />
-          <div className="pointer-events-none absolute -bottom-16 -left-16 h-56 w-56 rounded-full bg-white/5" />
-          <div className="pointer-events-none absolute right-24 bottom-40 h-24 w-24 rounded-full bg-white/5" />
-          <div className="pointer-events-none absolute left-20 top-40 h-20 w-20 rounded-full bg-white/5" />
+        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-charcoal flex-col justify-between px-12 py-12">
+          {/* Decorative */}
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-gold/20 to-transparent" />
+          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-gold/20 to-transparent" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-gold/[0.02] blur-[100px]" />
 
-          {/* Top logo */}
+          {/* Logo */}
           <div>
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 transition-opacity hover:opacity-80"
+              className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
-                <QrCode className="h-5 w-5 text-white" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10">
+                <BookOpen className="h-4 w-4 text-gold" />
               </div>
-              <span className="text-xl font-bold">
-                Menu<span className="text-emerald-200">QR</span>
+              <span className="text-lg font-bold tracking-tight text-white">
+                BIZFLIP
               </span>
             </button>
           </div>
 
-          {/* Center content */}
-          <div className="relative z-10 my-auto max-w-md lg:my-0 lg:py-16">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-emerald-100">
-              <Sparkles className="h-4 w-4" />
-              Get Started Free
+          {/* Center */}
+          <div className="relative z-10 max-w-md">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/[0.06] px-4 py-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-gold" />
+              <span className="text-[11px] font-medium tracking-widest uppercase text-gold-light">
+                Get Started Free
+              </span>
             </div>
-            <h1 className="text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
-              Start Building Your{' '}
-              <span className="text-emerald-200">Digital Menu</span>{' '}
-              Today
+            <h1 className="text-4xl font-bold leading-tight text-white font-editorial">
+              Create Your{' '}
+              <span className="text-gradient-gold">Digital Experience</span>
             </h1>
-            <p className="mt-4 text-base leading-relaxed text-emerald-100 lg:text-lg">
-              Join thousands of restaurants that have upgraded to QR code menus. No credit card required.
+            <p className="mt-4 text-base leading-relaxed text-white/40">
+              Join thousands of businesses that have upgraded to digital experiences. No credit card required.
             </p>
 
-            {/* Benefits list */}
-            <ul className="mt-8 space-y-4">
+            <ul className="mt-10 space-y-4">
               {[
-                'Create your first menu in minutes',
-                'Choose from 10+ beautiful templates',
-                'Scan existing menus with AI',
+                'Create your experience in minutes',
+                'Choose from premium templates',
+                'Scan existing content with AI',
                 'Track performance with analytics',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3">
-                  <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
-                  <span className="text-sm text-emerald-100">{item}</span>
+                  <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" />
+                  <span className="text-sm text-white/40">{item}</span>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Bottom trust indicator */}
-          <div className="relative z-10 hidden items-center gap-2 text-sm text-emerald-200 lg:flex">
-            <span className="text-base">&#9733;</span>
-            <span>Trusted by 2,000+ restaurants worldwide</span>
+          {/* Bottom */}
+          <div className="relative z-10 flex items-center gap-2 text-[12px] text-white/25">
+            <span className="text-gold/60">&#9733;</span>
+            <span>Trusted by businesses worldwide</span>
           </div>
         </div>
 
         {/* Right form panel */}
-        <div className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:px-6 lg:px-12">
+        <div className="flex flex-1 flex-col items-center justify-center px-6 py-10">
           {/* Back link (mobile) */}
           <button
             onClick={() => navigate('/')}
-            className="mb-6 flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-emerald-600 lg:hidden"
+            className="mb-8 flex items-center gap-1.5 text-[13px] text-charcoal/40 transition-colors hover:text-charcoal lg:hidden self-start"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to home
+            Back
           </button>
 
-          <Card className="w-full max-w-md border-gray-200 shadow-sm">
-            <CardHeader className="text-center">
-              {/* Logo for desktop only */}
-              <div className="mb-2 hidden justify-center lg:flex">
-                <button
-                  onClick={() => navigate('/')}
-                  className="flex items-center gap-2 transition-opacity hover:opacity-80"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
-                    <QrCode className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="text-lg font-bold text-gray-900">
-                    Menu<span className="text-emerald-600">QR</span>
-                  </span>
-                </button>
-              </div>
-              <CardTitle className="text-2xl font-bold text-gray-900">
+          <div className="w-full max-w-sm">
+            {/* Logo */}
+            <div className="flex justify-center mb-8">
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-charcoal">
+                  <BookOpen className="h-4 w-4 text-white" />
+                </div>
+                <span className="text-lg font-bold tracking-tight text-charcoal">
+                  BIZFLIP
+                </span>
+              </button>
+            </div>
+
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-charcoal tracking-tight font-editorial">
                 Create your account
-              </CardTitle>
-              <CardDescription className="text-gray-500">
-                Get started with your free MenuQR account
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Full Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="John Doe"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    autoComplete="name"
-                    disabled={loading}
-                  />
-                </div>
-
-                {/* Email */}
-                <div className="space-y-2">
-                  <Label htmlFor="reg-email">Email</Label>
-                  <Input
-                    id="reg-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="email"
-                    disabled={loading}
-                  />
-                </div>
-
-                {/* Business Category */}
-                <div className="space-y-2">
-                  <Label htmlFor="category">Business Category</Label>
-                  <Select value={category} onValueChange={setCategory} disabled={loading}>
-                    <SelectTrigger id="category" className="w-full">
-                      <SelectValue placeholder="Select your business type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BUSINESS_CATEGORIES.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Password */}
-                <div className="space-y-2">
-                  <Label htmlFor="reg-password">Password</Label>
-                  <Input
-                    id="reg-password"
-                    type="password"
-                    placeholder="Min. 8 characters"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="new-password"
-                    disabled={loading}
-                  />
-                </div>
-
-                {/* Confirm Password */}
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm Password</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    placeholder="Repeat your password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    autoComplete="new-password"
-                    disabled={loading}
-                  />
-                </div>
-
-                {/* Terms checkbox */}
-                <div className="flex items-start gap-2 pt-1">
-                  <Checkbox
-                    id="terms"
-                    checked={acceptTerms}
-                    onCheckedChange={(checked) => setAcceptTerms(checked === true)}
-                    disabled={loading}
-                    className="mt-0.5"
-                  />
-                  <Label htmlFor="terms" className="cursor-pointer text-sm leading-snug text-gray-600">
-                    I agree to the{' '}
-                    <button
-                      type="button"
-                      className="font-medium text-emerald-600 hover:text-emerald-700"
-                    >
-                      Terms of Service
-                    </button>{' '}
-                    and{' '}
-                    <button
-                      type="button"
-                      className="font-medium text-emerald-600 hover:text-emerald-700"
-                    >
-                      Privacy Policy
-                    </button>
-                  </Label>
-                </div>
-
-                {/* Submit */}
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="h-11 w-full bg-emerald-600 text-white hover:bg-emerald-700"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Creating account...
-                    </>
-                  ) : (
-                    'Create Account'
-                  )}
-                </Button>
-              </form>
-
-              {/* Sign in link */}
-              <p className="mt-6 text-center text-sm text-gray-500">
-                Already have an account?{' '}
-                <button
-                  onClick={() => navigate('/login')}
-                  className="font-semibold text-emerald-600 hover:text-emerald-700"
-                >
-                  Sign in
-                </button>
+              </h2>
+              <p className="mt-2 text-sm text-charcoal/40">
+                Start building your digital experience
               </p>
-            </CardContent>
-          </Card>
+            </div>
+
+            <Card className="border-black/[0.06] shadow-premium bg-white">
+              <CardContent className="p-6">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Full Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-[12px] font-medium tracking-wide uppercase text-charcoal/50">
+                      Full Name
+                    </Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="John Doe"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      autoComplete="name"
+                      disabled={loading}
+                      className="h-11 bg-ivory border-black/[0.06] focus:border-charcoal/20"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-email" className="text-[12px] font-medium tracking-wide uppercase text-charcoal/50">
+                      Email
+                    </Label>
+                    <Input
+                      id="reg-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="email"
+                      disabled={loading}
+                      className="h-11 bg-ivory border-black/[0.06] focus:border-charcoal/20"
+                    />
+                  </div>
+
+                  {/* Business Category */}
+                  <div className="space-y-2">
+                    <Label htmlFor="category" className="text-[12px] font-medium tracking-wide uppercase text-charcoal/50">
+                      Business Category
+                    </Label>
+                    <Select value={category} onValueChange={setCategory} disabled={loading}>
+                      <SelectTrigger id="category" className="w-full h-11 bg-ivory border-black/[0.06]">
+                        <SelectValue placeholder="Select your business type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BUSINESS_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-password" className="text-[12px] font-medium tracking-wide uppercase text-charcoal/50">
+                      Password
+                    </Label>
+                    <Input
+                      id="reg-password"
+                      type="password"
+                      placeholder="Min. 8 characters"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="new-password"
+                      disabled={loading}
+                      className="h-11 bg-ivory border-black/[0.06] focus:border-charcoal/20"
+                    />
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password" className="text-[12px] font-medium tracking-wide uppercase text-charcoal/50">
+                      Confirm Password
+                    </Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="Repeat your password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      autoComplete="new-password"
+                      disabled={loading}
+                      className="h-11 bg-ivory border-black/[0.06] focus:border-charcoal/20"
+                    />
+                  </div>
+
+                  {/* Terms */}
+                  <div className="flex items-start gap-2 pt-1">
+                    <Checkbox
+                      id="terms"
+                      checked={acceptTerms}
+                      onCheckedChange={(checked) => setAcceptTerms(checked === true)}
+                      disabled={loading}
+                      className="mt-0.5"
+                    />
+                    <Label htmlFor="terms" className="cursor-pointer text-sm leading-snug text-charcoal/40">
+                      I agree to the{' '}
+                      <button type="button" className="font-medium text-charcoal/60 hover:text-charcoal">
+                        Terms of Service
+                      </button>{' '}
+                      and{' '}
+                      <button type="button" className="font-medium text-charcoal/60 hover:text-charcoal">
+                        Privacy Policy
+                      </button>
+                    </Label>
+                  </div>
+
+                  {/* Submit */}
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="h-11 w-full bg-charcoal hover:bg-charcoal-light text-white text-[13px] font-semibold tracking-wide"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Creating account...
+                      </>
+                    ) : (
+                      'Create Account'
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Sign in link */}
+            <p className="mt-8 text-center text-sm text-charcoal/40">
+              Already have an account?{' '}
+              <button
+                onClick={() => navigate('/login')}
+                className="font-semibold text-charcoal hover:text-charcoal/70"
+              >
+                Sign in
+              </button>
+            </p>
+          </div>
         </div>
       </div>
     </div>

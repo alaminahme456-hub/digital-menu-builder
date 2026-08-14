@@ -299,9 +299,9 @@ export default function AIScanner() {
                     <div
                       className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
                         isActive
-                          ? 'border-emerald-500 bg-emerald-500 text-white'
+                          ? 'border-emerald-500 bg-ivory0 text-white'
                           : isCompleted
-                          ? 'border-emerald-500 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                          ? 'border-emerald-500 bg-emerald-100 dark:bg-emerald-900/30 text-charcoal dark:text-emerald-400'
                           : 'border-muted-foreground/25 text-muted-foreground'
                       }`}
                     >
@@ -314,9 +314,9 @@ export default function AIScanner() {
                     <span
                       className={`text-xs font-medium ${
                         isActive
-                          ? 'text-emerald-600 dark:text-emerald-400'
+                          ? 'text-charcoal dark:text-emerald-400'
                           : isCompleted
-                          ? 'text-emerald-600 dark:text-emerald-400'
+                          ? 'text-charcoal dark:text-emerald-400'
                           : 'text-muted-foreground'
                       }`}
                     >
@@ -326,7 +326,7 @@ export default function AIScanner() {
                   {index < STEPS.length - 1 && (
                     <div
                       className={`flex-1 h-0.5 mx-2 sm:mx-4 transition-colors duration-300 ${
-                        index < currentStepIndex ? 'bg-emerald-500' : 'bg-muted-foreground/15'
+                        index < currentStepIndex ? 'bg-ivory0' : 'bg-muted-foreground/15'
                       }`}
                     />
                   )}
@@ -358,7 +358,7 @@ export default function AIScanner() {
             <div
               className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all duration-200 cursor-pointer ${
                 dragOver
-                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20'
+                  ? 'border-emerald-500 bg-ivory dark:bg-emerald-950/20'
                   : 'border-muted-foreground/25 hover:border-emerald-400 hover:bg-muted/50'
               }`}
               onDragOver={(e) => {
@@ -381,14 +381,14 @@ export default function AIScanner() {
               />
               <div className="space-y-4">
                 <div className="mx-auto w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <Camera className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+                  <Camera className="h-10 w-10 text-charcoal dark:text-emerald-400" />
                 </div>
                 <div>
                   <p className="text-base font-semibold">
                     {dragOver ? 'Drop your menu photo here' : 'Take a photo of your physical menu'}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    or <span className="text-emerald-600 dark:text-emerald-400 font-medium underline">browse files</span>
+                    or <span className="text-charcoal dark:text-emerald-400 font-medium underline">browse files</span>
                   </p>
                 </div>
                 <div className="flex items-center justify-center gap-2">
@@ -416,7 +416,7 @@ export default function AIScanner() {
             <div className="flex flex-col items-center text-center space-y-6">
               <div className="relative">
                 <div className="w-24 h-24 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <BrainCircuit className="h-12 w-12 text-emerald-600 dark:text-emerald-400 animate-pulse" />
+                  <BrainCircuit className="h-12 w-12 text-charcoal dark:text-emerald-400 animate-pulse" />
                 </div>
                 <div className="absolute -top-1 -right-1">
                   <ScanLine className="h-6 w-6 text-emerald-500 animate-bounce" />
@@ -450,23 +450,23 @@ export default function AIScanner() {
       {step === 'review' && (
         <div className="space-y-4">
           {/* Detection Banner */}
-          <Card className="border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20">
+          <Card className="bg-gold/15 dark:border-emerald-800 bg-ivory/50 dark:bg-emerald-950/20">
             <CardContent className="py-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
-                    <Sparkles className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    <Sparkles className="h-5 w-5 text-charcoal dark:text-emerald-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                    <p className="text-sm font-semibold text-gold-dark dark:text-emerald-300">
                       AI detected {items.length} menu items
                     </p>
-                    <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">
+                    <p className="text-xs text-charcoal/70 dark:text-emerald-400/70">
                       Review and edit before saving
                     </p>
                   </div>
                 </div>
-                <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border-0">
+                <Badge className="bg-emerald-100 text-gold-dark dark:bg-emerald-900/40 dark:text-emerald-400 border-0">
                   {categories.length} {categories.length === 1 ? 'category' : 'categories'}
                 </Badge>
               </div>
@@ -547,7 +547,7 @@ export default function AIScanner() {
                               <SelectItem
                                 value="__new__"
                                 onClick={() => setShowNewCategory(true)}
-                                className="text-emerald-600"
+                                className="text-charcoal"
                               >
                                 + New Category
                               </SelectItem>
@@ -601,7 +601,7 @@ export default function AIScanner() {
                     }}
                     autoFocus
                   />
-                  <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={addNewCategory}>
+                  <Button size="sm" className="h-8 bg-charcoal hover:bg-charcoal-light text-white" onClick={addNewCategory}>
                     Add
                   </Button>
                   <Button size="sm" variant="ghost" className="h-8" onClick={() => setShowNewCategory(false)}>
@@ -619,7 +619,7 @@ export default function AIScanner() {
               Scan Another
             </Button>
             <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+              className="bg-charcoal hover:bg-charcoal-light text-white gap-2"
               onClick={handleSave}
               disabled={saving || items.filter(i => i.name.trim()).length === 0}
             >
@@ -646,7 +646,7 @@ export default function AIScanner() {
           <CardContent className="py-16">
             <div className="flex flex-col items-center text-center space-y-6">
               <div className="w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                <CheckCircle2 className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+                <CheckCircle2 className="h-10 w-10 text-charcoal dark:text-emerald-400" />
               </div>
               <div className="space-y-2">
                 <h3 className="text-xl font-semibold">Menu Items Saved!</h3>
@@ -664,7 +664,7 @@ export default function AIScanner() {
                   Scan Another Menu
                 </Button>
                 <Button
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+                  className="bg-charcoal hover:bg-charcoal-light text-white gap-2"
                   onClick={goToMenuManager}
                 >
                   Go to Menu Manager

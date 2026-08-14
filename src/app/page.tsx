@@ -26,7 +26,7 @@ import CreateBusinessDialog from '@/components/dashboard/create-business-dialog'
 // Public menu
 import PublicMenuView from '@/components/public-menu/public-menu-view';
 
-import { Loader2 } from 'lucide-react';
+import { Loader2, BookOpen } from 'lucide-react';
 
 export default function Home() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -153,18 +153,17 @@ export default function Home() {
     }
 
     // Authenticated routes - show dashboard
-    // If no businesses, show create business dialog
-    if (businesses.length === 0) {
+      if (businesses.length === 0) {
       return (
         <DashboardLayout activePage="">
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-slate-800 mb-2">Welcome to BizFlip!</h2>
-              <p className="text-slate-500">Create your first business to get started.</p>
+              <h2 className="text-2xl font-bold text-charcoal mb-2 font-editorial">Welcome to BizFlip</h2>
+              <p className="text-charcoal/40">Create your first business to get started.</p>
             </div>
             <button
               onClick={() => setShowCreateBusiness(true)}
-              className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium transition-colors"
+              className="px-6 py-3 bg-charcoal hover:bg-charcoal-light text-white rounded-xl font-medium transition-colors shadow-premium"
             >
               Create Your First Business
             </button>
@@ -215,13 +214,13 @@ export default function Home() {
   // Show loading during initialization
   if (initializing && isAuthenticated) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+      <div className="flex items-center justify-center min-h-screen bg-ivory">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center">
-            <span className="text-white font-bold text-xl">M</span>
+          <div className="w-12 h-12 bg-charcoal rounded-xl flex items-center justify-center">
+            <BookOpen className="h-5 w-5 text-gold" />
           </div>
-          <Loader2 className="h-6 w-6 text-emerald-600 animate-spin" />
-          <p className="text-slate-500 text-sm">Loading your workspace...</p>
+          <Loader2 className="h-5 w-5 text-charcoal/30 animate-spin" />
+          <p className="text-charcoal/30 text-sm">Loading your workspace...</p>
         </div>
       </div>
     );
@@ -229,7 +228,7 @@ export default function Home() {
 
   return (
     <>
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-ivory">
         {renderView()}
       </div>
       <CreateBusinessDialog open={showCreateBusiness} onOpenChange={setShowCreateBusiness} />

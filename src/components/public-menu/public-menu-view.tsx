@@ -187,7 +187,7 @@ export default function PublicMenuView({ slug, isPreview = false }: PublicMenuPr
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center">
-            <BookOpen className="w-8 h-8 text-emerald-600 animate-pulse" />
+            <BookOpen className="w-8 h-8 text-charcoal animate-pulse" />
           </div>
           <p className="text-gray-500 text-sm">Loading menu...</p>
         </div>
@@ -454,7 +454,7 @@ export default function PublicMenuView({ slug, isPreview = false }: PublicMenuPr
 
       {/* Footer */}
       <div className="text-center py-6 text-xs text-gray-400 border-t">
-        Powered by <span className="font-semibold">MenuQR</span>
+        Powered by <span className="font-semibold">BizFlip</span>
       </div>
     </div>
   );

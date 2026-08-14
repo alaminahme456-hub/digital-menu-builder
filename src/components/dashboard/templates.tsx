@@ -327,14 +327,14 @@ function TemplateCard({
     <div
       className={`group relative rounded-2xl transition-all duration-300 ${
         isActive
-          ? 'ring-2 ring-emerald-500 shadow-lg shadow-emerald-500/15 bg-white dark:bg-gray-900'
-          : 'border border-gray-200 dark:border-gray-800 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-lg bg-white dark:bg-gray-900'
+          ? 'ring-1 ring-gold/40 shadow-lg shadow-gold/5 bg-white'
+          : 'border border-black/[0.06] hover:border-black/[0.12] hover:shadow-premium bg-white'
       }`}
     >
       {/* Applied badge */}
       {isActive && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
-          <Badge className="bg-emerald-500 text-white border-0 shadow-sm gap-1 px-3 py-1 text-xs font-semibold">
+          <Badge className="bg-charcoal text-white border-0 shadow-sm gap-1 px-3 py-1 text-[10px] font-semibold tracking-wide">
             <Check className="h-3 w-3" />
             Applied
           </Badge>
@@ -368,7 +368,7 @@ function TemplateCard({
               {template.label.toUpperCase()}
             </h3>
             {isActive && (
-              <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+              <Check className="h-4 w-4 text-gold flex-shrink-0" />
             )}
           </div>
           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
@@ -396,7 +396,7 @@ function TemplateCard({
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 h-9 text-xs font-medium gap-1.5 rounded-lg border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+            className="flex-1 h-9 text-xs font-medium gap-1.5 rounded-lg border-black/[0.08] hover:bg-ivory"
             onClick={onPreview}
           >
             <Eye className="h-3.5 w-3.5" />
@@ -406,8 +406,8 @@ function TemplateCard({
             size="sm"
             className={`flex-1 h-9 text-xs font-semibold gap-1.5 rounded-lg transition-all duration-200 ${
               isActive
-                ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/50'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md'
+                ? 'bg-gold/10 text-gold-dark border border-gold/20 hover:bg-gold/20'
+                : 'bg-charcoal hover:bg-charcoal-light text-white shadow-sm hover:shadow-md'
             }`}
             disabled={isActive || isApplying}
             onClick={onApply}
@@ -619,7 +619,7 @@ export default function Templates() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-emerald-500" />
+            <Sparkles className="h-5 w-5 text-gold" />
             Design Templates
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -655,7 +655,7 @@ export default function Templates() {
       <Card className="mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Paintbrush className="h-5 w-5 text-emerald-500" />
+            <Paintbrush className="h-5 w-5 text-gold" />
             Customize Design
           </CardTitle>
           <CardDescription>
@@ -794,7 +794,7 @@ export default function Templates() {
           {/* Apply Button */}
           <div className="flex justify-end mt-6">
             <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 rounded-lg"
+              className="bg-charcoal hover:bg-charcoal-light text-white gap-2 rounded-lg"
               onClick={applyCustomization}
               disabled={saving}
             >
@@ -815,11 +815,11 @@ export default function Templates() {
       </Card>
 
       {/* ── Draft vs Published info ── */}
-      <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 p-4 flex items-start gap-3">
-        <Crown className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+      <div className="rounded-xl border border-gold/15 bg-champagne/30 px-4 py-4 flex items-start gap-3">
+        <Crown className="h-5 w-5 text-gold flex-shrink-0 mt-0.5" />
         <div>
-          <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-200">Draft Mode</h4>
-          <p className="text-xs text-blue-700 dark:text-blue-300 mt-1 leading-relaxed">
+          <h4 className="text-sm font-semibold text-charcoal">Draft Mode</h4>
+          <p className="text-xs text-charcoal/50 mt-1 leading-relaxed">
             Templates are applied to your draft menu first. The public menu visible to customers will update after you click <strong>Publish</strong> in the top bar. This lets you preview and experiment before going live.
           </p>
         </div>
@@ -830,7 +830,7 @@ export default function Templates() {
         <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Smartphone className="h-5 w-5 text-emerald-500" />
+              <Smartphone className="h-5 w-5 text-gold" />
               {TEMPLATES.find(t => t.name === previewTemplate)?.label} Preview
             </DialogTitle>
             <DialogDescription>
@@ -857,7 +857,7 @@ export default function Templates() {
               Close
             </Button>
             <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 rounded-lg"
+              className="bg-charcoal hover:bg-charcoal-light text-white gap-2 rounded-lg"
               disabled={currentTemplate === previewTemplate || !!applyingTemplate}
               onClick={() => {
                 if (previewTemplate) {

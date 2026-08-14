@@ -264,8 +264,8 @@ export default function AdminPanel() {
       label: 'Total Businesses',
       value: stats?.totalBusinesses ?? 0,
       icon: Building2,
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-50 dark:bg-emerald-950/50',
+      color: 'text-charcoal',
+      bg: 'bg-ivory dark:bg-emerald-950/50',
     },
     {
       label: 'Published Menus',
@@ -293,7 +293,7 @@ export default function AdminPanel() {
   const statusBadge = (status: string) => {
     switch (status) {
       case 'published':
-        return <Badge className="bg-emerald-600 hover:bg-emerald-700">Published</Badge>;
+        return <Badge className="bg-charcoal hover:bg-charcoal-light">Published</Badge>;
       case 'unpublished':
         return <Badge variant="secondary">Unpublished</Badge>;
       case 'suspended':
@@ -572,7 +572,7 @@ export default function AdminPanel() {
                                       handleToggleBusinessStatus(b.id, 'published')
                                     }
                                   >
-                                    <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />
+                                    <CheckCircle2 className="mr-2 h-4 w-4 text-charcoal" />
                                     Publish / Activate
                                   </DropdownMenuItem>
                                 )}
