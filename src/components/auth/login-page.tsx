@@ -109,12 +109,6 @@ export default function LoginPage() {
 
           {/* Center */}
           <div className="relative z-10 max-w-md">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/[0.06] px-4 py-1.5">
-              <BookOpen className="h-3.5 w-3.5 text-gold" />
-              <span className="text-[11px] font-medium tracking-widest uppercase text-gold-light">
-                Digital Experience Platform
-              </span>
-            </div>
             <h1 className="text-4xl font-bold leading-tight text-white font-editorial">
               Your Digital Experience,{' '}
               <span className="text-gradient-gold">One Scan Away</span>

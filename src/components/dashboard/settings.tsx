@@ -1101,5 +1101,12 @@ export default function SettingsPanel({ initialTab = 'business' }: SettingsPanel
         </div>
       </TabsContent>
     </Tabs>
+
+    {/* Footer branding */}
+    <div className="mt-12 pt-6 border-t border-black/[0.06] text-center">
+      <p className="text-[11px] text-charcoal/25 tracking-wider">
+        Developed by <span className="font-semibold text-charcoal/40">ALTECH</span>
+      </p>
+    </div>
   );
 }

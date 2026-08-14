@@ -215,13 +215,6 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
             {/* Left: Copy */}
             <div className="max-w-xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/[0.06] px-4 py-1.5 mb-8">
-                <Sparkles className="h-3.5 w-3.5 text-gold" />
-                <span className="text-[11px] font-medium tracking-widest uppercase text-gold-light">
-                  Digital Experience Platform
-                </span>
-              </div>
-
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.08] tracking-tight text-white font-editorial">
                 Your Business,{' '}
                 <span className="text-gradient-gold">Beautifully</span>{' '}
