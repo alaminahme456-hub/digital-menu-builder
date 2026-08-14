@@ -52,3 +52,39 @@ Stage Summary:
 - All frontend components verified clean (correct API calls, state management, routing)
 - SQL fixes saved to supabase/fix-rls-public.sql
 - Remaining: verify profile auto-creation trigger once email rate limit resets
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Instant Template Application System
+
+Work Log:
+- Updated src/lib/store.ts: added activeTemplate and templateAppliedAt to Zustand store for cross-component reactivity
+- Rewrote src/components/dashboard/templates.tsx (714 lines): complete instant template application system
+  - TemplateCard component with premium card design, preview hover overlay, style tags
+  - Optimistic UI: template applies instantly, saves to DB in background
+  - Applied indicator: green ring, checkmark badge, "Applied" button state
+  - Template switching: only ONE active template at a time
+  - Preview button opens dialog without applying template
+  - Preview as Customer button navigates to /preview
+  - Draft mode info banner explaining Publish flow
+  - Customization panel with color pickers and font selector
+  - Error handling: reverts UI on failure with toast message
+- Updated src/components/dashboard/preview.tsx: reacts to template changes via store
+  - dataVersion state triggers re-fetch when template changes
+  - effectiveTemplate uses activeTemplate (optimistic) over stored template
+  - Draft template indicator banner in both list and flipbook views
+  - Refresh button for manual re-fetch
+  - Footer updated to "Powered by BizFlip"
+- Created src/app/api/businesses/[id]/template-log/route.ts: POST endpoint for logging template applications
+- Created supabase/create-template-applications.sql: migration for template_applications table with RLS
+- Build passes cleanly, zero errors
+- Committed and pushed to GitHub (main branch)
+
+Stage Summary:
+- 5 files modified/created for instant template feature
+- Templates page: premium card grid, instant apply with optimistic UI, visual indicators
+- Preview page: instantly reacts to template changes without page refresh
+- Store: template state propagated across all dashboard components
+- Database: template_applications table tracks history (requires running SQL migration)
+- Template flow: Click Apply → Instant UI Update → Background DB Save
