@@ -179,7 +179,7 @@ export default function QRCodePanel() {
             <img src="${qrDataUrl}" alt="QR Code" />
             <p class="scan-text">Scan to view our digital catalog</p>
             <p class="url">${menuUrl}</p>
-            <p class="powered">Powered by BizFlip</p>
+            <p class="powered">MADE BY ALTECH</p>
           </div>
           <script>window.onload = function() { window.print(); window.close(); }<\/script>
         </body>

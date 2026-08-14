@@ -430,7 +430,7 @@ export default function UploadFlipbook({
           </button>
         )}
 
-        <p className="mt-6 text-[10px] text-gray-300">Powered by <span className="font-semibold">BizFlip</span></p>
+        <p className="mt-6 text-[10px] text-gray-300">MADE BY <span className="font-semibold">ALTECH</span></p>
       </div>
     );
   };

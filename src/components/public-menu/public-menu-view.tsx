@@ -454,7 +454,7 @@ export default function PublicMenuView({ slug, isPreview = false }: PublicMenuPr
 
       {/* Footer */}
       <div className="text-center py-6 text-xs text-gray-400 border-t">
-        Powered by <span className="font-semibold">BizFlip</span>
+        MADE BY <span className="font-semibold">ALTECH</span>
       </div>
     </div>
   );

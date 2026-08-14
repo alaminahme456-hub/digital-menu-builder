@@ -305,7 +305,7 @@ export default function PreviewPanel() {
 
         {/* Footer */}
         <div className="text-center py-4 text-xs text-muted-foreground border-t">
-          Powered by BizFlip
+          MADE BY ALTECH
         </div>
       </div>
     );

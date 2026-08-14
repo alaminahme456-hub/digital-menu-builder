@@ -253,10 +253,10 @@ export default function PublicCover({ business, onOpen }: PublicCoverProps) {
           </button>
         </div>
 
-        {/* BizFlip branding */}
+        {/* ALTECH branding */}
         <div className="absolute bottom-4 left-0 right-0 text-center">
           <p className={`text-[10px] tracking-wider ${isDark ? 'text-white/15' : 'text-black/15'}`}>
-            Powered by <span className="font-bold">BIZFLIP</span>
+            MADE BY <span className="font-bold">ALTECH</span>
           </p>
         </div>
       </motion.div>
