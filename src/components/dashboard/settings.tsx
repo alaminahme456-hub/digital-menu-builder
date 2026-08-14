@@ -291,11 +291,30 @@ export default function SettingsPanel({ initialTab = 'business' }: SettingsPanel
       if (res.ok) {
         const data = await res.json();
         if (data.url) {
-          setCurrentBusiness({
-            ...currentBusiness,
-            logo: data.url,
+          // Persist logo to database immediately
+          const putRes = await fetch(`/api/businesses/${currentBusiness.id}`, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ logo: data.url }),
           });
-          toast.success('Logo uploaded');
+          if (putRes.ok) {
+            const putData = await putRes.json();
+            const updatedBiz = putData.business;
+            setCurrentBusiness({
+              ...currentBusiness,
+              logo: updatedBiz.logo || data.url,
+            });
+            toast.success('Logo uploaded and saved');
+          } else {
+            setCurrentBusiness({
+              ...currentBusiness,
+              logo: data.url,
+            });
+            toast.success('Logo uploaded (save may be pending)');
+          }
         }
       } else {
         toast.error('Failed to upload logo');

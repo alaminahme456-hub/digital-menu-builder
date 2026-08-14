@@ -413,6 +413,12 @@ export default function UploadFlipbook({
             Order on WhatsApp
           </button>
         )}
+        {!business.whatsappOrder && (
+          <div className="mt-5 flex items-center gap-2 px-5 py-3 bg-gray-100 rounded-xl text-sm text-gray-400">
+            <MessageCircle className="w-4 h-4" />
+            Ordering is currently unavailable
+          </div>
+        )}
 
         <p className="mt-6 text-[10px] text-gray-300">MADE BY <span className="font-semibold">ALTECH</span></p>
       </div>

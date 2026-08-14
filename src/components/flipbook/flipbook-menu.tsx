@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
+  MessageCircle,
 } from 'lucide-react';
 import type { Business, MenuCategory, MenuItem } from '@/lib/types';
 import { formatPrice } from '@/lib/auth';
@@ -171,6 +172,14 @@ export default function FlipbookMenu({
   };
   const fontFamily = fontMap[business.fontFamily] || fontMap.inter;
 
+  const handlePageTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (selectedItem || !isOpened || !business.flipbookInteractions) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x < rect.width * 0.3) goPrev();
+    else if (x > rect.width * 0.7) goNext();
+  };
+
   const getPageTransitionClass = () => {
     if (!isOpened) return '';
     if (isOpening) return shouldAnimate ? 'animate-page-flip-open' : '';
@@ -294,6 +303,12 @@ export default function FlipbookMenu({
           style={{ backgroundColor: '#25D366' }}>
           Order on WhatsApp ({formatPrice(basketTotal.total)})
         </button>
+      )}
+      {!business.whatsappOrder && (
+        <div className="flex items-center gap-2 px-5 py-3 bg-gray-100 rounded-xl text-sm text-gray-400">
+          <MessageCircle className="w-4 h-4" />
+          Ordering is currently unavailable
+        </div>
       )}
       <p className="mt-6 text-[10px] text-gray-300">MADE BY <span className="font-semibold">ALTECH</span></p>
     </div>

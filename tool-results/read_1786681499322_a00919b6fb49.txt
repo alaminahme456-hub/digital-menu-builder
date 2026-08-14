@@ -1,0 +1,1115 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import { useState, useEffect, useRef } from 'react';
+     4→     4→import {
+     5→     5→  Save,
+     6→     6→  Upload,
+     7→     7→  Trash2,
+     8→     8→  Loader2,
+     9→     9→  ImageIcon,
+    10→    10→  AlertTriangle,
+    11→    11→} from 'lucide-react';
+    12→    12→import {
+    13→    13→  Card,
+    14→    14→  CardContent,
+    15→    15→  CardHeader,
+    16→    16→  CardTitle,
+    17→    17→  CardDescription,
+    18→    18→} from '@/components/ui/card';
+    19→    19→import { Button } from '@/components/ui/button';
+    20→    20→import { Input } from '@/components/ui/input';
+    21→    21→import { Textarea } from '@/components/ui/textarea';
+    22→    22→import { Label } from '@/components/ui/label';
+    23→    23→import { Switch } from '@/components/ui/switch';
+    24→    24→import { Separator } from '@/components/ui/separator';
+    25→    25→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    26→    26→import {
+    27→    27→  Select,
+    28→    28→  SelectContent,
+    29→    29→  SelectItem,
+    30→    30→  SelectTrigger,
+    31→    31→  SelectValue,
+    32→    32→} from '@/components/ui/select';
+    33→    33→import {
+    34→    34→  AlertDialog,
+    35→    35→  AlertDialogAction,
+    36→    36→  AlertDialogCancel,
+    37→    37→  AlertDialogContent,
+    38→    38→  AlertDialogDescription,
+    39→    39→  AlertDialogFooter,
+    40→    40→  AlertDialogHeader,
+    41→    41→  AlertDialogTitle,
+    42→    42→  AlertDialogTrigger,
+    43→    43→} from '@/components/ui/alert-dialog';
+    44→    44→import { useAuthStore, useAppStore } from '@/lib/store';
+    45→    45→import type { Business } from '@/lib/types';
+    46→    46→import { BUSINESS_CATEGORIES } from '@/lib/types';
+    47→    47→import { getAppUrl } from '@/lib/auth';
+    48→    48→import { toast } from 'sonner';
+    49→    49→
+    50→    50→interface SettingsPanelProps {
+    51→    51→  initialTab?: string;
+    52→    52→}
+    53→    53→
+    54→    54→export default function SettingsPanel({ initialTab = 'business' }: SettingsPanelProps) {
+    55→    55→  const { token, user } = useAuthStore();
+    56→    56→  const { currentBusiness, setCurrentBusiness } = useAppStore();
+    57→    57→  const fileInputRef = useRef<HTMLInputElement>(null);
+    58→    58→
+    59→    59→  // Business form state
+    60→    60→  const [bizForm, setBizForm] = useState({
+    61→    61→    name: '',
+    62→    62→    category: '',
+    63→    63→    phone: '',
+    64→    64→    whatsapp: '',
+    65→    65→    address: '',
+    66→    66→    openingHours: '',
+    67→    67→    description: '',
+    68→    68→    status: 'draft' as string,
+    69→    69→    whatsappOrder: false,
+    70→    70→    seoEnabled: false,
+    71→    71→  });
+    72→    72→  const [bizLoading, setBizLoading] = useState(false);
+    73→    73→  const [bizSaving, setBizSaving] = useState(false);
+    74→    74→  const [bizInitial, setBizInitial] = useState<Business | null>(null);
+    75→    75→
+    76→    76→  // Account form state
+    77→    77→  const [accForm, setAccForm] = useState({
+    78→    78→    name: '',
+    79→    79→    phone: '',
+    80→    80→    currentPassword: '',
+    81→    81→    newPassword: '',
+    82→    82→    confirmPassword: '',
+    83→    83→  });
+    84→    84→  const [accSaving, setAccSaving] = useState(false);
+    85→    85→  const [accLoading, setAccLoading] = useState(true);
+    86→    86→
+    87→    87→  // Upload state
+    88→    88→  const [uploading, setUploading] = useState(false);
+    89→    89→
+    90→    90→  // Flipbook settings state
+    91→    91→  const [flipbookForm, setFlipbookForm] = useState({
+    92→    92→    flipbookEnabled: true,
+    93→    93→    flipbookAnimEnabled: true,
+    94→    94→    flipbookAnimSpeed: 'medium' as string,
+    95→    95→    flipbookPageNumbers: true,
+    96→    96→    flipbookSwipeNav: true,
+    97→    97→    flipbookSoundEffects: false,
+    98→    98→    flipbookFullscreen: true,
+    99→    99→    flipbookInteractions: true,
+   100→   100→  });
+   101→   101→  const [flipbookSaving, setFlipbookSaving] = useState(false);
+   102→   102→
+   103→   103→  // Ordering settings state
+   104→   104→  const [orderingForm, setOrderingForm] = useState({
+   105→   105→    whatsappOrder: true,
+   106→   106→    basketEnabled: true,
+   107→   107→    showQuantitySelector: true,
+   108→   108→    showOrderButton: true,
+   109→   109→    whatsappGreeting: 'Hello, I would like to place an order:',
+   110→   110→  });
+   111→   111→  const [orderingSaving, setOrderingSaving] = useState(false);
+   112→   112→
+   113→   113→  // Fetch business data
+   114→   114→  useEffect(() => {
+   115→   115→    if (!currentBusiness?.id || !token) return;
+   116→   116→    setBizLoading(true);
+   117→   117→    async function fetchBusiness() {
+   118→   118→      try {
+   119→   119→        const res = await fetch(`/api/businesses/${currentBusiness.id}`, {
+   120→   120→          headers: { Authorization: `Bearer ${token}` },
+   121→   121→        });
+   122→   122→        if (res.ok) {
+   123→   123→          const data = await res.json();
+   124→   124→          const b: Business = data.business;
+   125→   125→          setBizInitial(b);
+   126→   126→          setBizForm({
+   127→   127→            name: b.name || '',
+   128→   128→            category: b.category || '',
+   129→   129→            phone: b.phone || '',
+   130→   130→            whatsapp: b.whatsapp || '',
+   131→   131→            address: b.address || '',
+   132→   132→            openingHours: b.openingHours || '',
+   133→   133→            description: b.description || '',
+   134→   134→            status: b.status || 'draft',
+   135→   135→            whatsappOrder: b.whatsappOrder ?? false,
+   136→   136→            seoEnabled: b.seoEnabled ?? false,
+   137→   137→            welcomeMessage: (b as Record<string, unknown>).welcomeMessage as string || '',
+   138→   138→          });
+   139→   139→          // Load flipbook settings
+   140→   140→          setFlipbookForm({
+   141→   141→            flipbookEnabled: b.flipbookEnabled ?? true,
+   142→   142→            flipbookAnimEnabled: b.flipbookAnimEnabled ?? true,
+   143→   143→            flipbookAnimSpeed: b.flipbookAnimSpeed || 'medium',
+   144→   144→            flipbookPageNumbers: b.flipbookPageNumbers ?? true,
+   145→   145→            flipbookSwipeNav: b.flipbookSwipeNav ?? true,
+   146→   146→            flipbookSoundEffects: b.flipbookSoundEffects ?? false,
+   147→   147→            flipbookFullscreen: b.flipbookFullscreen ?? true,
+   148→   148→            flipbookInteractions: b.flipbookInteractions ?? true,
+   149→   149→          });
+   150→   150→          // Load ordering settings
+   151→   151→          setOrderingForm({
+   152→   152→            whatsappOrder: b.whatsappOrder ?? true,
+   153→   153→            basketEnabled: b.basketEnabled ?? true,
+   154→   154→            showQuantitySelector: b.showQuantitySelector ?? true,
+   155→   155→            showOrderButton: b.showOrderButton ?? true,
+   156→   156→            whatsappGreeting: b.whatsappGreeting || 'Hello, I would like to place an order:',
+   157→   157→          });
+   158→   158→        }
+   159→   159→      } catch {
+   160→   160→        toast.error('Failed to load business settings');
+   161→   161→      } finally {
+   162→   162→        setBizLoading(false);
+   163→   163→      }
+   164→   164→    }
+   165→   165→    fetchBusiness();
+   166→   166→  }, [currentBusiness?.id, token]);
+   167→   167→
+   168→   168→  // Fetch user data
+   169→   169→  useEffect(() => {
+   170→   170→    if (!user || !token) return;
+   171→   171→    setAccForm({
+   172→   172→      name: user.name || '',
+   173→   173→      phone: '',
+   174→   174→      currentPassword: '',
+   175→   175→      newPassword: '',
+   176→   176→      confirmPassword: '',
+   177→   177→    });
+   178→   178→    setAccLoading(false);
+   179→   179→  }, [user, token]);
+   180→   180→
+   181→   181→  // Save business settings
+   182→   182→  const handleSaveBusiness = async () => {
+   183→   183→    if (!currentBusiness?.id || !token) return;
+   184→   184→    setBizSaving(true);
+   185→   185→    try {
+   186→   186→      const res = await fetch(`/api/businesses/${currentBusiness.id}`, {
+   187→   187→        method: 'PUT',
+   188→   188→        headers: {
+   189→   189→          Authorization: `Bearer ${token}`,
+   190→   190→          'Content-Type': 'application/json',
+   191→   191→        },
+   192→   192→        body: JSON.stringify(bizForm),
+   193→   193→      });
+   194→   194→      if (res.ok) {
+   195→   195→        const data = await res.json();
+   196→   196→        const updated: Business = data.business;
+   197→   197→        setBizInitial(updated);
+   198→   198→        setCurrentBusiness({
+   199→   199→          id: updated.id,
+   200→   200→          slug: updated.slug,
+   201→   201→          name: updated.name,
+   202→   202→          logo: updated.logo,
+   203→   203→          status: updated.status,
+   204→   204→        });
+   205→   205→        toast.success('Business settings saved');
+   206→   206→      } else {
+   207→   207→        const err = await res.json().catch(() => ({}));
+   208→   208→        toast.error(err.error || 'Failed to save settings');
+   209→   209→      }
+   210→   210→    } catch {
+   211→   211→      toast.error('Failed to save settings');
+   212→   212→    } finally {
+   213→   213→      setBizSaving(false);
+   214→   214→    }
+   215→   215→  };
+   216→   216→
+   217→   217→  // Save account settings
+   218→   218→  const handleSaveAccount = async () => {
+   219→   219→    if (!token) return;
+   220→   220→    const updateData: Record<string, string> = {};
+   221→   221→    if (accForm.name) updateData.name = accForm.name;
+   222→   222→    if (accForm.phone) updateData.phone = accForm.phone;
+   223→   223→
+   224→   224→    // Password change validation
+   225→   225→    if (accForm.newPassword) {
+   226→   226→      if (!accForm.currentPassword) {
+   227→   227→        toast.error('Current password is required to change password');
+   228→   228→        return;
+   229→   229→      }
+   230→   230→      if (accForm.newPassword !== accForm.confirmPassword) {
+   231→   231→        toast.error('New passwords do not match');
+   232→   232→        return;
+   233→   233→      }
+   234→   234→      if (accForm.newPassword.length < 8) {
+   235→   235→        toast.error('Password must be at least 8 characters');
+   236→   236→        return;
+   237→   237→      }
+   238→   238→      updateData.currentPassword = accForm.currentPassword;
+   239→   239→      updateData.newPassword = accForm.newPassword;
+   240→   240→    }
+   241→   241→
+   242→   242→    if (Object.keys(updateData).length === 0) {
+   243→   243→      toast.error('No changes to save');
+   244→   244→      return;
+   245→   245→    }
+   246→   246→
+   247→   247→    setAccSaving(true);
+   248→   248→    try {
+   249→   249→      const res = await fetch('/api/auth/me', {
+   250→   250→        method: 'PUT',
+   251→   251→        headers: {
+   252→   252→          Authorization: `Bearer ${token}`,
+   253→   253→          'Content-Type': 'application/json',
+   254→   254→        },
+   255→   255→        body: JSON.stringify(updateData),
+   256→   256→      });
+   257→   257→      if (res.ok) {
+   258→   258→        toast.success('Account settings saved');
+   259→   259→        setAccForm((prev) => ({
+   260→   260→          ...prev,
+   261→   261→          currentPassword: '',
+   262→   262→          newPassword: '',
+   263→   263→          confirmPassword: '',
+   264→   264→        }));
+   265→   265→      } else {
+   266→   266→        const err = await res.json().catch(() => ({}));
+   267→   267→        toast.error(err.error || 'Failed to save account');
+   268→   268→      }
+   269→   269→    } catch {
+   270→   270→      toast.error('Failed to save account');
+   271→   271→    } finally {
+   272→   272→      setAccSaving(false);
+   273→   273→    }
+   274→   274→  };
+   275→   275→
+   276→   276→  // Logo upload
+   277→   277→  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+   278→   278→    const file = e.target.files?.[0];
+   279→   279→    if (!file || !currentBusiness?.id || !token) return;
+   280→   280→    setUploading(true);
+   281→   281→    try {
+   282→   282→      const formData = new FormData();
+   283→   283→      formData.append('file', file);
+   284→   284→      formData.append('businessId', currentBusiness.id);
+   285→   285→      formData.append('type', 'logo');
+   286→   286→      const res = await fetch('/api/upload', {
+   287→   287→        method: 'POST',
+   288→   288→        headers: { Authorization: `Bearer ${token}` },
+   289→   289→        body: formData,
+   290→   290→      });
+   291→   291→      if (res.ok) {
+   292→   292→        const data = await res.json();
+   293→   293→        if (data.url) {
+   294→   294→          setCurrentBusiness({
+   295→   295→            ...currentBusiness,
+   296→   296→            logo: data.url,
+   297→   297→          });
+   298→   298→          toast.success('Logo uploaded');
+   299→   299→        }
+   300→   300→      } else {
+   301→   301→        toast.error('Failed to upload logo');
+   302→   302→      }
+   303→   303→    } catch {
+   304→   304→      toast.error('Failed to upload logo');
+   305→   305→    } finally {
+   306→   306→      setUploading(false);
+   307→   307→      if (fileInputRef.current) fileInputRef.current.value = '';
+   308→   308→    }
+   309→   309→  };
+   310→   310→
+   311→   311→  // Delete account
+   312→   312→  const handleDeleteAccount = async () => {
+   313→   313→    if (!token) return;
+   314→   314→    try {
+   315→   315→      const res = await fetch('/api/auth/me', {
+   316→   316→        method: 'DELETE',
+   317→   317→        headers: { Authorization: `Bearer ${token}` },
+   318→   318→      });
+   319→   319→      if (res.ok) {
+   320→   320→        toast.success('Account deleted');
+   321→   321→        useAuthStore.getState().logout();
+   322→   322→      } else {
+   323→   323→        toast.error('Failed to delete account');
+   324→   324→      }
+   325→   325→    } catch {
+   326→   326→      toast.error('Failed to delete account');
+   327→   327→    }
+   328→   328→  };
+   329→   329→
+   330→   330→  if (!currentBusiness) {
+   331→   331→    return (
+   332→   332→      <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+   333→   333→        <p>Select a business to manage settings</p>
+   334→   334→      </div>
+   335→   335→    );
+   336→   336→  }
+   337→   337→
+   338→   338→  const hasBizChanges =
+   339→   339→    bizInitial &&
+   340→   340→    (bizForm.name !== bizInitial.name ||
+   341→   341→      bizForm.category !== (bizInitial.category || '') ||
+   342→   342→      bizForm.phone !== (bizInitial.phone || '') ||
+   343→   343→      bizForm.whatsapp !== (bizInitial.whatsapp || '') ||
+   344→   344→      bizForm.address !== (bizInitial.address || '') ||
+   345→   345→      bizForm.openingHours !== (bizInitial.openingHours || '') ||
+   346→   346→      bizForm.description !== (bizInitial.description || '') ||
+   347→   347→      bizForm.status !== bizInitial.status ||
+   348→   348→      bizForm.whatsappOrder !== (bizInitial.whatsappOrder ?? false) ||
+   349→   349→      bizForm.seoEnabled !== (bizInitial.seoEnabled ?? false));
+   350→   350→
+   351→   351→return (
+   352→   352→    <>
+   353→   353→    <Tabs defaultValue={initialTab} className="space-y-6">
+   354→   354→      <TabsList>
+   355→   355→        <TabsTrigger value="business">Business Settings</TabsTrigger>
+   356→   356→        <TabsTrigger value="flipbook">Flipbook</TabsTrigger>
+   357→   357→        <TabsTrigger value="ordering">Ordering</TabsTrigger>
+   358→   358→        <TabsTrigger value="account">Account Settings</TabsTrigger>
+   359→   359→      </TabsList>
+   360→   360→
+   361→   361→      {/* Business Settings Tab */}
+   362→   362→      <TabsContent value="business" className="space-y-6">
+   363→   363→        {/* Basic Info */}
+   364→   364→        <Card>
+   365→   365→          <CardHeader>
+   366→   366→            <CardTitle>Basic Information</CardTitle>
+   367→   367→            <CardDescription>
+   368→   368→              Update your business details and branding
+   369→   369→            </CardDescription>
+   370→   370→          </CardHeader>
+   371→   371→          <CardContent className="space-y-4">
+   372→   372→            {bizLoading ? (
+   373→   373→              <div className="space-y-4">
+   374→   374→                {[1, 2, 3, 4].map((i) => (
+   375→   375→                  <div key={i} className="space-y-2">
+   376→   376→                    <div className="h-4 w-24 rounded bg-muted" />
+   377→   377→                    <div className="h-9 rounded-md bg-muted" />
+   378→   378→                  </div>
+   379→   379→                ))}
+   380→   380→              </div>
+   381→   381→            ) : (
+   382→   382→              <>
+   383→   383→                {/* Logo Upload */}
+   384→   384→                <div className="space-y-2">
+   385→   385→                  <Label>Logo</Label>
+   386→   386→                  <div className="flex items-center gap-4">
+   387→   387→                    {currentBusiness.logo ? (
+   388→   388→                      <img
+   389→   389→                        src={currentBusiness.logo}
+   390→   390→                        alt="Logo"
+   391→   391→                        className="h-16 w-16 rounded-xl object-cover ring-1 ring-border"
+   392→   392→                      />
+   393→   393→                    ) : (
+   394→   394→                      <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-muted">
+   395→   395→                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
+   396→   396→                      </div>
+   397→   397→                    )}
+   398→   398→                    <div className="flex flex-col gap-2">
+   399→   399→                      <Button
+   400→   400→                        type="button"
+   401→   401→                        variant="outline"
+   402→   402→                        size="sm"
+   403→   403→                        onClick={() => fileInputRef.current?.click()}
+   404→   404→                        disabled={uploading}
+   405→   405→                      >
+   406→   406→                        {uploading ? (
+   407→   407→                          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+   408→   408→                        ) : (
+   409→   409→                          <Upload className="mr-1.5 h-4 w-4" />
+   410→   410→                        )}
+   411→   411→                        {uploading ? 'Uploading...' : 'Upload Logo'}
+   412→   412→                      </Button>
+   413→   413→                      <input
+   414→   414→                        ref={fileInputRef}
+   415→   415→                        type="file"
+   416→   416→                        accept="image/*"
+   417→   417→                        onChange={handleLogoUpload}
+   418→   418→                        className="hidden"
+   419→   419→                      />
+   420→   420→                      <p className="text-xs text-muted-foreground">
+   421→   421→                        PNG, JPG up to 2MB
+   422→   422→                      </p>
+   423→   423→                    </div>
+   424→   424→                  </div>
+   425→   425→                </div>
+   426→   426→
+   427→   427→                <Separator />
+   428→   428→
+   429→   429→                {/* Business Name */}
+   430→   430→                <div className="space-y-2">
+   431→   431→                  <Label htmlFor="biz-name">Business Name</Label>
+   432→   432→                  <Input
+   433→   433→                    id="biz-name"
+   434→   434→                    value={bizForm.name}
+   435→   435→                    onChange={(e) =>
+   436→   436→                      setBizForm((p) => ({ ...p, name: e.target.value }))
+   437→   437→                    }
+   438→   438→                    placeholder="Enter business name"
+   439→   439→                  />
+   440→   440→                </div>
+   441→   441→
+   442→   442→                {/* Public URL / Slug */}
+   443→   443→                <div className="space-y-2">
+   444→   444→                  <Label htmlFor="biz-slug">Public URL</Label>
+   445→   445→                  <div className="flex items-center gap-0">
+   446→   446→                    <div className="flex items-center bg-muted text-muted-foreground text-sm px-3 py-2 rounded-l-md border border-r-0 border-input">
+   447→   447→                      {getAppUrl()}/p/
+   448→   448→                    </div>
+   449→   449→                    <Input
+   450→   450→                      id="biz-slug"
+   451→   451→                      value={currentBusiness?.slug || ''}
+   452→   452→                      disabled
+   453→   453→                      className="rounded-l-none"
+   454→   454→                      placeholder="auto-generated-slug"
+   455→   455→                    />
+   456→   456→                  </div>
+   457→   457→                  <p className="text-xs text-muted-foreground">
+   458→   458→                    Slug is auto-generated from your business name. Contact support to change it.
+   459→   459→                  </p>
+   460→   460→                </div>
+   461→   461→
+   462→   462→                {/* Category */}
+   463→   463→                <div className="space-y-2">
+   464→   464→                  <Label>Category</Label>
+   465→   465→                  <Select
+   466→   466→                    value={bizForm.category}
+   467→   467→                    onValueChange={(v) =>
+   468→   468→                      setBizForm((p) => ({ ...p, category: v }))
+   469→   469→                    }
+   470→   470→                  >
+   471→   471→                    <SelectTrigger className="w-full">
+   472→   472→                      <SelectValue placeholder="Select a category" />
+   473→   473→                    </SelectTrigger>
+   474→   474→                    <SelectContent>
+   475→   475→                      {BUSINESS_CATEGORIES.map((cat) => (
+   476→   476→                        <SelectItem key={cat} value={cat}>
+   477→   477→                          {cat}
+   478→   478→                        </SelectItem>
+   479→   479→                      ))}
+   480→   480→                    </SelectContent>
+   481→   481→                  </Select>
+   482→   482→                </div>
+   483→   483→
+   484→   484→                {/* Phone & WhatsApp */}
+   485→   485→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   486→   486→                  <div className="space-y-2">
+   487→   487→                    <Label htmlFor="biz-phone">Phone</Label>
+   488→   488→                    <Input
+   489→   489→                      id="biz-phone"
+   490→   490→                      value={bizForm.phone}
+   491→   491→                      onChange={(e) =>
+   492→   492→                        setBizForm((p) => ({ ...p, phone: e.target.value }))
+   493→   493→                      }
+   494→   494→                      placeholder="Phone number"
+   495→   495→                    />
+   496→   496→                  </div>
+   497→   497→                  <div className="space-y-2">
+   498→   498→                    <Label htmlFor="biz-whatsapp">WhatsApp</Label>
+   499→   499→                    <Input
+   500→   500→                      id="biz-whatsapp"
+   501→   501→                      value={bizForm.whatsapp}
+   502→   502→                      onChange={(e) =>
+   503→   503→                        setBizForm((p) => ({ ...p, whatsapp: e.target.value }))
+   504→   504→                      }
+   505→   505→                      placeholder="WhatsApp number"
+   506→   506→                    />
+   507→   507→                  </div>
+   508→   508→                </div>
+   509→   509→
+   510→   510→                {/* Address */}
+   511→   511→                <div className="space-y-2">
+   512→   512→                  <Label htmlFor="biz-address">Address</Label>
+   513→   513→                  <Input
+   514→   514→                    id="biz-address"
+   515→   515→                    value={bizForm.address}
+   516→   516→                    onChange={(e) =>
+   517→   517→                      setBizForm((p) => ({ ...p, address: e.target.value }))
+   518→   518→                    }
+   519→   519→                    placeholder="Business address"
+   520→   520→                  />
+   521→   521→                </div>
+   522→   522→
+   523→   523→                {/* Opening Hours */}
+   524→   524→                <div className="space-y-2">
+   525→   525→                  <Label htmlFor="biz-hours">Opening Hours</Label>
+   526→   526→                  <Input
+   527→   527→                    id="biz-hours"
+   528→   528→                    value={bizForm.openingHours}
+   529→   529→                    onChange={(e) =>
+   530→   530→                      setBizForm((p) => ({ ...p, openingHours: e.target.value }))
+   531→   531→                    }
+   532→   532→                    placeholder="e.g. Mon-Fri 9AM-10PM, Sat-Sun 10AM-11PM"
+   533→   533→                  />
+   534→   534→                </div>
+   535→   535→
+   536→   536→                {/* Description */}
+   537→   537→                <div className="space-y-2">
+   538→   538→                  <Label htmlFor="biz-desc">Description / Tagline</Label>
+   539→   539→                  <Textarea
+   540→   540→                    id="biz-desc"
+   541→   541→                    value={bizForm.description}
+   542→   542→                    onChange={(e) =>
+   543→   543→                      setBizForm((p) => ({ ...p, description: e.target.value }))
+   544→   544→                    }
+   545→   545→                    placeholder="Brief description of your business"
+   546→   546→                    rows={3}
+   547→   547→                  />
+   548→   548→                </div>
+   549→   549→
+   550→   550→                {/* Welcome Message */}
+   551→   551→                <div className="space-y-2">
+   552→   552→                  <Label htmlFor="biz-welcome">Welcome Message</Label>
+   553→   553→                  <Textarea
+   554→   554→                    id="biz-welcome"
+   555→   555→                    value={(bizForm as Record<string, unknown>).welcomeMessage as string || ''}
+   556→   556→                    onChange={(e) =>
+   557→   557→                      setBizForm((p) => ({ ...p, welcomeMessage: e.target.value }))
+   558→   558→                    }
+   559→   559→                    placeholder="Welcome message shown to customers when they open your menu. e.g. Thank you for visiting us. Explore our menu and discover our products."
+   560→   560→                    rows={3}
+   561→   561→                  />
+   562→   562→                  <p className="text-xs text-muted-foreground">
+   563→   563→                    This message appears on the Welcome page of your digital book experience.
+   564→   564→                  </p>
+   565→   565→                </div>
+   566→   566→              </>
+   567→   567→            )}
+   568→   568→          </CardContent>
+   569→   569→        </Card>
+   570→   570→
+   571→   571→        {/* Menu Settings */}
+   572→   572→        <Card>
+   573→   573→          <CardHeader>
+   574→   574→            <CardTitle>Menu Settings</CardTitle>
+   575→   575→            <CardDescription>
+   576→   576→              Control how your menu is published and accessed
+   577→   577→            </CardDescription>
+   578→   578→          </CardHeader>
+   579→   579→          <CardContent className="space-y-6">
+   580→   580→            {bizLoading ? (
+   581→   581→              <div className="space-y-4">
+   582→   582→                {[1, 2, 3].map((i) => (
+   583→   583→                  <div key={i} className="flex items-center justify-between">
+   584→   584→                    <div className="space-y-1">
+   585→   585→                      <div className="h-4 w-32 rounded bg-muted" />
+   586→   586→                      <div className="h-3 w-48 rounded bg-muted" />
+   587→   587→                    </div>
+   588→   588→                    <div className="h-5 w-10 rounded-full bg-muted" />
+   589→   589→                  </div>
+   590→   590→                ))}
+   591→   591→              </div>
+   592→   592→            ) : (
+   593→   593→              <>
+   594→   594→                {/* Menu Status */}
+   595→   595→                <div className="space-y-2">
+   596→   596→                  <Label>Menu Status</Label>
+   597→   597→                  <Select
+   598→   598→                    value={bizForm.status}
+   599→   599→                    onValueChange={(v) =>
+   600→   600→                      setBizForm((p) => ({ ...p, status: v }))
+   601→   601→                    }
+   602→   602→                  >
+   603→   603→                    <SelectTrigger className="w-full sm:w-64">
+   604→   604→                      <SelectValue />
+   605→   605→                    </SelectTrigger>
+   606→   606→                    <SelectContent>
+   607→   607→                      <SelectItem value="draft">Draft</SelectItem>
+   608→   608→                      <SelectItem value="published">Published</SelectItem>
+   609→   609→                      <SelectItem value="unpublished">Unpublished</SelectItem>
+   610→   610→                    </SelectContent>
+   611→   611→                  </Select>
+   612→   612→                  <p className="text-xs text-muted-foreground">
+   613→   613→                    Only published menus are accessible via QR code
+   614→   614→                  </p>
+   615→   615→                </div>
+   616→   616→
+   617→   617→                <Separator />
+   618→   618→
+   619→   619→                {/* WhatsApp Ordering */}
+   620→   620→                <div className="flex items-center justify-between gap-4">
+   621→   621→                  <div className="space-y-0.5">
+   622→   622→                    <Label>WhatsApp Ordering</Label>
+   623→   623→                    <p className="text-sm text-muted-foreground">
+   624→   624→                      Allow customers to place orders via WhatsApp
+   625→   625→                    </p>
+   626→   626→                  </div>
+   627→   627→                  <Switch
+   628→   628→                    checked={bizForm.whatsappOrder}
+   629→   629→                    onCheckedChange={(v) =>
+   630→   630→                      setBizForm((p) => ({ ...p, whatsappOrder: v }))
+   631→   631→                    }
+   632→   632→                  />
+   633→   633→                </div>
+   634→   634→
+   635→   635→                <Separator />
+   636→   636→
+   637→   637→                {/* SEO */}
+   638→   638→                <div className="flex items-center justify-between gap-4">
+   639→   639→                  <div className="space-y-0.5">
+   640→   640→                    <Label>SEO Indexing</Label>
+   641→   641→                    <p className="text-sm text-muted-foreground">
+   642→   642→                      Allow search engines to index your menu page
+   643→   643→                    </p>
+   644→   644→                  </div>
+   645→   645→                  <Switch
+   646→   646→                    checked={bizForm.seoEnabled}
+   647→   647→                    onCheckedChange={(v) =>
+   648→   648→                      setBizForm((p) => ({ ...p, seoEnabled: v }))
+   649→   649→                    }
+   650→   650→                  />
+   651→   651→                </div>
+   652→   652→              </>
+   653→   653→            )}
+   654→   654→          </CardContent>
+   655→   655→        </Card>
+   656→   656→
+   657→   657→        {/* Save Button */}
+   658→   658→        <div className="flex justify-end">
+   659→   659→          <Button
+   660→   660→            onClick={handleSaveBusiness}
+   661→   661→            disabled={bizSaving || bizLoading || !hasBizChanges}
+   662→   662→            className="bg-charcoal hover:bg-charcoal-light"
+   663→   663→          >
+   664→   664→            {bizSaving ? (
+   665→   665→              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+   666→   666→            ) : (
+   667→   667→              <Save className="mr-2 h-4 w-4" />
+   668→   668→            )}
+   669→   669→            Save Changes
+   670→   670→          </Button>
+   671→   671→        </div>
+   672→   672→      </TabsContent>
+   673→   673→
+   674→   674→      {/* Account Settings Tab */}
+   675→   675→      <TabsContent value="account" className="space-y-6">
+   676→   676→        {/* Profile Info */}
+   677→   677→        <Card>
+   678→   678→          <CardHeader>
+   679→   679→            <CardTitle>Profile Information</CardTitle>
+   680→   680→            <CardDescription>Update your personal details</CardDescription>
+   681→   681→          </CardHeader>
+   682→   682→          <CardContent className="space-y-4">
+   683→   683→            {accLoading ? (
+   684→   684→              <div className="space-y-4">
+   685→   685→                {[1, 2, 3].map((i) => (
+   686→   686→                  <div key={i} className="space-y-2">
+   687→   687→                    <div className="h-4 w-20 rounded bg-muted" />
+   688→   688→                    <div className="h-9 rounded-md bg-muted" />
+   689→   689→                  </div>
+   690→   690→                ))}
+   691→   691→              </div>
+   692→   692→            ) : (
+   693→   693→              <>
+   694→   694→                <div className="space-y-2">
+   695→   695→                  <Label htmlFor="acc-email">Email</Label>
+   696→   696→                  <Input
+   697→   697→                    id="acc-email"
+   698→   698→                    value={user?.email || ''}
+   699→   699→                    disabled
+   700→   700→                    className="bg-muted"
+   701→   701→                  />
+   702→   702→                  <p className="text-xs text-muted-foreground">
+   703→   703→                    Email cannot be changed
+   704→   704→                  </p>
+   705→   705→                </div>
+   706→   706→
+   707→   707→                <div className="space-y-2">
+   708→   708→                  <Label htmlFor="acc-name">Full Name</Label>
+   709→   709→                  <Input
+   710→   710→                    id="acc-name"
+   711→   711→                    value={accForm.name}
+   712→   712→                    onChange={(e) =>
+   713→   713→                      setAccForm((p) => ({ ...p, name: e.target.value }))
+   714→   714→                    }
+   715→   715→                    placeholder="Your full name"
+   716→   716→                  />
+   717→   717→                </div>
+   718→   718→
+   719→   719→                <div className="space-y-2">
+   720→   720→                  <Label htmlFor="acc-phone">Phone</Label>
+   721→   721→                  <Input
+   722→   722→                    id="acc-phone"
+   723→   723→                    value={accForm.phone}
+   724→   724→                    onChange={(e) =>
+   725→   725→                      setAccForm((p) => ({ ...p, phone: e.target.value }))
+   726→   726→                    }
+   727→   727→                    placeholder="Your phone number"
+   728→   728→                  />
+   729→   729→                </div>
+   730→   730→              </>
+   731→   731→            )}
+   732→   732→          </CardContent>
+   733→   733→        </Card>
+   734→   734→
+   735→   735→        {/* Change Password */}
+   736→   736→        <Card>
+   737→   737→          <CardHeader>
+   738→   738→            <CardTitle>Change Password</CardTitle>
+   739→   739→            <CardDescription>
+   740→   740→              Leave blank to keep current password
+   741→   741→            </CardDescription>
+   742→   742→          </CardHeader>
+   743→   743→          <CardContent className="space-y-4">
+   744→   744→            <div className="space-y-2">
+   745→   745→              <Label htmlFor="current-pw">Current Password</Label>
+   746→   746→              <Input
+   747→   747→                id="current-pw"
+   748→   748→                type="password"
+   749→   749→                value={accForm.currentPassword}
+   750→   750→                onChange={(e) =>
+   751→   751→                  setAccForm((p) => ({ ...p, currentPassword: e.target.value }))
+   752→   752→                }
+   753→   753→                placeholder="Enter current password"
+   754→   754→              />
+   755→   755→            </div>
+   756→   756→            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   757→   757→              <div className="space-y-2">
+   758→   758→                <Label htmlFor="new-pw">New Password</Label>
+   759→   759→                <Input
+   760→   760→                  id="new-pw"
+   761→   761→                  type="password"
+   762→   762→                  value={accForm.newPassword}
+   763→   763→                  onChange={(e) =>
+   764→   764→                    setAccForm((p) => ({ ...p, newPassword: e.target.value }))
+   765→   765→                  }
+   766→   766→                  placeholder="Min. 8 characters"
+   767→   767→                />
+   768→   768→              </div>
+   769→   769→              <div className="space-y-2">
+   770→   770→                <Label htmlFor="confirm-pw">Confirm Password</Label>
+   771→   771→                <Input
+   772→   772→                  id="confirm-pw"
+   773→   773→                  type="password"
+   774→   774→                  value={accForm.confirmPassword}
+   775→   775→                  onChange={(e) =>
+   776→   776→                    setAccForm((p) => ({ ...p, confirmPassword: e.target.value }))
+   777→   777→                  }
+   778→   778→                  placeholder="Confirm new password"
+   779→   779→                />
+   780→   780→              </div>
+   781→   781→            </div>
+   782→   782→          </CardContent>
+   783→   783→        </Card>
+   784→   784→
+   785→   785→        {/* Save Account Button */}
+   786→   786→        <div className="flex justify-end">
+   787→   787→          <Button
+   788→   788→            onClick={handleSaveAccount}
+   789→   789→            disabled={accSaving || accLoading}
+   790→   790→            className="bg-charcoal hover:bg-charcoal-light"
+   791→   791→          >
+   792→   792→            {accSaving ? (
+   793→   793→              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+   794→   794→            ) : (
+   795→   795→              <Save className="mr-2 h-4 w-4" />
+   796→   796→            )}
+   797→   797→            Save
+   798→   798→          </Button>
+   799→   799→        </div>
+   800→   800→
+   801→   801→        {/* Danger Zone */}
+   802→   802→        <Card className="border-red-200 dark:border-red-900/50">
+   803→   803→          <CardHeader>
+   804→   804→            <CardTitle className="text-red-600 flex items-center gap-2">
+   805→   805→              <AlertTriangle className="h-5 w-5" />
+   806→   806→              Danger Zone
+   807→   807→            </CardTitle>
+   808→   808→            <CardDescription>
+   809→   809→              Irreversible actions that affect your account
+   810→   810→            </CardDescription>
+   811→   811→          </CardHeader>
+   812→   812→          <CardContent>
+   813→   813→            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+   814→   814→              <div>
+   815→   815→                <p className="font-medium text-sm">Delete Account</p>
+   816→   816→                <p className="text-sm text-muted-foreground">
+   817→   817→                  Permanently delete your account and all associated data.
+   818→   818→                  This action cannot be undone.
+   819→   819→                </p>
+   820→   820→              </div>
+   821→   821→              <AlertDialog>
+   822→   822→                <AlertDialogTrigger asChild>
+   823→   823→                  <Button variant="destructive" size="sm" className="flex-shrink-0">
+   824→   824→                    <Trash2 className="mr-1.5 h-4 w-4" />
+   825→   825→                    Delete Account
+   826→   826→                  </Button>
+   827→   827→                </AlertDialogTrigger>
+   828→   828→                <AlertDialogContent>
+   829→   829→                  <AlertDialogHeader>
+   830→   830→                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+   831→   831→                    <AlertDialogDescription>
+   832→   832→                      This action cannot be undone. This will permanently delete
+   833→   833→                      your account and remove all of your businesses, menus, and
+   834→   834→                      analytics data from our servers.
+   835→   835→                    </AlertDialogDescription>
+   836→   836→                  </AlertDialogHeader>
+   837→   837→                  <AlertDialogFooter>
+   838→   838→                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+   839→   839→                    <AlertDialogAction
+   840→   840→                      onClick={handleDeleteAccount}
+   841→   841→                      className="bg-red-600 hover:bg-red-700"
+   842→   842→                    >
+   843→   843→                      Delete Account
+   844→   844→                    </AlertDialogAction>
+   845→   845→                  </AlertDialogFooter>
+   846→   846→                </AlertDialogContent>
+   847→   847→              </AlertDialog>
+   848→   848→            </div>
+   849→   849→          </CardContent>
+   850→   850→        </Card>
+   851→   851→      </TabsContent>
+   852→   852→
+   853→   853→      {/* Flipbook Settings Tab */}
+   854→   854→      <TabsContent value="flipbook" className="space-y-6">
+   855→   855→        <Card>
+   856→   856→          <CardHeader>
+   857→   857→            <CardTitle>Flipbook Settings</CardTitle>
+   858→   858→            <CardDescription>
+   859→   859→              Configure the interactive flipbook menu experience for your customers.
+   860→   860→            </CardDescription>
+   861→   861→          </CardHeader>
+   862→   862→          <CardContent className="space-y-6">
+   863→   863→            {/* Enable flipbook */}
+   864→   864→            <div className="flex items-center justify-between">
+   865→   865→              <div>
+   866→   866→                <Label className="text-sm font-medium">Enable Flipbook</Label>
+   867→   867→                <p className="text-xs text-muted-foreground mt-0.5">Show your menu as an interactive digital book</p>
+   868→   868→              </div>
+   869→   869→              <Switch
+   870→   870→                checked={flipbookForm.flipbookEnabled}
+   871→   871→                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookEnabled: v }))}
+   872→   872→              />
+   873→   873→            </div>
+   874→   874→            <Separator />
+   875→   875→            {/* Enable animation */}
+   876→   876→            <div className="flex items-center justify-between">
+   877→   877→              <div>
+   878→   878→                <Label className="text-sm font-medium">Page Animation</Label>
+   879→   879→                <p className="text-xs text-muted-foreground mt-0.5">Smooth page-turn animations when navigating</p>
+   880→   880→              </div>
+   881→   881→              <Switch
+   882→   882→                checked={flipbookForm.flipbookAnimEnabled}
+   883→   883→                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookAnimEnabled: v }))}
+   884→   884→                disabled={!flipbookForm.flipbookEnabled}
+   885→   885→              />
+   886→   886→            </div>
+   887→   887→            {/* Animation speed */}
+   888→   888→            {flipbookForm.flipbookEnabled && flipbookForm.flipbookAnimEnabled && (
+   889→   889→              <div className="flex items-center justify-between">
+   890→   890→                <Label className="text-sm font-medium">Animation Speed</Label>
+   891→   891→                <Select
+   892→   892→                  value={flipbookForm.flipbookAnimSpeed}
+   893→   893→                  onValueChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookAnimSpeed: v }))}
+   894→   894→                >
+   895→   895→                  <SelectTrigger className="w-32">
+   896→   896→                    <SelectValue />
+   897→   897→                  </SelectTrigger>
+   898→   898→                  <SelectContent>
+   899→   899→                    <SelectItem value="slow">Slow</SelectItem>
+   900→   900→                    <SelectItem value="medium">Medium</SelectItem>
+   901→   901→                    <SelectItem value="fast">Fast</SelectItem>
+   902→   902→                  </SelectContent>
+   903→   903→                </Select>
+   904→   904→              </div>
+   905→   905→            )}
+   906→   906→            <Separator />
+   907→   907→            {/* Page numbers */}
+   908→   908→            <div className="flex items-center justify-between">
+   909→   909→              <div>
+   910→   910→                <Label className="text-sm font-medium">Show Page Numbers</Label>
+   911→   911→                <p className="text-xs text-muted-foreground mt-0.5">Display current page / total pages</p>
+   912→   912→              </div>
+   913→   913→              <Switch
+   914→   914→                checked={flipbookForm.flipbookPageNumbers}
+   915→   915→                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookPageNumbers: v }))}
+   916→   916→                disabled={!flipbookForm.flipbookEnabled}
+   917→   917→              />
+   918→   918→            </div>
+   919→   919→            {/* Swipe navigation */}
+   920→   920→            <div className="flex items-center justify-between">
+   921→   921→              <div>
+   922→   922→                <Label className="text-sm font-medium">Swipe Navigation</Label>
+   923→   923→                <p className="text-xs text-muted-foreground mt-0.5">Allow customers to swipe left/right to turn pages</p>
+   924→   924→              </div>
+   925→   925→              <Switch
+   926→   926→                checked={flipbookForm.flipbookSwipeNav}
+   927→   927→                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookSwipeNav: v }))}
+   928→   928→                disabled={!flipbookForm.flipbookEnabled}
+   929→   929→              />
+   930→   930→            </div>
+   931→   931→            {/* Sound effects */}
+   932→   932→            <div className="flex items-center justify-between">
+   933→   933→              <div>
+   934→   934→                <Label className="text-sm font-medium">Sound Effects</Label>
+   935→   935→                <p className="text-xs text-muted-foreground mt-0.5">Play page-turn sounds on navigation</p>
+   936→   936→              </div>
+   937→   937→              <Switch
+   938→   938→                checked={flipbookForm.flipbookSoundEffects}
+   939→   939→                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookSoundEffects: v }))}
+   940→   940→                disabled={!flipbookForm.flipbookEnabled}
+   941→   941→              />
+   942→   942→            </div>
+   943→   943→            <Separator />
+   944→   944→            {/* Fullscreen */}
+   945→   945→            <div className="flex items-center justify-between">
+   946→   946→              <div>
+   947→   947→                <Label className="text-sm font-medium">Fullscreen Button</Label>
+   948→   948→                <p className="text-xs text-muted-foreground mt-0.5">Allow customers to view menu in fullscreen</p>
+   949→   949→              </div>
+   950→   950→              <Switch
+   951→   951→                checked={flipbookForm.flipbookFullscreen}
+   952→   952→                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookFullscreen: v }))}
+   953→   953→                disabled={!flipbookForm.flipbookEnabled}
+   954→   954→              />
+   955→   955→            </div>
+   956→   956→            {/* Product interactions */}
+   957→   957→            <div className="flex items-center justify-between">
+   958→   958→              <div>
+   959→   959→                <Label className="text-sm font-medium">Product Interactions</Label>
+   960→   960→                <p className="text-xs text-muted-foreground mt-0.5">Allow customers to tap items for details</p>
+   961→   961→              </div>
+   962→   962→              <Switch
+   963→   963→                checked={flipbookForm.flipbookInteractions}
+   964→   964→                onCheckedChange={(v) => setFlipbookForm((p) => ({ ...p, flipbookInteractions: v }))}
+   965→   965→                disabled={!flipbookForm.flipbookEnabled}
+   966→   966→              />
+   967→   967→            </div>
+   968→   968→          </CardContent>
+   969→   969→        </Card>
+   970→   970→        <div className="flex justify-end">
+   971→   971→          <Button
+   972→   972→            onClick={async () => {
+   973→   973→              if (!currentBusiness?.id || !token) return;
+   974→   974→              setFlipbookSaving(true);
+   975→   975→              try {
+   976→   976→                const res = await fetch(`/api/businesses/${currentBusiness.id}`, {
+   977→   977→                  method: 'PUT',
+   978→   978→                  headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+   979→   979→                  body: JSON.stringify(flipbookForm),
+   980→   980→                });
+   981→   981→                if (res.ok) toast.success('Flipbook settings saved');
+   982→   982→                else toast.error('Failed to save');
+   983→   983→              } catch { toast.error('Failed to save'); }
+   984→   984→              finally { setFlipbookSaving(false); }
+   985→   985→            }}
+   986→   986→            disabled={flipbookSaving}
+   987→   987→          >
+   988→   988→            {flipbookSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+   989→   989→            Save Flipbook Settings
+   990→   990→          </Button>
+   991→   991→        </div>
+   992→   992→      </TabsContent>
+   993→   993→
+   994→   994→      {/* Ordering Settings Tab */}
+   995→   995→      <TabsContent value="ordering" className="space-y-6">
+   996→   996→        <Card>
+   997→   997→          <CardHeader>
+   998→   998→            <CardTitle>Ordering Settings</CardTitle>
+   999→   999→            <CardDescription>
+  1000→  1000→              Configure WhatsApp ordering and basket options for your customers.
+  1001→  1001→            </CardDescription>
+  1002→  1002→          </CardHeader>
+  1003→  1003→          <CardContent className="space-y-6">
+  1004→  1004→            {/* WhatsApp ordering */}
+  1005→  1005→            <div className="flex items-center justify-between">
+  1006→  1006→              <div>
+  1007→  1007→                <Label className="text-sm font-medium">Enable WhatsApp Ordering</Label>
+  1008→  1008→                <p className="text-xs text-muted-foreground mt-0.5">Let customers order directly via WhatsApp</p>
+  1009→  1009→              </div>
+  1010→  1010→              <Switch
+  1011→  1011→                checked={orderingForm.whatsappOrder}
+  1012→  1012→                onCheckedChange={(v) => {
+  1013→  1013→                  setOrderingForm((p) => ({ ...p, whatsappOrder: v }));
+  1014→  1014→                  setBizForm((p) => ({ ...p, whatsappOrder: v }));
+  1015→  1015→                }}
+  1016→  1016→              />
+  1017→  1017→            </div>
+  1018→  1018→            {/* WhatsApp number */}
+  1019→  1019→            <div className="space-y-2">
+  1020→  1020→              <Label htmlFor="order-whatsapp">WhatsApp Number</Label>
+  1021→  1021→              <p className="text-xs text-muted-foreground">Customer orders will be sent to this number</p>
+  1022→  1022→              <Input
+  1023→  1023→                id="order-whatsapp"
+  1024→  1024→                value={orderingForm.whatsappGreeting}
+  1025→  1025→                onChange={(e) => setBizForm((p) => ({ ...p, whatsapp: e.target.value }))}
+  1026→  1026→                placeholder={bizForm.whatsapp || 'e.g. +2341234567890'}
+  1027→  1027→              />
+  1028→  1028→            </div>
+  1029→  1029→            <Separator />
+  1030→  1030→            {/* Basket */}
+  1031→  1031→            <div className="flex items-center justify-between">
+  1032→  1032→              <div>
+  1033→  1033→                <Label className="text-sm font-medium">Enable Basket</Label>
+  1034→  1034→                <p className="text-xs text-muted-foreground mt-0.5">Allow customers to add multiple items before ordering</p>
+  1035→  1035→              </div>
+  1036→  1036→              <Switch
+  1037→  1037→                checked={orderingForm.basketEnabled}
+  1038→  1038→                onCheckedChange={(v) => setOrderingForm((p) => ({ ...p, basketEnabled: v }))}
+  1039→  1039→                disabled={!orderingForm.whatsappOrder}
+  1040→  1040→              />
+  1041→  1041→            </div>
+  1042→  1042→            {/* Quantity selector */}
+  1043→  1043→            <div className="flex items-center justify-between">
+  1044→  1044→              <div>
+  1045→  1045→                <Label className="text-sm font-medium">Show Quantity Selector</Label>
+  1046→  1046→                <p className="text-xs text-muted-foreground mt-0.5">Display quantity +/- buttons on item details</p>
+  1047→  1047→              </div>
+  1048→  1048→              <Switch
+  1049→  1049→                checked={orderingForm.showQuantitySelector}
+  1050→  1050→                onCheckedChange={(v) => setOrderingForm((p) => ({ ...p, showQuantitySelector: v }))}
+  1051→  1051→                disabled={!orderingForm.whatsappOrder}
+  1052→  1052→              />
+  1053→  1053→            </div>
+  1054→  1054→            {/* Order button */}
+  1055→  1055→            <div className="flex items-center justify-between">
+  1056→  1056→              <div>
+  1057→  1057→                <Label className="text-sm font-medium">Show Order Button</Label>
+  1058→  1058→                <p className="text-xs text-muted-foreground mt-0.5">Display &ldquo;Order on WhatsApp&rdquo; button on items</p>
+  1059→  1059→              </div>
+  1060→  1060→              <Switch
+  1061→  1061→                checked={orderingForm.showOrderButton}
+  1062→  1062→                onCheckedChange={(v) => setOrderingForm((p) => ({ ...p, showOrderButton: v }))}
+  1063→  1063→                disabled={!orderingForm.whatsappOrder}
+  1064→  1064→              />
+  1065→  1065→            </div>
+  1066→  1066→            <Separator />
+  1067→  1067→            {/* Custom greeting */}
+  1068→  1068→            <div className="space-y-2">
+  1069→  1069→              <Label htmlFor="wa-greeting">Custom WhatsApp Greeting</Label>
+  1070→  1070→              <p className="text-xs text-muted-foreground">This message will appear at the top of every order</p>
+  1071→  1071→              <Textarea
+  1072→  1072→                id="wa-greeting"
+  1073→  1073→                value={orderingForm.whatsappGreeting}
+  1074→  1074→                onChange={(e) => setOrderingForm((p) => ({ ...p, whatsappGreeting: e.target.value }))}
+  1075→  1075→                placeholder="Hello, I would like to place an order:"
+  1076→  1076→                rows={2}
+  1077→  1077→              />
+  1078→  1078→            </div>
+  1079→  1079→          </CardContent>
+  1080→  1080→        </Card>
+  1081→  1081→        <div className="flex justify-end">
+  1082→  1082→          <Button
+  1083→  1083→            onClick={async () => {
+  1084→  1084→              if (!currentBusiness?.id || !token) return;
+  1085→  1085→              setOrderingSaving(true);
+  1086→  1086→              try {
+  1087→  1087→                const res = await fetch(`/api/businesses/${currentBusiness.id}`, {
+  1088→  1088→                  method: 'PUT',
+  1089→  1089→                  headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  1090→  1090→                  body: JSON.stringify(orderingForm),
+  1091→  1091→                });
+  1092→  1092→                if (res.ok) toast.success('Ordering settings saved');
+  1093→  1093→                else toast.error('Failed to save');
+  1094→  1094→              } catch { toast.error('Failed to save'); }
+  1095→  1095→              finally { setOrderingSaving(false); }
+  1096→  1096→            }}
+  1097→  1097→            disabled={orderingSaving}
+  1098→  1098→          >
+  1099→  1099→            {orderingSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+  1100→  1100→            Save Ordering Settings
+  1101→  1101→          </Button>
+  1102→  1102→        </div>
+  1103→  1103→      </TabsContent>
+  1104→  1104→    </Tabs>
+  1105→  1105→
+  1106→  1106→    {/* Footer branding */}
+  1107→  1107→    <div className="mt-12 pt-6 border-t border-black/[0.06] text-center">
+  1108→  1108→      <p className="text-[11px] text-charcoal/25 tracking-wider">
+  1109→  1109→        Developed by <span className="font-semibold text-charcoal/40">ALTECH</span>
+  1110→  1110→      </p>
+  1111→  1111→    </div>
+  1112→  1112→    </>
+  1113→  1113→  );
+  1114→  1114→}
+  1115→  1115→

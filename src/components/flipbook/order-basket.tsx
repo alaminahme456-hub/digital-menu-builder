@@ -181,6 +181,14 @@ export default function OrderBasket({
                   Order on WhatsApp
                 </button>
               )}
+
+              {/* Ordering turned off message */}
+              {!business.whatsappOrder && (
+                <div className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm text-gray-400 bg-gray-100">
+                  <MessageCircle className="w-4 h-4" />
+                  Ordering is currently unavailable
+                </div>
+              )}
             </div>
           </div>
         </>
