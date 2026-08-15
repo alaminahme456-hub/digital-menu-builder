@@ -169,7 +169,7 @@ export default function LandingPage() {
               </Button>
               <Button
                 onClick={() => navigate('/register')}
-                className="bg-charcoal hover:bg-charcoal-light text-white text-[13px] font-medium h-9 px-5 rounded-lg"
+                className="bg-charcoal hover:bg-charcoal-light text-white text-[10px] sm:text-[13px] font-medium h-7 sm:h-9 px-2.5 sm:px-5 rounded-lg"
               >
                 Create Your Experience
               </Button>
