@@ -76,8 +76,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Verify ownership first with the user's JWT
     const authSupabase = createServerClient(authUser.token);
-
     const { data: bizRow, error: bizError } = await authSupabase
       .from('businesses')
       .select('id')
@@ -89,8 +89,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Business not found' }, { status: 404 });
     }
 
-    // Use the authenticated client (user's JWT) so RLS recognizes the owner
-    const supabase = authSupabase;
+    // Use service client to bypass RLS (ownership already verified above)
+    const supabase = createServiceClient();
 
     const { data: catRows, error: catError } = await supabase
       .from('menu_categories')
@@ -99,8 +99,8 @@ export async function GET(request: NextRequest) {
       .order('sort_order', { ascending: true });
 
     if (catError) {
-      console.error('Get categories error:', catError);
-      return NextResponse.json({ error: 'Failed to get categories', detail: catError.message }, { status: 500 });
+      console.error('Get categories error:', JSON.stringify(catError));
+      return NextResponse.json({ error: 'Failed to get categories', detail: catError.message, code: catError.code }, { status: 500 });
     }
 
     const categories = toCamelList(catRows ?? []);
@@ -113,8 +113,8 @@ export async function GET(request: NextRequest) {
       .order('sort_order', { ascending: true });
 
     if (itemError) {
-      console.error('Get items error:', itemError);
-      return NextResponse.json({ error: 'Failed to get items' }, { status: 500 });
+      console.error('Get items error:', JSON.stringify(itemError));
+      return NextResponse.json({ error: 'Failed to get items', detail: itemError.message, code: itemError.code }, { status: 500 });
     }
 
     const allItems = toCamelList(itemRows ?? []);

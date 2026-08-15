@@ -728,7 +728,7 @@ export default function MenuManager() {
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
         console.error('Fetch categories failed:', res.status, errBody);
-        throw new Error(errBody?.error || `HTTP ${res.status}`);
+        throw new Error(errBody?.detail || errBody?.error || `HTTP ${res.status}`);
       }
       const data = await res.json();
       setCategories(data.categories || []);
