@@ -17,44 +17,45 @@
 CREATE OR REPLACE FUNCTION get_public_menu(p_slug TEXT)
 RETURNS JSON AS $$
 DECLARE
+  v_biz_id TEXT;
   v_business JSON;
   v_categories JSON;
   v_items JSON;
   v_uploads JSON;
-  v_result JSON;
 BEGIN
-  -- Fetch business
-  SELECT json_build_object(
-    'data', to_jsonb(b)
-  ) INTO v_business
-  FROM businesses b
-  WHERE b.slug = p_slug;
+  -- Fetch business id first (TEXT type for compatibility)
+  SELECT id::TEXT INTO v_biz_id
+  FROM businesses
+  WHERE slug = p_slug
+  LIMIT 1;
 
-  IF v_business IS NULL THEN
+  IF v_biz_id IS NULL THEN
     RETURN json_build_object('error', 'not_found');
   END IF;
 
-  -- Get business id from the result
-  SELECT jsonb_path_query_first(v_business, '$.data.id')#>>'{}' INTO v_result;
-  
+  -- Fetch business data
+  SELECT to_jsonb(b) INTO v_business
+  FROM businesses b
+  WHERE b.id = v_biz_id::uuid;
+
   -- Fetch categories
   SELECT json_agg(to_jsonb(c) ORDER BY c.sort_order ASC) INTO v_categories
   FROM menu_categories c
-  WHERE c.business_id = v_result::uuid;
+  WHERE c.business_id = v_biz_id::uuid;
 
   -- Fetch items
   SELECT json_agg(to_jsonb(i) ORDER BY i.sort_order ASC) INTO v_items
   FROM menu_items i
-  WHERE i.business_id = v_result::uuid;
+  WHERE i.business_id = v_biz_id::uuid;
 
   -- Fetch published uploads
   SELECT json_agg(to_jsonb(u) ORDER BY u.created_at DESC) INTO v_uploads
   FROM menu_uploads u
-  WHERE u.business_id = v_result::uuid AND u.published = true;
+  WHERE u.business_id = v_biz_id::uuid AND u.published = true;
 
   -- Combine results
   RETURN json_build_object(
-    'business', jsonb_path_query_first(v_business, '$.data'),
+    'business', v_business,
     'categories', COALESCE(v_categories, '[]'::json),
     'items', COALESCE(v_items, '[]'::json),
     'uploads', COALESCE(v_uploads, '[]'::json)
@@ -64,8 +65,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
 -- ============================================================
 -- PART 2: Update RLS policies for defense-in-depth
--- (Even though the function bypasses RLS, these policies
---  ensure that direct table queries also work for anon users)
+-- Uses owns_business(business_id::text) for UUID cast safety
 -- ============================================================
 
 -- 1. Businesses: Allow anon to read published businesses
@@ -77,27 +77,27 @@ CREATE POLICY "biz_select_own" ON businesses
 DROP POLICY IF EXISTS "cat_select" ON menu_categories;
 CREATE POLICY "cat_select" ON menu_categories
   FOR SELECT USING (
-    owns_business(business_id)
+    owns_business(business_id::text)
     OR is_admin()
-    OR EXISTS (SELECT 1 FROM businesses WHERE businesses.id = menu_categories.business_id AND businesses.status = 'published')
+    OR EXISTS (SELECT 1 FROM businesses WHERE businesses.id = menu_categories.business_id::uuid AND businesses.status = 'published')
   );
 
 -- 3. Menu Items: Allow anon to read for published businesses
 DROP POLICY IF EXISTS "item_select" ON menu_items;
 CREATE POLICY "item_select" ON menu_items
   FOR SELECT USING (
-    owns_business(business_id)
+    owns_business(business_id::text)
     OR is_admin()
-    OR EXISTS (SELECT 1 FROM businesses WHERE businesses.id = menu_items.business_id AND businesses.status = 'published')
+    OR EXISTS (SELECT 1 FROM businesses WHERE businesses.id = menu_items.business_id::uuid AND businesses.status = 'published')
   );
 
 -- 4. Menu Uploads: Allow anon to read for published businesses
 DROP POLICY IF EXISTS "upload_select" ON menu_uploads;
 CREATE POLICY "upload_select" ON menu_uploads
   FOR SELECT USING (
-    owns_business(business_id)
+    owns_business(business_id::text)
     OR is_admin()
-    OR EXISTS (SELECT 1 FROM businesses WHERE businesses.id = menu_uploads.business_id AND businesses.status = 'published')
+    OR EXISTS (SELECT 1 FROM businesses WHERE businesses.id = menu_uploads.business_id::uuid AND businesses.status = 'published')
   );
 
 -- 5. Analytics: Allow anon inserts for view tracking
@@ -109,7 +109,7 @@ CREATE POLICY "analytics_insert" ON analytics
 DROP POLICY IF EXISTS "analytics_select" ON analytics;
 CREATE POLICY "analytics_select" ON analytics
   FOR SELECT USING (
-    owns_business(business_id)
+    owns_business(business_id::text)
     OR is_admin()
-    OR EXISTS (SELECT 1 FROM businesses WHERE businesses.id = analytics.business_id AND businesses.status = 'published')
+    OR EXISTS (SELECT 1 FROM businesses WHERE businesses.id = analytics.business_id::uuid AND businesses.status = 'published')
   );

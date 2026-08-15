@@ -725,7 +725,11 @@ export default function MenuManager() {
       const res = await fetch(`/api/menu/categories?businessId=${businessId}`, {
         headers: authHeaders(token),
       });
-      if (!res.ok) throw new Error('Failed to fetch');
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        console.error('Fetch categories failed:', res.status, errBody);
+        throw new Error(errBody?.error || `HTTP ${res.status}`);
+      }
       const data = await res.json();
       setCategories(data.categories || []);
       // Auto-select first category if none selected
@@ -739,8 +743,9 @@ export default function MenuManager() {
         }
         return prev;
       });
-    } catch {
-      toast.error('Failed to load menu data');
+    } catch (err) {
+      console.error('Failed to load menu data:', err);
+      toast.error(`Failed to load menu data: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
