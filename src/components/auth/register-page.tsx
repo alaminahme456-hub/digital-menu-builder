@@ -24,7 +24,11 @@ import { useAuthStore, useAppStore } from '@/lib/store';
 import { BUSINESS_CATEGORIES } from '@/lib/types';
 import { toast } from 'sonner';
 
-export default function RegisterPage() {
+interface RegisterPageProps {
+  isDesigner?: boolean;
+}
+
+export default function RegisterPage({ isDesigner = false }: RegisterPageProps) {
   const navigate = useAppStore((s) => s.navigate);
   const setAuth = useAuthStore((s) => s.setAuth);
   const setBusinesses = useAppStore((s) => s.setBusinesses);
@@ -63,7 +67,7 @@ export default function RegisterPage() {
       toast.error('Passwords do not match');
       return false;
     }
-    if (!category) {
+    if (!category && !isDesigner) {
       toast.error('Please select a business category');
       return false;
     }
@@ -230,10 +234,10 @@ export default function RegisterPage() {
 
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-charcoal tracking-tight font-editorial">
-                Create your account
+                {isDesigner ? 'Create your designer account' : 'Create your account'}
               </h2>
               <p className="mt-2 text-sm text-charcoal/40">
-                Start building your digital experience
+                {isDesigner ? 'Start sharing your designs with the world' : 'Start building your digital experience'}
               </p>
             </div>
 
@@ -274,7 +278,8 @@ export default function RegisterPage() {
                     />
                   </div>
 
-                  {/* Business Category */}
+                  {/* Business Category — hidden for designer registration */}
+                  {!isDesigner && (
                   <div className="space-y-2">
                     <Label htmlFor="category" className="text-[12px] font-medium tracking-wide uppercase text-charcoal/50">
                       Business Category
@@ -292,6 +297,7 @@ export default function RegisterPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  )}
 
                   {/* Password */}
                   <div className="space-y-2">

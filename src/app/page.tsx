@@ -147,8 +147,9 @@ export default function Home() {
         case 'login':
           return <LoginPage />;
         case 'register':
-        case 'designer-register':
           return <RegisterPage />;
+        case 'designer-register':
+          return <RegisterPage isDesigner />;
         default:
           return <LandingPage />;
       }
