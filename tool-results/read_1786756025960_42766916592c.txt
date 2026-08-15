@@ -1,0 +1,1087 @@
+   290→      if (res.ok) {
+   291→        const data = await res.json();
+   292→        setWithdrawals(data.withdrawals || []);
+   293→      }
+   294→    } catch {
+   295→      toast.error('Failed to load withdrawals');
+   296→    } finally {
+   297→      setLoading((p) => ({ ...p, withdrawals: false }));
+   298→    }
+   299→  }, [token]);
+   300→
+   301→  const fetchConfig = useCallback(async () => {
+   302→    if (!token) return;
+   303→    setLoading((p) => ({ ...p, config: true }));
+   304→    try {
+   305→      const res = await fetch('/api/admin/marketplace/config', {
+   306→        headers: { Authorization: `Bearer ${token}` },
+   307→      });
+   308→      if (res.ok) {
+   309→        const data = await res.json();
+   310→        setConfig(data.config);
+   311→      }
+   312→    } catch {
+   313→      // Config may not exist yet, use defaults
+   314→    } finally {
+   315→      setLoading((p) => ({ ...p, config: false }));
+   316→    }
+   317→  }, [token]);
+   318→
+   319→  const fetchStats = useCallback(async () => {
+   320→    if (!token) return;
+   321→    setLoading((p) => ({ ...p, stats: true }));
+   322→    try {
+   323→      const res = await fetch('/api/admin/marketplace/stats', {
+   324→        headers: { Authorization: `Bearer ${token}` },
+   325→      });
+   326→      if (res.ok) {
+   327→        const data = await res.json();
+   328→        setStats(data.stats);
+   329→      }
+   330→    } catch {
+   331→      toast.error('Failed to load marketplace stats');
+   332→    } finally {
+   333→      setLoading((p) => ({ ...p, stats: false }));
+   334→    }
+   335→  }, [token]);
+   336→
+   337→  // ── Effects ─────────────────────────────────────────────────────────────
+   338→
+   339→  useEffect(() => {
+   340→    if (subTab === 'designers') fetchDesigners(designerFilter);
+   341→  }, [subTab, designerFilter, fetchDesigners]);
+   342→
+   343→  useEffect(() => {
+   344→    if (subTab === 'templates') fetchTemplates(templateStatusFilter, templateTypeFilter);
+   345→  }, [subTab, templateStatusFilter, templateTypeFilter, fetchTemplates]);
+   346→
+   347→  useEffect(() => {
+   348→    if (subTab === 'withdrawals') fetchWithdrawals('pending');
+   349→  }, [subTab, fetchWithdrawals]);
+   350→
+   351→  useEffect(() => {
+   352→    if (subTab === 'settings') fetchConfig();
+   353→  }, [subTab, fetchConfig]);
+   354→
+   355→  useEffect(() => {
+   356→    if (subTab === 'analytics') fetchStats();
+   357→  }, [subTab, fetchStats]);
+   358→
+   359→  // ── Actions ─────────────────────────────────────────────────────────────
+   360→
+   361→  const handleReviewDesigner = async (
+   362→    id: string,
+   363→    action: 'approve' | 'reject',
+   364→    reason?: string
+   365→  ) => {
+   366→    if (!token) return;
+   367→    try {
+   368→      const res = await fetch('/api/admin/marketplace/designers', {
+   369→        method: 'POST',
+   370→        headers: {
+   371→          Authorization: `Bearer ${token}`,
+   372→          'Content-Type': 'application/json',
+   373→        },
+   374→        body: JSON.stringify({ id, action, reason }),
+   375→      });
+   376→      if (res.ok) {
+   377→        setDesigners((prev) =>
+   378→          prev.map((d) =>
+   379→            d.id === id
+   380→              ? { ...d, status: action === 'approve' ? 'approved' : 'rejected' }
+   381→              : d
+   382→          )
+   383→        );
+   384→        toast.success(`Designer application ${action === 'approve' ? 'approved' : 'rejected'}`);
+   385→      } else {
+   386→        toast.error(`Failed to ${action} designer`);
+   387→      }
+   388→    } catch {
+   389→      toast.error(`Failed to ${action} designer`);
+   390→    }
+   391→  };
+   392→
+   393→  const handleReviewTemplate = async (
+   394→    id: string,
+   395→    action: 'approve' | 'reject' | 'request_changes' | 'feature' | 'unfeature',
+   396→    reason?: string
+   397→  ) => {
+   398→    if (!token) return;
+   399→    try {
+   400→      const res = await fetch('/api/admin/marketplace/templates', {
+   401→        method: 'PUT',
+   402→        headers: {
+   403→          Authorization: `Bearer ${token}`,
+   404→          'Content-Type': 'application/json',
+   405→        },
+   406→        body: JSON.stringify({ id, action, reason }),
+   407→      });
+   408→      if (res.ok) {
+   409→        if (action === 'feature' || action === 'unfeature') {
+   410→          setTemplates((prev) =>
+   411→            prev.map((t) =>
+   412→              t.id === id
+   413→                ? { ...t, featured: action === 'feature' }
+   414→                : t
+   415→            )
+   416→          );
+   417→          toast.success(`Template ${action === 'feature' ? 'featured' : 'unfeatured'}`);
+   418→        } else {
+   419→          setTemplates((prev) =>
+   420→            prev.map((t) =>
+   421→              t.id === id
+   422→                ? {
+   423→                    ...t,
+   424→                    status:
+   425→                      action === 'approve'
+   426→                        ? 'published'
+   427→                        : action === 'reject'
+   428→                          ? 'rejected'
+   429→                          : t.status,
+   430→                  }
+   431→                : t
+   432→            )
+   433→          );
+   434→          toast.success(
+   435→            action === 'approve'
+   436→              ? 'Template published'
+   437→              : action === 'reject'
+   438→                ? 'Template rejected'
+   439→                : 'Changes requested'
+   440→          );
+   441→        }
+   442→      } else {
+   443→        toast.error(`Failed to process template`);
+   444→      }
+   445→    } catch {
+   446→      toast.error('Failed to process template');
+   447→    }
+   448→  };
+   449→
+   450→  const handleProcessWithdrawal = async (
+   451→    id: string,
+   452→    action: 'approve' | 'reject' | 'paid'
+   453→  ) => {
+   454→    if (!token) return;
+   455→    try {
+   456→      const res = await fetch('/api/admin/marketplace/withdrawals', {
+   457→        method: 'PUT',
+   458→        headers: {
+   459→          Authorization: `Bearer ${token}`,
+   460→          'Content-Type': 'application/json',
+   461→        },
+   462→        body: JSON.stringify({ id, action }),
+   463→      });
+   464→      if (res.ok) {
+   465→        setWithdrawals((prev) =>
+   466→          prev.map((w) =>
+   467→            w.id === id ? { ...w, status: action === 'paid' ? 'paid' : action } : w
+   468→          )
+   469→        );
+   470→        toast.success(`Withdrawal ${action === 'paid' ? 'marked as paid' : `${action}d`}`);
+   471→      } else {
+   472→        toast.error('Failed to process withdrawal');
+   473→      }
+   474→    } catch {
+   475→      toast.error('Failed to process withdrawal');
+   476→    }
+   477→  };
+   478→
+   479→  const handleSaveConfig = async () => {
+   480→    if (!token) return;
+   481→    setLoading((p) => ({ ...p, config: true }));
+   482→    try {
+   483→      const res = await fetch('/api/admin/marketplace/config', {
+   484→        method: 'PUT',
+   485→        headers: {
+   486→          Authorization: `Bearer ${token}`,
+   487→          'Content-Type': 'application/json',
+   488→        },
+   489→        body: JSON.stringify(config),
+   490→      });
+   491→      if (res.ok) {
+   492→        toast.success('Marketplace settings saved');
+   493→      } else {
+   494→        toast.error('Failed to save settings');
+   495→      }
+   496→    } catch {
+   497→      toast.error('Failed to save settings');
+   498→    } finally {
+   499→      setLoading((p) => ({ ...p, config: false }));
+   500→    }
+   501→  };
+   502→
+   503→  const openRejectDialog = (type: 'designer' | 'template' | 'withdrawal', id: string) => {
+   504→    setRejectDialog({ open: true, type, id, reason: '' });
+   505→  };
+   506→
+   507→  const handleRejectConfirm = () => {
+   508→    const { type, id, reason } = rejectDialog;
+   509→    if (!reason.trim()) {
+   510→      toast.error('Please provide a reason');
+   511→      return;
+   512→    }
+   513→    if (type === 'designer') {
+   514→      handleReviewDesigner(id, 'reject', reason);
+   515→    } else if (type === 'template') {
+   516→      handleReviewTemplate(id, 'reject', reason);
+   517→    } else if (type === 'withdrawal') {
+   518→      handleProcessWithdrawal(id, 'reject');
+   519→    }
+   520→    setRejectDialog({ open: false, type: '', id: '', reason: '' });
+   521→  };
+   522→
+   523→  const handleRequestChangesConfirm = () => {
+   524→    const { id, message } = changesDialog;
+   525→    if (!message.trim()) {
+   526→      toast.error('Please provide change details');
+   527→      return;
+   528→    }
+   529→    handleReviewTemplate(id, 'request_changes', message);
+   530→    setChangesDialog({ open: false, id: '', message: '' });
+   531→  };
+   532→
+   533→  // ── Skeleton Loader ─────────────────────────────────────────────────────
+   534→
+   535→  const TableSkeleton = () => (
+   536→    <div className="space-y-3">
+   537→      {[1, 2, 3, 4, 5].map((i) => (
+   538→        <Skeleton key={i} className="h-12 w-full" />
+   539→      ))}
+   540→    </div>
+   541→  );
+   542→
+   543→  // ── Render ──────────────────────────────────────────────────────────────
+   544→
+   545→  return (
+   546→    <div className="space-y-6">
+   547→      <Tabs value={subTab} onValueChange={setSubTab}>
+   548→        <TabsList className="flex-wrap h-auto gap-1">
+   549→          <TabsTrigger value="designers" className="gap-1.5">
+   550→            <Users className="h-3.5 w-3.5" />
+   551→            <span className="hidden sm:inline">Designers</span>
+   552→          </TabsTrigger>
+   553→          <TabsTrigger value="templates" className="gap-1.5">
+   554→            <Palette className="h-3.5 w-3.5" />
+   555→            <span className="hidden sm:inline">Templates</span>
+   556→          </TabsTrigger>
+   557→          <TabsTrigger value="withdrawals" className="gap-1.5">
+   558→            <Wallet className="h-3.5 w-3.5" />
+   559→            <span className="hidden sm:inline">Withdrawals</span>
+   560→          </TabsTrigger>
+   561→          <TabsTrigger value="settings" className="gap-1.5">
+   562→            <Settings className="h-3.5 w-3.5" />
+   563→            <span className="hidden sm:inline">Settings</span>
+   564→          </TabsTrigger>
+   565→          <TabsTrigger value="analytics" className="gap-1.5">
+   566→            <BarChart3 className="h-3.5 w-3.5" />
+   567→            <span className="hidden sm:inline">Analytics</span>
+   568→          </TabsTrigger>
+   569→        </TabsList>
+   570→
+   571→        {/* ─── Designer Applications ──────────────────────────────────────── */}
+   572→        <TabsContent value="designers" className="mt-6">
+   573→          <Card>
+   574→            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+   575→              <div>
+   576→                <CardTitle className="text-base">Designer Applications</CardTitle>
+   577→                <CardDescription>
+   578→                  {designers.length} application{designers.length !== 1 ? 's' : ''} found
+   579→                </CardDescription>
+   580→              </div>
+   581→              <div className="flex items-center gap-2">
+   582→                <Select value={designerFilter} onValueChange={setDesignerFilter}>
+   583→                  <SelectTrigger className="w-[140px] h-9">
+   584→                    <SelectValue placeholder="Filter status" />
+   585→                  </SelectTrigger>
+   586→                  <SelectContent>
+   587→                    <SelectItem value="all">All Status</SelectItem>
+   588→                    <SelectItem value="pending">Pending</SelectItem>
+   589→                    <SelectItem value="approved">Approved</SelectItem>
+   590→                    <SelectItem value="rejected">Rejected</SelectItem>
+   591→                  </SelectContent>
+   592→                </Select>
+   593→                <Button
+   594→                  variant="outline"
+   595→                  size="sm"
+   596→                  onClick={() => fetchDesigners(designerFilter)}
+   597→                  disabled={loading.designers}
+   598→                >
+   599→                  <RefreshCw
+   600→                    className={`mr-1.5 h-3.5 w-3.5 ${loading.designers ? 'animate-spin' : ''}`}
+   601→                  />
+   602→                  Refresh
+   603→                </Button>
+   604→              </div>
+   605→            </CardHeader>
+   606→            <CardContent>
+   607→              {loading.designers ? (
+   608→                <TableSkeleton />
+   609→              ) : designers.length === 0 ? (
+   610→                <div className="flex items-center justify-center h-32 text-muted-foreground">
+   611→                  No designer applications found
+   612→                </div>
+   613→              ) : (
+   614→                <div className="overflow-x-auto">
+   615→                  <Table>
+   616→                    <TableHeader>
+   617→                      <TableRow>
+   618→                        <TableHead>Applicant</TableHead>
+   619→                        <TableHead className="hidden sm:table-cell">Username</TableHead>
+   620→                        <TableHead className="hidden md:table-cell">Email</TableHead>
+   621→                        <TableHead className="hidden lg:table-cell">Country</TableHead>
+   622→                        <TableHead className="hidden lg:table-cell">Specialties</TableHead>
+   623→                        <TableHead className="hidden xl:table-cell">Submitted</TableHead>
+   624→                        <TableHead>Status</TableHead>
+   625→                        <TableHead className="w-10"> </TableHead>
+   626→                      </TableRow>
+   627→                    </TableHeader>
+   628→                    <TableBody>
+   629→                      {designers.map((d) => (
+   630→                        <TableRow key={d.id}>
+   631→                          <TableCell className="font-medium text-sm">
+   632→                            {d.applicantName}
+   633→                          </TableCell>
+   634→                          <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+   635→                            @{d.username}
+   636→                          </TableCell>
+   637→                          <TableCell className="hidden md:table-cell text-sm">
+   638→                            {d.email}
+   639→                          </TableCell>
+   640→                          <TableCell className="hidden lg:table-cell text-sm">
+   641→                            {d.country}
+   642→                          </TableCell>
+   643→                          <TableCell className="hidden lg:table-cell">
+   644→                            <div className="flex flex-wrap gap-1">
+   645→                              {d.specialties.split(',').map((s) => (
+   646→                                <Badge key={s} variant="outline" className="text-xs">
+   647→                                  {s.trim()}
+   648→                                </Badge>
+   649→                              ))}
+   650→                            </div>
+   651→                          </TableCell>
+   652→                          <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
+   653→                            {formatDate(d.submittedAt)}
+   654→                          </TableCell>
+   655→                          <TableCell>{applicationStatusBadge(d.status)}</TableCell>
+   656→                          <TableCell>
+   657→                            <DropdownMenu>
+   658→                              <DropdownMenuTrigger asChild>
+   659→                                <Button variant="ghost" size="icon" className="h-8 w-8">
+   660→                                  <MoreHorizontal className="h-4 w-4" />
+   661→                                </Button>
+   662→                              </DropdownMenuTrigger>
+   663→                              <DropdownMenuContent align="end">
+   664→                                {d.status === 'pending' && (
+   665→                                  <DropdownMenuItem
+   666→                                    onClick={() => handleReviewDesigner(d.id, 'approve')}
+   667→                                  >
+   668→                                    <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />
+   669→                                    Approve
+   670→                                  </DropdownMenuItem>
+   671→                                )}
+   672→                                {d.status === 'pending' && (
+   673→                                  <DropdownMenuItem
+   674→                                    onClick={() => openRejectDialog('designer', d.id)}
+   675→                                    className="text-red-600 focus:text-red-600"
+   676→                                  >
+   677→                                    <Ban className="mr-2 h-4 w-4" />
+   678→                                    Reject
+   679→                                  </DropdownMenuItem>
+   680→                                )}
+   681→                                <DropdownMenuItem>
+   682→                                  <Eye className="mr-2 h-4 w-4" />
+   683→                                  View Profile
+   684→                                </DropdownMenuItem>
+   685→                              </DropdownMenuContent>
+   686→                            </DropdownMenu>
+   687→                          </TableCell>
+   688→                        </TableRow>
+   689→                      ))}
+   690→                    </TableBody>
+   691→                  </Table>
+   692→                </div>
+   693→              )}
+   694→            </CardContent>
+   695→          </Card>
+   696→        </TabsContent>
+   697→
+   698→        {/* ─── Template Review ───────────────────────────────────────────── */}
+   699→        <TabsContent value="templates" className="mt-6">
+   700→          <Card>
+   701→            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+   702→              <div>
+   703→                <CardTitle className="text-base">Template Review</CardTitle>
+   704→                <CardDescription>
+   705→                  {templates.length} template{templates.length !== 1 ? 's' : ''} found
+   706→                </CardDescription>
+   707→              </div>
+   708→              <div className="flex items-center gap-2">
+   709→                <Select value={templateStatusFilter} onValueChange={setTemplateStatusFilter}>
+   710→                  <SelectTrigger className="w-[130px] h-9">
+   711→                    <SelectValue placeholder="Status" />
+   712→                  </SelectTrigger>
+   713→                  <SelectContent>
+   714→                    <SelectItem value="all">All Status</SelectItem>
+   715→                    <SelectItem value="pending">Pending</SelectItem>
+   716→                    <SelectItem value="published">Published</SelectItem>
+   717→                    <SelectItem value="rejected">Rejected</SelectItem>
+   718→                  </SelectContent>
+   719→                </Select>
+   720→                <Select value={templateTypeFilter} onValueChange={setTemplateTypeFilter}>
+   721→                  <SelectTrigger className="w-[120px] h-9">
+   722→                    <SelectValue placeholder="Type" />
+   723→                  </SelectTrigger>
+   724→                  <SelectContent>
+   725→                    <SelectItem value="all">All Types</SelectItem>
+   726→                    <SelectItem value="menu">Menu</SelectItem>
+   727→                    <SelectItem value="landing">Landing Page</SelectItem>
+   728→                    <SelectItem value="portfolio">Portfolio</SelectItem>
+   729→                    <SelectItem value="other">Other</SelectItem>
+   730→                  </SelectContent>
+   731→                </Select>
+   732→                <Button
+   733→                  variant="outline"
+   734→                  size="sm"
+   735→                  onClick={() => fetchTemplates(templateStatusFilter, templateTypeFilter)}
+   736→                  disabled={loading.templates}
+   737→                >
+   738→                  <RefreshCw
+   739→                    className={`mr-1.5 h-3.5 w-3.5 ${loading.templates ? 'animate-spin' : ''}`}
+   740→                  />
+   741→                  Refresh
+   742→                </Button>
+   743→              </div>
+   744→            </CardHeader>
+   745→            <CardContent>
+   746→              {loading.templates ? (
+   747→                <TableSkeleton />
+   748→              ) : templates.length === 0 ? (
+   749→                <div className="flex items-center justify-center h-32 text-muted-foreground">
+   750→                  No templates found
+   751→                </div>
+   752→              ) : (
+   753→                <div className="overflow-x-auto">
+   754→                  <Table>
+   755→                    <TableHeader>
+   756→                      <TableRow>
+   757→                        <TableHead className="w-12">Preview</TableHead>
+   758→                        <TableHead>Template Name</TableHead>
+   759→                        <TableHead className="hidden sm:table-cell">Type</TableHead>
+   760→                        <TableHead className="hidden md:table-cell">Designer</TableHead>
+   761→                        <TableHead className="hidden lg:table-cell">Category</TableHead>
+   762→                        <TableHead className="hidden xl:table-cell">Submitted</TableHead>
+   763→                        <TableHead>Status</TableHead>
+   764→                        <TableHead className="w-10"> </TableHead>
+   765→                      </TableRow>
+   766→                    </TableHeader>
+   767→                    <TableBody>
+   768→                      {templates.map((t) => (
+   769→                        <TableRow key={t.id}>
+   770→                          <TableCell>
+   771→                            {t.previewUrl ? (
+   772→                              <div className="h-8 w-12 rounded bg-muted overflow-hidden">
+   773→                                <img
+   774→                                  src={t.previewUrl}
+   775→                                  alt={t.name}
+   776→                                  className="h-full w-full object-cover"
+   777→                                />
+   778→                              </div>
+   779→                            ) : (
+   780→                              <div className="h-8 w-12 rounded bg-muted flex items-center justify-center">
+   781→                                <Image className="h-4 w-4 text-muted-foreground" />
+   782→                              </div>
+   783→                            )}
+   784→                          </TableCell>
+   785→                          <TableCell>
+   786→                            <div className="flex items-center gap-2">
+   787→                              <span className="font-medium text-sm">{t.name}</span>
+   788→                              {t.featured && (
+   789→                                <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+   790→                              )}
+   791→                            </div>
+   792→                          </TableCell>
+   793→                          <TableCell className="hidden sm:table-cell">
+   794→                            <Badge variant="outline" className="text-xs capitalize">
+   795→                              {t.type}
+   796→                            </Badge>
+   797→                          </TableCell>
+   798→                          <TableCell className="hidden md:table-cell text-sm">
+   799→                            {t.designerName}
+   800→                          </TableCell>
+   801→                          <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+   802→                            {t.category || '—'}
+   803→                          </TableCell>
+   804→                          <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
+   805→                            {formatDate(t.submittedAt)}
+   806→                          </TableCell>
+   807→                          <TableCell>{templateStatusBadge(t.status)}</TableCell>
+   808→                          <TableCell>
+   809→                            <DropdownMenu>
+   810→                              <DropdownMenuTrigger asChild>
+   811→                                <Button variant="ghost" size="icon" className="h-8 w-8">
+   812→                                  <MoreHorizontal className="h-4 w-4" />
+   813→                                </Button>
+   814→                              </DropdownMenuTrigger>
+   815→                              <DropdownMenuContent align="end">
+   816→                                {t.status === 'pending' && (
+   817→                                  <DropdownMenuItem
+   818→                                    onClick={() => handleReviewTemplate(t.id, 'approve')}
+   819→                                  >
+   820→                                    <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />
+   821→                                    Approve
+   822→                                  </DropdownMenuItem>
+   823→                                )}
+   824→                                {(t.status === 'pending' || t.status === 'published') && (
+   825→                                  <DropdownMenuItem
+   826→                                    onClick={() => openRejectDialog('template', t.id)}
+   827→                                    className="text-red-600 focus:text-red-600"
+   828→                                  >
+   829→                                    <Ban className="mr-2 h-4 w-4" />
+   830→                                    Reject
+   831→                                  </DropdownMenuItem>
+   832→                                )}
+   833→                                {t.status === 'pending' && (
+   834→                                  <DropdownMenuItem
+   835→n                                    onClick={() =>
+   836→                                      setChangesDialog({ open: true, id: t.id, message: '' })
+   837→                                    }
+   838→                                  >
+   839→                                    <MessageSquare className="mr-2 h-4 w-4" />
+   840→                                    Request Changes
+   841→                                  </DropdownMenuItem>
+   842→                                )}
+   843→                                {t.status === 'published' && !t.featured && (
+   844→                                  <DropdownMenuItem
+   845→n                                    onClick={() => handleReviewTemplate(t.id, 'feature')}
+   846→                                  >
+   847→                                    <Star className="mr-2 h-4 w-4" />
+   848→                                    Feature
+   849→                                  </DropdownMenuItem>
+   850→                                )}
+   851→                                {t.featured && (
+   852→                                  <DropdownMenuItem
+   853→n                                    onClick={() => handleReviewTemplate(t.id, 'unfeature')}
+   854→                                  >
+   855→                                    <StarOff className="mr-2 h-4 w-4" />
+   856→                                    Unfeature
+   857→                                  </DropdownMenuItem>
+   858→                                )}
+   859→                              </DropdownMenuContent>
+   860→                            </DropdownMenu>
+   861→                          </TableCell>
+   862→                        </TableRow>
+   863→                      ))}
+   864→                    </TableBody>
+   865→                  </Table>
+   866→                </div>
+   867→              )}
+   868→            </CardContent>
+   869→          </Card>
+   870→        </TabsContent>
+   871→
+   872→        {/* ─── Withdrawals ────────────────────────────────────────────────── */}
+   873→        <TabsContent value="withdrawals" className="mt-6">
+   874→          <Card>
+   875→            <CardHeader className="flex flex-row items-center justify-between gap-4">
+   876→              <div>
+   877→                <CardTitle className="text-base">Withdrawal Requests</CardTitle>
+   878→                <CardDescription>
+   879→                  {withdrawals.length} pending request{withdrawals.length !== 1 ? 's' : ''}
+   880→                </CardDescription>
+   881→              </div>
+   882→              <Button
+   883→                variant="outline"
+   884→                size="sm"
+   885→                onClick={() => fetchWithdrawals('pending')}
+   886→                disabled={loading.withdrawals}
+   887→              >
+   888→                <RefreshCw
+   889→                  className={`mr-1.5 h-3.5 w-3.5 ${loading.withdrawals ? 'animate-spin' : ''}`}
+   890→                />
+   891→                Refresh
+   892→              </Button>
+   893→            </CardHeader>
+   894→            <CardContent>
+   895→              {loading.withdrawals ? (
+   896→                <TableSkeleton />
+   897→              ) : withdrawals.length === 0 ? (
+   898→                <div className="flex items-center justify-center h-32 text-muted-foreground">
+   899→                  No pending withdrawal requests
+   900→                </div>
+   901→              ) : (
+   902→                <div className="overflow-x-auto">
+   903→                  <Table>
+   904→                    <TableHeader>
+   905→                      <TableRow>
+   906→                        <TableHead>Designer</TableHead>
+   907→                        <TableHead>Amount</TableHead>
+   908→                        <TableHead className="hidden sm:table-cell">Bank</TableHead>
+   909→                        <TableHead className="hidden md:table-cell">Account Name</TableHead>
+   910→                        <TableHead className="hidden lg:table-cell">Account Number</TableHead>
+   911→                        <TableHead className="hidden xl:table-cell">Requested</TableHead>
+   912→                        <TableHead>Status</TableHead>
+   913→                        <TableHead className="w-10"> </TableHead>
+   914→                      </TableRow>
+   915→                    </TableHeader>
+   916→                    <TableBody>
+   917→                      {withdrawals.map((w) => (
+   918→                        <TableRow key={w.id}>
+   919→                          <TableCell className="font-medium text-sm">
+   920→                            {w.designerName}
+   921→                          </TableCell>
+   922→                          <TableCell className="font-semibold tabular-nums">
+   923→                            {formatCurrency(w.amount)}
+   924→                          </TableCell>
+   925→                          <TableCell className="hidden sm:table-cell text-sm">
+   926→                            {w.bank}
+   927→                          </TableCell>
+   928→                          <TableCell className="hidden md:table-cell text-sm">
+   929→                            {w.accountName}
+   930→                          </TableCell>
+   931→                          <TableCell className="hidden lg:table-cell text-sm tabular-nums">
+   932→                            {w.accountNumber}
+   933→                          </TableCell>
+   934→                          <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
+   935→                            {formatDate(w.requestedAt)}
+   936→                          </TableCell>
+   937→                          <TableCell>{withdrawalStatusBadge(w.status)}</TableCell>
+   938→                          <TableCell>
+   939→                            <DropdownMenu>
+   940→                              <DropdownMenuTrigger asChild>
+   941→                                <Button variant="ghost" size="icon" className="h-8 w-8">
+   942→                                  <MoreHorizontal className="h-4 w-4" />
+   943→                                </Button>
+   944→                              </DropdownMenuTrigger>
+   945→                              <DropdownMenuContent align="end">
+   946→                                {w.status === 'pending' && (
+   947→                                  <>
+   948→                                    <DropdownMenuItem
+   949→                                      onClick={() => handleProcessWithdrawal(w.id, 'approve')}
+   950→                                    >
+   951→                                      <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />
+   952→                                      Approve
+   953→                                    </DropdownMenuItem>
+   954→                                    <DropdownMenuItem
+   955→                                      onClick={() => openRejectDialog('withdrawal', w.id)}
+   956→                                      className="text-red-600 focus:text-red-600"
+   957→                                    >
+   958→                                      <Ban className="mr-2 h-4 w-4" />
+   959→                                      Reject
+   960→                                    </DropdownMenuItem>
+   961→                                  </>
+   962→                                )}
+   963→                                {w.status === 'approved' && (
+   964→                                  <DropdownMenuItem
+   965→                                    onClick={() => handleProcessWithdrawal(w.id, 'paid')}
+   966→                                  >
+   967→                                    <DollarSign className="mr-2 h-4 w-4 text-emerald-600" />
+   968→                                    Mark as Paid
+   969→                                  </DropdownMenuItem>
+   970→                                )}
+   971→                              </DropdownMenuContent>
+   972→                            </DropdownMenu>
+   973→                          </TableCell>
+   974→                        </TableRow>
+   975→                      ))}
+   976→                    </TableBody>
+   977→                  </Table>
+   978→                </div>
+   979→              )}
+   980→            </CardContent>
+   981→          </Card>
+   982→        </TabsContent>
+   983→
+   984→        {/* ─── Settings ───────────────────────────────────────────────────── */}
+   985→        <TabsContent value="settings" className="mt-6">
+   986→          <Card>
+   987→            <CardHeader>
+   988→              <CardTitle className="text-base flex items-center gap-2">
+   989→                <Settings className="h-4 w-4" />
+   990→                Marketplace Configuration
+   991→              </CardTitle>
+   992→              <CardDescription>
+   993→                Configure revenue sharing, withdrawal settings, and marketplace parameters
+   994→              </CardDescription>
+   995→            </CardHeader>
+   996→            <CardContent>
+   997→              <div className="grid gap-6 max-w-lg">
+   998→                <div className="grid gap-2">
+   999→                  <Label htmlFor="designerShare">Designer Revenue Share (%)</Label>
+  1000→                  <Input
+  1001→                    id="designerShare"
+  1002→                    type="number"
+  1003→                    min={0}
+  1004→                    max={100}
+  1005→                    value={config.designerRevenueShare}
+  1006→                    onChange={(e) =>
+  1007→                      setConfig((p) => ({
+  1008→                        ...p,
+  1009→                        designerRevenueShare: Number(e.target.value),
+  1010→                      }))
+  1011→                    }
+  1012→                  />
+  1013→                </div>
+  1014→                <div className="grid gap-2">
+  1015→                  <Label htmlFor="platformShare">Platform Revenue Share (%)</Label>
+  1016→                  <Input
+  1017→                    id="platformShare"
+  1018→                    type="number"
+  1019→                    min={0}
+  1020→                    max={100}
+  1021→                    value={config.platformRevenueShare}
+  1022→                    onChange={(e) =>
+  1023→                      setConfig((p) => ({
+  1024→                        ...p,
+  1025→                        platformRevenueShare: Number(e.target.value),
+  1026→                      }))
+  1027→                    }
+  1028→                  />
+  1029→                </div>
+  1030→                <div className="grid gap-2">
+  1031→                  <Label htmlFor="earningPremium">Earning per Premium Use</Label>
+  1032→                  <Input
+  1033→                    id="earningPremium"
+  1034→                    type="number"
+  1035→                    min={0}
+  1036→                    value={config.earningPerPremiumUse}
+  1037→                    onChange={(e) =>
+  1038→                      setConfig((p) => ({
+  1039→                        ...p,
+  1040→                        earningPerPremiumUse: Number(e.target.value),
+  1041→                      }))
+  1042→                    }
+  1043→                  />
+  1044→                </div>
+  1045→                <div className="grid gap-2">
+  1046→                  <Label htmlFor="currency">Currency Symbol</Label>
+  1047→                  <Input
+  1048→                    id="currency"
+  1049→                    type="text"
+  1050→                    value={config.currency}
+  1051→                    onChange={(e) =>
+  1052→                      setConfig((p) => ({
+  1053→                        ...p,
+  1054→                        currency: e.target.value,
+  1055→                      }))
+  1056→                    }
+  1057→                    placeholder="₦"
+  1058→                  />
+  1059→                </div>
+  1060→                <div className="grid gap-2">
+  1061→                  <Label htmlFor="minWithdrawal">Minimum Withdrawal Amount</Label>
+  1062→                  <Input
+  1063→                    id="minWithdrawal"
+  1064→                    type="number"
+  1065→                    min={0}
+  1066→                    value={config.minimumWithdrawal}
+  1067→                    onChange={(e) =>
+  1068→                      setConfig((p) => ({
+  1069→                        ...p,
+  1070→                        minimumWithdrawal: Number(e.target.value),
+  1071→                      }))
+  1072→                    }
+  1073→                  />
+  1074→                </div>
+  1075→                <div className="pt-2">
+  1076→                  <Button
+  1077→                    onClick={handleSaveConfig}
+  1078→                    disabled={loading.config}
+  1079→                  >
+  1080→                    {loading.config ? (
+  1081→                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+  1082→                    ) : null}
+  1083→                    Save Settings
+  1084→                  </Button>
+  1085→                </div>
+  1086→              </div>
+  1087→            </CardContent>
+  1088→          </Card>
+  1089→        </TabsContent>
+  1090→
+  1091→        {/* ─── Analytics ──────────────────────────────────────────────────── */}
+  1092→        <TabsContent value="analytics" className="mt-6 space-y-6">
+  1093→          <div className="flex justify-end">
+  1094→            <Button
+  1095→              variant="outline"
+  1096→              size="sm"
+  1097→              onClick={fetchStats}
+  1098→              disabled={loading.stats}
+  1099→            >
+  1100→              <RefreshCw
+  1101→                className={`mr-1.5 h-3.5 w-3.5 ${loading.stats ? 'animate-spin' : ''}`}
+  1102→              />
+  1103→              Refresh
+  1104→            </Button>
+  1105→          </div>
+  1106→
+  1107→          {loading.stats ? (
+  1108→            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+  1109→              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+  1110→                <Card key={i} className="gap-4">
+  1111→                  <CardContent className="p-4">
+  1112→                    <Skeleton className="h-4 w-24 mb-2" />
+  1113→                    <Skeleton className="h-7 w-16" />
+  1114→                  </CardContent>
+  1115→                </Card>
+  1116→              ))}
+  1117→            </div>
+  1118→          ) : stats ? (
+  1119→            <>
+  1120→              {/* Stat Cards */}
+  1121→              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+  1122→                <Card className="gap-4">
+  1123→                  <CardContent className="flex items-center gap-3 p-4">
+  1124→                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/50">
+  1125→                      <Users className="h-5 w-5 text-amber-600" />
+  1126→                    </div>
+  1127→                    <div className="min-w-0">
+  1128→                      <p className="text-xs text-muted-foreground truncate">Total Designers</p>
+  1129→                      <p className="text-xl font-bold tabular-nums">{formatNumber(stats.totalDesigners)}</p>
+  1130→                    </div>
+  1131→                  </CardContent>
+  1132→                </Card>
+  1133→                <Card className="gap-4">
+  1134→                  <CardContent className="flex items-center gap-3 p-4">
+  1135→                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/50">
+  1136→                      <FileCheck className="h-5 w-5 text-amber-500" />
+  1137→                    </div>
+  1138→                    <div className="min-w-0">
+  1139→                      <p className="text-xs text-muted-foreground truncate">Pending Designers</p>
+  1140→                      <p className="text-xl font-bold tabular-nums">{formatNumber(stats.pendingDesigners)}</p>
+  1141→                    </div>
+  1142→                  </CardContent>
+  1143→                </Card>
+  1144→                <Card className="gap-4">
+  1145→                  <CardContent className="flex items-center gap-3 p-4">
+  1146→                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/50">
+  1147→                      <Palette className="h-5 w-5 text-violet-600" />
+  1148→                    </div>
+  1149→                    <div className="min-w-0">
+  1150→                      <p className="text-xs text-muted-foreground truncate">Total Templates</p>
+  1151→                      <p className="text-xl font-bold tabular-nums">{formatNumber(stats.totalTemplates)}</p>
+  1152→                    </div>
+  1153→                  </CardContent>
+  1154→                </Card>
+  1155→                <Card className="gap-4">
+  1156→                  <CardContent className="flex items-center gap-3 p-4">
+  1157→                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/50">
+  1158→                      <FileCheck className="h-5 w-5 text-amber-500" />
+  1159→                    </div>
+  1160→                    <div className="min-w-0">
+  1161→                      <p className="text-xs text-muted-foreground truncate">Pending Templates</p>
+  1162→                      <p className="text-xl font-bold tabular-nums">{formatNumber(stats.pendingTemplates)}</p>
+  1163→                    </div>
+  1164→                  </CardContent>
+  1165→                </Card>
+  1166→                <Card className="gap-4">
+  1167→                  <CardContent className="flex items-center gap-3 p-4">
+  1168→                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/50">
+  1169→                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+  1170→                    </div>
+  1171→                    <div className="min-w-0">
+  1172→                      <p className="text-xs text-muted-foreground truncate">Published Templates</p>
+  1173→                      <p className="text-xl font-bold tabular-nums">{formatNumber(stats.publishedTemplates)}</p>
+  1174→                    </div>
+  1175→                  </CardContent>
+  1176→                </Card>
+  1177→                <Card className="gap-4">
+  1178→                  <CardContent className="flex items-center gap-3 p-4">
+  1179→                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-sky-50 dark:bg-sky-950/50">
+  1180→                      <Store className="h-5 w-5 text-sky-600" />
+  1181→                    </div>
+  1182→                    <div className="min-w-0">
+  1183→                      <p className="text-xs text-muted-foreground truncate">Total Template Uses</p>
+  1184→                      <p className="text-xl font-bold tabular-nums">{formatNumber(stats.totalTemplateUses)}</p>
+  1185→                    </div>
+  1186→                  </CardContent>
+  1187→                </Card>
+  1188→                <Card className="gap-4">
+  1189→                  <CardContent className="flex items-center gap-3 p-4">
+  1190→                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-950/50">
+  1191→                      <Star className="h-5 w-5 text-rose-600" />
+  1192→                    </div>
+  1193→                    <div className="min-w-0">
+  1194→                      <p className="text-xs text-muted-foreground truncate">Premium Uses</p>
+  1195→                      <p className="text-xl font-bold tabular-nums">{formatNumber(stats.premiumUses)}</p>
+  1196→                    </div>
+  1197→                  </CardContent>
+  1198→                </Card>
+  1199→                <Card className="gap-4">
+  1200→                  <CardContent className="flex items-center gap-3 p-4">
+  1201→                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/50">
+  1202→                      <DollarSign className="h-5 w-5 text-emerald-600" />
+  1203→                    </div>
+  1204→                    <div className="min-w-0">
+  1205→                      <p className="text-xs text-muted-foreground truncate">Total Payouts</p>
+  1206→                      <p className="text-xl font-bold tabular-nums">{formatCurrency(stats.totalPayouts)}</p>
+  1207→                    </div>
+  1208→                  </CardContent>
+  1209→                </Card>
+  1210→              </div>
+  1211→
+  1212→              {/* Marketplace Revenue - prominent */}
+  1213→              <Card className="border-emerald-200 dark:border-emerald-800">
+  1214→                <CardContent className="flex items-center gap-4 p-6">
+  1215→                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/50">
+  1216→                    <BarChart3 className="h-6 w-6 text-emerald-600" />
+  1217→                  </div>
+  1218→                  <div>
+  1219→                    <p className="text-sm text-muted-foreground">Marketplace Revenue</p>
+  1220→                    <p className="text-3xl font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+  1221→                      {formatCurrency(stats.marketplaceRevenue)}
+  1222→                    </p>
+  1223→                  </div>
+  1224→                </CardContent>
+  1225→              </Card>
+  1226→
+  1227→              {/* Top Lists */}
+  1228→              <div className="grid md:grid-cols-2 gap-6">
+  1229→                {/* Top Designers */}
+  1230→                <Card>
+  1231→                  <CardHeader>
+  1232→                    <CardTitle className="text-base">Top Designers</CardTitle>
+  1233→                  </CardHeader>
+  1234→                  <CardContent>
+  1235→                    {stats.topDesigners.length === 0 ? (
+  1236→                      <p className="text-sm text-muted-foreground text-center py-4">
+  1237→                        No data available
+  1238→                      </p>
+  1239→                    ) : (
+  1240→                      <div className="space-y-3 max-h-72 overflow-y-auto">
+  1241→                        {stats.topDesigners.map((d, i) => (
+  1242→                          <div
+  1243→                            key={i}
+  1244→                            className="flex items-center justify-between gap-3 py-2 border-b last:border-0"
+  1245→                          >
+  1246→                            <div className="flex items-center gap-3 min-w-0">
+  1247→                              <span className="text-xs font-medium text-muted-foreground w-5 text-right">
+  1248→                                {i + 1}
+  1249→                              </span>
+  1250→                              <span className="text-sm font-medium truncate">{d.name}</span>
+  1251→                            </div>
+  1252→                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-shrink-0">
+  1253→                              <span>{d.templates} templates</span>
+  1254→                              <span>{formatNumber(d.uses)} uses</span>
+  1255→                              <span className="font-medium text-foreground tabular-nums">
+  1256→                                {formatCurrency(d.revenue)}
+  1257→                              </span>
+  1258→                            </div>
+  1259→                          </div>
+  1260→                        ))}
+  1261→                      </div>
+  1262→                    )}
+  1263→                  </CardContent>
+  1264→                </Card>
+  1265→
+  1266→                {/* Top Templates */}
+  1267→                <Card>
+  1268→                  <CardHeader>
+  1269→                    <CardTitle className="text-base">Top Templates</CardTitle>
+  1270→                  </CardHeader>
+  1271→                  <CardContent>
+  1272→                    {stats.topTemplates.length === 0 ? (
+  1273→                      <p className="text-sm text-muted-foreground text-center py-4">
+  1274→                        No data available
+  1275→                      </p>
+  1276→                    ) : (
+  1277→                      <div className="space-y-3 max-h-72 overflow-y-auto">
+  1278→                        {stats.topTemplates.map((t, i) => (
+  1279→                          <div
+  1280→                            key={i}
+  1281→                            className="flex items-center justify-between gap-3 py-2 border-b last:border-0"
+  1282→                          >
+  1283→                            <div className="flex items-center gap-3 min-w-0">
+  1284→                              <span className="text-xs font-medium text-muted-foreground w-5 text-right">
+  1285→                                {i + 1}
+  1286→                              </span>
+  1287→                              <div className="min-w-0">
+  1288→                                <span className="text-sm font-medium truncate block">{t.name}</span>
+  1289→                                <span className="text-xs text-muted-foreground">by {t.designer}</span>
+  1290→                              </div>
+  1291→                            </div>
+  1292→                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-shrink-0">
+  1293→                              <span>{formatNumber(t.uses)} uses</span>
+  1294→                              <span className="font-medium text-foreground tabular-nums">
+  1295→                                {formatCurrency(t.revenue)}
+  1296→                              </span>
+  1297→                            </div>
+  1298→                          </div>
+  1299→                        ))}
+  1300→                      </div>
+  1301→                    )}
+  1302→                  </CardContent>
+  1303→                </Card>
+  1304→              </div>
+  1305→            </>
+  1306→          ) : (
+  1307→            <div className="flex items-center justify-center h-32 text-muted-foreground">
+  1308→              No analytics data available
+  1309→            </div>
+  1310→          )}
+  1311→        </TabsContent>
+  1312→      </Tabs>
+  1313→
+  1314→      {/* ─── Reject Dialog ──────────────────────────────────────────────── */}
+  1315→      <Dialog open={rejectDialog.open} onOpenChange={(open) => setRejectDialog((p) => ({ ...p, open }))}>
+  1316→        <DialogContent>
+  1317→          <DialogHeader>
+  1318→            <DialogTitle>Reject {rejectDialog.type === 'designer' ? 'Designer Application' : rejectDialog.type === 'template' ? 'Template' : 'Withdrawal'}</DialogTitle>
+  1319→            <DialogDescription>
+  1320→              Please provide a reason for the rejection. This will be communicated to the{' '}
+  1321→              {rejectDialog.type}.
+  1322→            </DialogDescription>
+  1323→          </DialogHeader>
+  1324→          <Textarea
+  1325→            placeholder="Enter rejection reason..."
+  1326→            value={rejectDialog.reason}
+  1327→            onChange={(e) => setRejectDialog((p) => ({ ...p, reason: e.target.value }))}
+  1328→            rows={3}
+  1329→          />
+  1330→          <DialogFooter>
+  1331→            <Button
+  1332→              variant="outline"
+  1333→              onClick={() => setRejectDialog({ open: false, type: '', id: '', reason: '' })}
+  1334→            >
+  1335→              Cancel
+  1336→            </Button>
+  1337→            <Button variant="destructive" onClick={handleRejectConfirm}>
+  1338→              Reject
+  1339→            </Button>
+  1340→          </DialogFooter>
+  1341→        </DialogContent>
+  1342→      </Dialog>
+  1343→
+  1344→      {/* ─── Request Changes Dialog ──────────────────────────────────────── */}
+  1345→      <Dialog open={changesDialog.open} onOpenChange={(open) => setChangesDialog((p) => ({ ...p, open }))}>
+  1346→        <DialogContent>
+  1347→          <DialogHeader>
+  1348→            <DialogTitle>Request Changes</DialogTitle>
+  1349→            <DialogDescription>
+  1350→              Describe the changes needed for this template. The designer will be notified.
+  1351→            </DialogDescription>
+  1352→          </DialogHeader>
+  1353→          <Textarea
+  1354→            placeholder="Describe the required changes..."
+  1355→            value={changesDialog.message}
+  1356→            onChange={(e) => setChangesDialog((p) => ({ ...p, message: e.target.value }))}
+  1357→            rows={3}
+  1358→          />
+  1359→          <DialogFooter>
+  1360→            <Button
+  1361→              variant="outline"
+  1362→              onClick={() => setChangesDialog({ open: false, id: '', message: '' })}
+  1363→            >
+  1364→              Cancel
+  1365→            </Button>
+  1366→            <Button onClick={handleRequestChangesConfirm}>
+  1367→              <MessageSquare className="mr-2 h-4 w-4" />
+  1368→              Send Request
+  1369→            </Button>
+  1370→          </DialogFooter>
+  1371→        </DialogContent>
+  1372→      </Dialog>
+  1373→    </div>
+  1374→  );
+  1375→}
+  1376→

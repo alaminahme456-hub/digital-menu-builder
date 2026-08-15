@@ -61,6 +61,14 @@ interface AppStore {
   coverFavorites: string[];
   toggleCoverFavorite: (templateId: string) => void;
 
+  // Marketplace
+  marketplaceFavorites: string[];  // template IDs
+  toggleMarketplaceFavorite: (templateId: string) => void;
+  appliedMarketplaceTemplate: string | null;  // currently applied marketplace template ID
+  appliedMarketplaceCoverTemplate: string | null;  // currently applied marketplace cover template ID
+  setAppliedMarketplaceTemplate: (id: string | null) => void;
+  setAppliedMarketplaceCoverTemplate: (id: string | null) => void;
+
   // UI
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
@@ -134,6 +142,21 @@ export const useAppStore = create<AppStore>()(
         };
       }),
 
+      // Marketplace
+      marketplaceFavorites: [],
+      toggleMarketplaceFavorite: (templateId) => set((state) => {
+        const exists = state.marketplaceFavorites.includes(templateId);
+        return {
+          marketplaceFavorites: exists
+            ? state.marketplaceFavorites.filter((id) => id !== templateId)
+            : [...state.marketplaceFavorites, templateId],
+        };
+      }),
+      appliedMarketplaceTemplate: null,
+      appliedMarketplaceCoverTemplate: null,
+      setAppliedMarketplaceTemplate: (id) => set({ appliedMarketplaceTemplate: id }),
+      setAppliedMarketplaceCoverTemplate: (id) => set({ appliedMarketplaceCoverTemplate: id }),
+
       // UI
       sidebarOpen: true,
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
@@ -145,6 +168,7 @@ export const useAppStore = create<AppStore>()(
       partialize: (state) => ({
         coverFavorites: state.coverFavorites,
         coverCustomization: state.coverCustomization,
+        marketplaceFavorites: state.marketplaceFavorites,
       }),
     }
   )

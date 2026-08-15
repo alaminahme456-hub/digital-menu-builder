@@ -1,0 +1,1125 @@
+     1→'use client';
+     2→
+     3→import React, { useState, useMemo, useCallback, useRef } from 'react';
+     4→import { motion, AnimatePresence } from 'framer-motion';
+     5→import {
+     6→  Search,
+     7→  Heart,
+     8→  Eye,
+     9→  Check,
+    10→  Sparkles,
+    11→  ChevronDown,
+    12→  X,
+    13→  Upload,
+    14→  ImageIcon,
+    15→  Type,
+    16→  Palette,
+    17→  BookOpen,
+    18→  SlidersHorizontal,
+    19→  Star,
+    20→  Loader2,
+    21→  AlertCircle,
+    22→  Monitor,
+    23→  Smartphone,
+    24→  Maximize,
+    25→} from 'lucide-react';
+    26→import { toast } from 'sonner';
+    27→import { useAppStore } from '@/lib/store';
+    28→import { useAuthStore } from '@/lib/store';
+    29→import {
+    30→  COVER_TEMPLATES,
+    31→  COVER_CATEGORIES,
+    32→  CoverTemplateStyle,
+    33→  CoverCategory,
+    34→  getRecommendedCovers,
+    35→  searchCovers,
+    36→} from '@/lib/cover-templates';
+    37→import { Button } from '@/components/ui/button';
+    38→import { Input } from '@/components/ui/input';
+    39→import { Badge } from '@/components/ui/badge';
+    40→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    41→import {
+    42→  Dialog,
+    43→  DialogContent,
+    44→  DialogTitle,
+    45→} from '@/components/ui/dialog';
+    46→import { ScrollArea } from '@/components/ui/scroll-area';
+    47→
+    48→// ═══════════════════════════════════════════════════════
+    49→// COVER PREVIEW COMPONENT — Renders a CSS-only book cover
+    50→// ═══════════════════════════════════════════════════════
+    51→
+    52→function CoverPreview({
+    53→  template,
+    54→  businessName,
+    55→  logo,
+    56→  coverImage,
+    57→  tagline,
+    58→  size = 'card',
+    59→  accentOverride,
+    60→  onTapOpen,
+    61→}: {
+    62→  template: CoverTemplateStyle;
+    63→  businessName: string;
+    64→  logo: string | null;
+    65→  coverImage: string | null;
+    66→  tagline?: string;
+    67→  size?: 'card' | 'preview' | 'full';
+    68→  accentOverride?: string;
+    69→  onTapOpen?: () => void;
+    70→}) {
+    71→  const s = template.style;
+    72→  const accent = accentOverride || s.accentColor;
+    73→  const isCard = size === 'card';
+    74→  const isPreview = size === 'preview';
+    75→
+    76→  const fontMap: Record<string, string> = {
+    77→    serif: "'Playfair Display', Georgia, serif",
+    78→    sans: "'Inter', system-ui, sans-serif",
+    79→    mono: "'JetBrains Mono', monospace",
+    80→  };
+    81→
+    82→  const titleFont = fontMap[s.titleFont] || fontMap.sans;
+    83→  const subFont = fontMap[s.subtitleFont] || fontMap.sans;
+    84→
+    85→  // Determine if this is a light or dark cover
+    86→  const isDark = ['0C0A09', '0F172A', '1A0A0A', '09090B', '0A0A0F', '18181B', '0A0A0A',
+    87→    '1C1917', '2C1810', '1E3A5F', '0F0F23', '1A0A00', '1A1A3E', '2D1B69'].includes(s.bg);
+    88→
+    89→  const widthClass = isCard ? 'w-full' : isPreview ? 'w-[320px] sm:w-[360px]' : 'w-full max-w-[420px]';
+    90→  const heightClass = isCard ? 'aspect-[3/4]' : isPreview ? 'aspect-[3/4]' : 'aspect-[3/4] sm:aspect-[9/16]';
+    91→
+    92→  return (
+    93→    <div
+    94→      className={`${widthClass} ${heightClass} relative overflow-hidden flex flex-col items-center justify-between`}
+    95→      style={{
+    96→        background: s.bgGradient || s.bg,
+    97→        borderRadius: s.cornerStyle === 'pill' ? '24px' : s.cornerStyle === 'rounded' ? '12px' : s.cornerStyle === 'sharp' ? '2px' : '8px',
+    98→        border: s.borderStyle === 'gold-line' ? `1.5px solid ${accent}` :
+    99→          s.borderStyle === 'double-line' ? `3px double ${accent}` :
+   100→          s.borderStyle === 'thin-line' ? `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` :
+   101→          'none',
+   102→        fontFamily: titleFont,
+   103→        padding: isCard ? '12px' : '24px',
+   104→      }}
+   105→    >
+   106→      {/* Overlay */}
+   107→      {s.overlay === 'dark-gradient' && (
+   108→        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.6))', pointerEvents: 'none' }} />
+   109→      )}
+   110→      {s.overlay === 'light-gradient' && (
+   111→        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 40%, rgba(255,255,255,0.6))', pointerEvents: 'none' }} />
+   112→      )}
+   113→      {s.overlay === 'solid-bottom' && (
+   114→        <div className="absolute bottom-0 left-0 right-0 h-1/3" style={{ background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)', pointerEvents: 'none' }} />
+   115→      )}
+   116→      {s.overlay === 'vignette' && (
+   117→        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4))', pointerEvents: 'none' }} />
+   118→      )}
+   119→
+   120→      {/* Pattern overlay */}
+   121→      {s.pattern === 'diamonds' && (
+   122→        <div className="absolute inset-0 opacity-[0.03]" style={{
+   123→          backgroundImage: `repeating-linear-gradient(45deg, ${accent} 0px, ${accent} 1px, transparent 1px, transparent 20px),
+   124→            repeating-linear-gradient(-45deg, ${accent} 0px, ${accent} 1px, transparent 1px, transparent 20px)`,
+   125→          pointerEvents: 'none',
+   126→        }} />
+   127→      )}
+   128→      {s.pattern === 'dots' && (
+   129→        <div className="absolute inset-0 opacity-[0.04]" style={{
+   130→          backgroundImage: `radial-gradient(circle, ${accent} 1px, transparent 1px)`,
+   131→          backgroundSize: '16px 16px',
+   132→          pointerEvents: 'none',
+   133→        }} />
+   134→      )}
+   135→      {s.pattern === 'lines' && (
+   136→        <div className="absolute inset-0 opacity-[0.03]" style={{
+   137→          backgroundImage: `repeating-linear-gradient(0deg, ${accent} 0px, ${accent} 1px, transparent 1px, transparent 12px)`,
+   138→          pointerEvents: 'none',
+   139→        }} />
+   140→      )}
+   141→      {s.pattern === 'geometric' && (
+   142→        <div className="absolute inset-0 opacity-[0.03]" style={{
+   143→          backgroundImage: `linear-gradient(30deg, ${accent} 12%, transparent 12.5%, transparent 87%, ${accent} 87.5%, ${accent}),
+   144→            linear-gradient(150deg, ${accent} 12%, transparent 12.5%, transparent 87%, ${accent} 87.5%, ${accent}),
+   145→            linear-gradient(30deg, ${accent} 12%, transparent 12.5%, transparent 87%, ${accent} 87.5%, ${accent}),
+   146→            linear-gradient(150deg, ${accent} 12%, transparent 12.5%, transparent 87%, ${accent} 87.5%, ${accent})`,
+   147→          backgroundSize: '40px 70px',
+   148→          pointerEvents: 'none',
+   149→        }} />
+   150→      )}
+   151→
+   152→      {/* Corner ornaments for luxury */}
+   153→      {s.decorativeElements.includes('corner-ornament') && isCard && (
+   154→        <>
+   155→          <div className="absolute top-1 left-1 w-3 h-3 border-t border-l" style={{ borderColor: accent }} />
+   156→          <div className="absolute top-1 right-1 w-3 h-3 border-t border-r" style={{ borderColor: accent }} />
+   157→          <div className="absolute bottom-1 left-1 w-3 h-3 border-b border-l" style={{ borderColor: accent }} />
+   158→          <div className="absolute bottom-1 right-1 w-3 h-3 border-b border-r" style={{ borderColor: accent }} />
+   159→        </>
+   160→      )}
+   161→
+   162→      {/* Cover image */}
+   163→      {coverImage && s.coverImagePosition !== 'none' ? (
+   164→        <div className={`relative z-10 w-full flex-shrink-0 ${isCard ? 'mt-2 mb-1' : 'mb-4'}`}
+   165→          style={{
+   166→            height: s.coverImagePosition === 'full' ? (isCard ? '55%' : '50%') :
+   167→              s.coverImagePosition === 'center' ? (isCard ? '35%' : '40%') :
+   168→              s.coverImagePosition === 'top' ? (isCard ? '30%' : '35%') :
+   169→              s.coverImagePosition === 'left-third' ? (isCard ? '35%' : '40%') : '30%',
+   170→            borderRadius: s.coverImageShape === 'rounded' ? '8px' :
+   171→              s.coverImageShape === 'circle' ? '50%' :
+   172→              s.coverImageShape === 'arch' ? '999px 999px 0 0' : '0',
+   173→            overflow: 'hidden',
+   174→          }}
+   175→        >
+   176→          <img
+   177→            src={coverImage}
+   178→            alt=""
+   179→            className="w-full h-full object-cover"
+   180→          />
+   181→          {s.coverImagePosition === 'full' && (
+   182→            <div className="absolute inset-0" style={{ background: isDark ? 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)' : 'linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.8) 100%)' }} />
+   183→          )}
+   184→        </div>
+   185→      ) : !coverImage && s.coverImagePosition !== 'none' && s.coverImageShape !== 'full' ? (
+   186→        <div className={`relative z-10 w-full flex-shrink-0 ${isCard ? 'mt-2 mb-1' : 'mb-4'} flex items-center justify-center`}
+   187→          style={{
+   188→            height: s.coverImagePosition === 'center' ? (isCard ? '25%' : '30%') :
+   189→              s.coverImagePosition === 'top' ? (isCard ? '22%' : '25%') : '20%',
+   190→            borderRadius: s.coverImageShape === 'rounded' ? '8px' :
+   191→              s.coverImageShape === 'circle' ? '50%' :
+   192→              s.coverImageShape === 'arch' ? '999px 999px 0 0' : '0',
+   193→            background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+   194→          }}
+   195→        >
+   196→          <ImageIcon className={`${isCard ? 'w-6 h-6' : 'w-10 h-10'} ${isDark ? 'text-white/10' : 'text-black/10'}`} />
+   197→        </div>
+   198→      ) : null}
+   199→
+   200→      {/* Content area */}
+   201→      <div className={`relative z-10 flex flex-col items-center text-center flex-1 ${isCard ? 'gap-0.5' : 'gap-2'} ${isCard ? 'px-1' : 'px-4'} justify-end pb-1`}>
+   202→
+   203→        {/* Logo */}
+   204→        {logo && !isCard && (
+   205→          <div className="mb-2">
+   206→            <img src={logo} alt="" className="w-10 h-10 rounded-lg object-cover" />
+   207→          </div>
+   208→        )}
+   209→
+   210→        {/* Tag */}
+   211→        {s.tagName && (
+   212→          <div className={`${isCard ? 'text-[6px]' : 'text-[10px]'} tracking-[0.15em] font-medium`}
+   213→            style={{ color: accent, fontFamily: subFont }}
+   214→          >
+   215→            {s.tagStyle === 'gold-line' && (
+   216→              <span className="flex items-center gap-1">
+   217→                <span className="inline-block w-3 h-px" style={{ background: accent }} />
+   218→                {s.tagName}
+   219→                <span className="inline-block w-3 h-px" style={{ background: accent }} />
+   220→              </span>
+   221→            )}
+   222→            {s.tagStyle === 'outline-badge' && (
+   223→              <span className="px-1.5 py-0.5 border" style={{ borderColor: accent, borderRadius: '2px' }}>
+   224→                {s.tagName}
+   225→              </span>
+   226→            )}
+   227→            {s.tagStyle === 'underline' && (
+   228→              <span className="underline underline-offset-2">{s.tagName}</span>
+   229→            )}
+   230→            {s.tagStyle === 'dot' && (
+   231→              <span className="flex items-center gap-1">
+   232→                <span className="inline-block w-1 h-1 rounded-full" style={{ background: accent }} />
+   233→                {s.tagName}
+   234→              </span>
+   235→            )}
+   236→            {s.tagStyle === 'gold-badge' && (
+   237→              <span className="px-1.5 py-0.5 rounded-sm" style={{ background: `${accent}15` }}>
+   238→                {s.tagName}
+   239→              </span>
+   240→            )}
+   241→            {s.tagStyle === 'none' && s.tagName}
+   242→          </div>
+   243→        )}
+   244→
+   245→        {/* Business name */}
+   246→        <h3 className={`${isCard ? 'text-sm font-bold' : 'text-xl sm:text-2xl font-bold'} leading-tight`}
+   247→          style={{ color: s.textColor, fontFamily: titleFont }}
+   248→        >
+   249→          {businessName || 'Your Business'}
+   250→        </h3>
+   251→
+   252→        {/* Tagline */}
+   253→        {tagline && !isCard && (
+   254→          <p className="text-xs opacity-50 max-w-[200px]" style={{ color: s.textColor, fontFamily: subFont }}>
+   255→            {tagline}
+   256→          </p>
+   257→        )}
+   258→
+   259→        {/* Decorative rule */}
+   260→        {s.decorativeElements.includes('gold-line-divider') && (
+   261→          <div className="my-0.5" style={{ width: isCard ? '20px' : '40px', height: '1px', background: accent }} />
+   262→        )}
+   263→        {s.decorativeElements.includes('thin-rule') && (
+   264→          <div className="my-0.5" style={{ width: isCard ? '24px' : '48px', height: '1px', background: `${s.textColor}20` }} />
+   265→        )}
+   266→        {s.decorativeElements.includes('bold-rule') && (
+   267→          <div className="my-0.5" style={{ width: isCard ? '28px' : '56px', height: '2px', background: s.textColor }} />
+   268→        )}
+   269→        {s.decorativeElements.includes('accent-bar') && (
+   270→          <div className="my-1" style={{ width: isCard ? '32px' : '64px', height: '3px', background: accent, borderRadius: '2px' }} />
+   271→        )}
+   272→        {s.decorativeElements.includes('color-bar') && (
+   273→          <div className="my-1" style={{ width: '60%', height: '3px', background: accent, borderRadius: '2px' }} />
+   274→        )}
+   275→
+   276→        {/* Subtitle / category */}
+   277→        <p className={`${isCard ? 'text-[7px]' : 'text-[11px]'} tracking-[0.1em] uppercase opacity-40`}
+   278→          style={{ color: s.textColor, fontFamily: subFont }}
+   279→        >
+   280→          {template.categoryLabel}
+   281→        </p>
+   282→
+   283→        {/* Button */}
+   284→        {!isCard && (
+   285→          <button
+   286→            onClick={onTapOpen}
+   287→            className="mt-3 px-5 py-2 text-xs font-semibold tracking-wider transition-all duration-300 hover:scale-105"
+   288→            style={{
+   289→              background: s.buttonStyle === 'gold-pill' ? accent :
+   290→                s.buttonStyle === 'outline' ? 'transparent' :
+   291→                s.buttonStyle === 'ghost' ? 'transparent' :
+   292→                s.buttonStyle === 'solid-dark' ? s.textColor :
+   293→                accent,
+   294→              color: s.buttonStyle === 'outline' || s.buttonStyle === 'ghost' ? s.textColor : (s.buttonStyle === 'solid-dark' ? s.bg : '#fff'),
+   295→              border: s.buttonStyle === 'outline' ? `1px solid ${accent}` :
+   296→                s.buttonStyle === 'ghost' ? '1px solid rgba(255,255,255,0.15)' : 'none',
+   297→              borderRadius: s.buttonStyle === 'gold-pill' ? '999px' : '8px',
+   298→            }}
+   299→          >
+   300→            {s.buttonLabel}
+   301→          </button>
+   302→        )}
+   303→      </div>
+   304→    </div>
+   305→  );
+   306→}
+   307→
+   308→// ═══════════════════════════════════════════════════════
+   309→// COVER TEMPLATE CARD — Individual card in the gallery
+   310→// ═══════════════════════════════════════════════════════
+   311→
+   312→function CoverTemplateCard({
+   313→  template,
+   314→  isActive,
+   315→  isApplying,
+   316→  isFavorite,
+   317→  businessName,
+   318→  logo,
+   319→  coverImage,
+   320→  tagline,
+   321→  accent,
+   322→  onApply,
+   323→  onPreview,
+   324→  onToggleFavorite,
+   325→}: {
+   326→  template: CoverTemplateStyle;
+   327→  isActive: boolean;
+   328→  isApplying: boolean;
+   329→  isFavorite: boolean;
+   330→  businessName: string;
+   331→  logo: string | null;
+   332→  coverImage: string | null;
+   333→  tagline: string;
+   334→  accent: string;
+   335→  onApply: () => void;
+   336→  onPreview: () => void;
+   337→  onToggleFavorite: () => void;
+   338→}) {
+   339→  return (
+   340→    <div className="group relative">
+   341→      {/* Applied indicator ring */}
+   342→      <div className={`relative rounded-xl p-0.5 transition-all duration-300 ${
+   343→        isActive ? 'ring-2 ring-gold/60 shadow-premium' : 'hover:ring-1 hover:ring-black/10'
+   344→      }`}>
+   345→        {/* Applied badge */}
+   346→        {isActive && (
+   347→          <div className="absolute -top-2 -right-2 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-gold text-white text-[10px] font-bold shadow-md">
+   348→            <Check className="w-2.5 h-2.5" />
+   349→            Applied
+   350→          </div>
+   351→        )}
+   352→
+   353→        {/* Favorite button */}
+   354→        <button
+   355→          onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+   356→          className="absolute top-3 left-3 z-20 p-1.5 rounded-full transition-all duration-200 hover:scale-110"
+   357→          style={{ background: isFavorite ? 'rgba(220,38,38,0.9)' : 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)' }}
+   358→        >
+   359→          <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-white text-white' : 'text-white/80'}`} />
+   360→        </button>
+   361→
+   362→        {/* Cover preview */}
+   363→        <div className="cursor-pointer" onClick={onPreview}>
+   364→          <CoverPreview
+   365→            template={template}
+   366→            businessName={businessName}
+   367→            logo={logo}
+   368→            coverImage={coverImage}
+   369→            tagline={tagline}
+   370→            size="card"
+   371→            accentOverride={isActive ? accent : undefined}
+   372→          />
+   373→        </div>
+   374→      </div>
+   375→
+   376→      {/* Info bar */}
+   377→      <div className="mt-2.5 px-1">
+   378→        <div className="flex items-center justify-between">
+   379→          <div>
+   380→            <h3 className="text-sm font-semibold text-charcoal tracking-tight">{template.label}</h3>
+   381→            <p className="text-[11px] text-charcoal/40">{template.categoryLabel}</p>
+   382→          </div>
+   383→          <div className="flex items-center gap-1.5">
+   384→            <button
+   385→              onClick={onPreview}
+   386→              className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-charcoal/50 hover:text-charcoal rounded-lg hover:bg-black/[0.04] transition-colors"
+   387→            >
+   388→              <Eye className="w-3 h-3" />
+   389→              Preview
+   390→            </button>
+   391→            {isActive ? (
+   392→              <div className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold text-gold rounded-lg bg-gold/10">
+   393→                <Check className="w-3 h-3" />
+   394→                Applied
+   395→              </div>
+   396→            ) : (
+   397→              <button
+   398→                onClick={onApply}
+   399→                disabled={isApplying}
+   400→                className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold text-white bg-charcoal hover:bg-charcoal-light rounded-lg transition-colors disabled:opacity-50"
+   401→              >
+   402→                {isApplying ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+   403→                Apply
+   404→              </button>
+   405→            )}
+   406→          </div>
+   407→        </div>
+   408→      </div>
+   409→    </div>
+   410→  );
+   411→}
+   412→
+   413→// ═══════════════════════════════════════════════════════
+   414→// COVER CUSTOMIZATION PANEL
+   415→// ═══════════════════════════════════════════════════════
+   416→
+   417→function CoverCustomizationPanel({
+   418→  coverImage,
+   419→  coverTagline,
+   420→  coverAccent,
+   421→  onChangeImage,
+   422→  onChangeTagline,
+   423→  onChangeAccent,
+   424→  onRemoveImage,
+   425→}: {
+   426→  coverImage: string | null;
+   427→  coverTagline: string;
+   428→  coverAccent: string;
+   429→  onChangeImage: (url: string | null) => void;
+   430→  onChangeTagline: (val: string) => void;
+   431→  onChangeAccent: (val: string) => void;
+   432→  onRemoveImage: () => void;
+   433→}) {
+   434→  const [uploading, setUploading] = useState(false);
+   435→  const fileInputRef = useRef<HTMLInputElement>(null);
+   436→  const token = useAuthStore((s) => s.token);
+   437→
+   438→  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+   439→    const file = e.target.files?.[0];
+   440→    if (!file || !token) return;
+   441→    setUploading(true);
+   442→    try {
+   443→      const formData = new FormData();
+   444→      formData.append('file', file);
+   445→      const res = await fetch('/api/upload', {
+   446→        method: 'POST',
+   447→        headers: { Authorization: `Bearer ${token}` },
+   448→        body: formData,
+   449→      });
+   450→      if (res.ok) {
+   451→        const data = await res.json();
+   452→        onChangeImage(data.url);
+   453→        toast.success('Cover image uploaded');
+   454→      } else {
+   455→        toast.error('Failed to upload image');
+   456→      }
+   457→    } catch {
+   458→      toast.error('Upload failed');
+   459→    } finally {
+   460→      setUploading(false);
+   461→    }
+   462→  };
+   463→
+   464→  const accentPresets = [
+   465→    { label: 'Gold', value: '#C9A84C' },
+   466→    { label: 'Silver', value: '#A1A1AA' },
+   467→    { label: 'Black', value: '#0A0A0A' },
+   468→    { label: 'White', value: '#FFFFFF' },
+   469→    { label: 'Rose', value: '#E11D48' },
+   470→    { label: 'Ocean', value: '#0891B2' },
+   471→    { label: 'Emerald', value: '#059669' },
+   472→    { label: 'Violet', value: '#7C3AED' },
+   473→  ];
+   474→
+   475→  return (
+   476→    <div className="space-y-5">
+   477→      {/* Cover Image */}
+   478→      <div>
+   479→        <label className="flex items-center gap-2 text-[12px] font-semibold text-charcoal/70 uppercase tracking-wider mb-2">
+   480→          <ImageIcon className="w-3.5 h-3.5" />
+   481→          Cover Image
+   482→        </label>
+   483→        {coverImage ? (
+   484→          <div className="relative rounded-xl overflow-hidden aspect-[3/2] bg-smoke">
+   485→            <img src={coverImage} alt="Cover" className="w-full h-full object-cover" />
+   486→            <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 hover:opacity-100">
+   487→              <button
+   488→                onClick={() => fileInputRef.current?.click()}
+   489→                className="p-2 rounded-lg bg-white text-charcoal text-[11px] font-medium shadow-lg"
+   490→              >
+   491→                Replace
+   492→              </button>
+   493→              <button
+   494→                onClick={onRemoveImage}
+   495→                className="p-2 rounded-lg bg-white text-red-500 text-[11px] font-medium shadow-lg"
+   496→              >
+   497→                Remove
+   498→              </button>
+   499→            </div>
+   500→          </div>
+   501→        ) : (
+   502→          <button
+   503→            onClick={() => fileInputRef.current?.click()}
+   504→            disabled={uploading}
+   505→            className="w-full rounded-xl border-2 border-dashed border-charcoal/10 aspect-[3/2] flex flex-col items-center justify-center gap-2 text-charcoal/30 hover:text-charcoal/50 hover:border-charcoal/20 transition-colors"
+   506→          >
+   507→            {uploading ? (
+   508→              <Loader2 className="w-6 h-6 animate-spin" />
+   509→            ) : (
+   510→              <Upload className="w-6 h-6" />
+   511→            )}
+   512→            <span className="text-xs font-medium">{uploading ? 'Uploading...' : 'Upload Cover Image'}</span>
+   513→          </button>
+   514→        )}
+   515→        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+   516→      </div>
+   517→
+   518→      {/* Tagline */}
+   519→      <div>
+   520→        <label className="flex items-center gap-2 text-[12px] font-semibold text-charcoal/70 uppercase tracking-wider mb-2">
+   521→          <Type className="w-3.5 h-3.5" />
+   522→          Tagline
+   523→        </label>
+   524→        <Input
+   525→          value={coverTagline}
+   526→          onChange={(e) => onChangeTagline(e.target.value)}
+   527→          placeholder="e.g. Quality. Style. Innovation."
+   528→          className="h-9 text-sm bg-white"
+   529→        />
+   530→        <p className="text-[10px] text-charcoal/30 mt-1">Optional — appears below the business name on the cover.</p>
+   531→      </div>
+   532→
+   533→      {/* Cover Accent */}
+   534→      <div>
+   535→        <label className="flex items-center gap-2 text-[12px] font-semibold text-charcoal/70 uppercase tracking-wider mb-2">
+   536→          <Palette className="w-3.5 h-3.5" />
+   537→          Cover Accent
+   538→        </label>
+   539→        <div className="flex items-center gap-2 flex-wrap">
+   540→          {accentPresets.map((preset) => (
+   541→            <button
+   542→              key={preset.value}
+   543→              onClick={() => onChangeAccent(preset.value)}
+   544→              className={`w-7 h-7 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+   545→                coverAccent === preset.value ? 'border-charcoal scale-110 shadow-md' : 'border-transparent'
+   546→              }`}
+   547→              style={{ background: preset.value }}
+   548→              title={preset.label}
+   549→            />
+   550→          ))}
+   551→          <div className="relative">
+   552→            <input
+   553→              type="color"
+   554→              value={coverAccent}
+   555→              onChange={(e) => onChangeAccent(e.target.value)}
+   556→              className="w-7 h-7 rounded-full cursor-pointer border-2 border-transparent hover:border-charcoal/30"
+   557→              title="Custom color"
+   558→            />
+   559→          </div>
+   560→        </div>
+   561→      </div>
+   562→    </div>
+   563→  );
+   564→}
+   565→
+   566→// ═══════════════════════════════════════════════════════
+   567→// FULL-SCREEN COVER PREVIEW MODAL
+   568→// ═══════════════════════════════════════════════════════
+   569→
+   570→function CoverPreviewModal({
+   571→  template,
+   572→  businessName,
+   573→  logo,
+   574→  coverImage,
+   575→  tagline,
+   576→  accent,
+   577→  isOpen,
+   578→  onClose,
+   579→  onApply,
+   580→  isApplied,
+   581→  isApplying,
+   582→}: {
+   583→  template: CoverTemplateStyle;
+   584→  businessName: string;
+   585→  logo: string | null;
+   586→  coverImage: string | null;
+   587→  tagline: string;
+   588→  accent: string;
+   589→  isOpen: boolean;
+   590→  onClose: () => void;
+   591→  onApply: () => void;
+   592→  isApplied: boolean;
+   593→  isApplying: boolean;
+   594→}) {
+   595→  const [showAnimation, setShowAnimation] = useState(false);
+   596→
+   597→  const handleTapOpen = () => {
+   598→    setShowAnimation(true);
+   599→    setTimeout(() => setShowAnimation(false), 1200);
+   600→  };
+   601→
+   602→  return (
+   603→    <Dialog open={isOpen} onOpenChange={onClose}>
+   604→      <DialogContent className="max-w-5xl w-full p-0 gap-0 bg-ivory border-charcoal/10 overflow-hidden" style={{ maxHeight: '90vh' }}>
+   605→        <DialogTitle className="sr-only">Cover Preview — {template.label}</DialogTitle>
+   606→        <div className="flex flex-col lg:flex-row">
+   607→          {/* Preview Area */}
+   608→          <div className="flex-1 flex items-center justify-center p-8 lg:p-12 bg-smoke/50 min-h-[400px] lg:min-h-[600px]">
+   609→            <AnimatePresence mode="wait">
+   610→              <motion.div
+   611→                key={showAnimation ? 'opened' : 'closed'}
+   612→                initial={showAnimation ? false : { scale: 0.9, opacity: 0 }}
+   613→                animate={showAnimation ? {
+   614→                  rotateY: -160,
+   615→                  scale: 0.85,
+   616→                  opacity: 0.5,
+   617→                  transformPerspective: 1200,
+   618→                } : {
+   619→                  scale: 1,
+   620→                  opacity: 1,
+   621→                  rotateY: 0,
+   622→                }}
+   623→                exit={showAnimation ? { rotateY: -180, opacity: 0 } : { scale: 0.9, opacity: 0 }}
+   624→                transition={{ duration: 0.6, ease: 'easeInOut' }}
+   625→                style={{ transformStyle: 'preserve-3d' }}
+   626→              >
+   627→                <CoverPreview
+   628→                  template={template}
+   629→                  businessName={businessName}
+   630→                  logo={logo}
+   631→                  coverImage={coverImage}
+   632→                  tagline={tagline}
+   633→                  size="preview"
+   634→                  accentOverride={accent}
+   635→                  onTapOpen={handleTapOpen}
+   636→                />
+   637→              </motion.div>
+   638→            </AnimatePresence>
+   639→          </div>
+   640→
+   641→          {/* Info sidebar */}
+   642→          <div className="w-full lg:w-[300px] p-6 lg:p-8 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-charcoal/10 bg-white">
+   643→            <div>
+   644→              <div className="flex items-center gap-2 mb-1">
+   645→                <Badge variant="secondary" className="text-[10px] font-semibold tracking-wider">
+   646→                  {template.categoryLabel}
+   647→                </Badge>
+   648→              </div>
+   649→              <h2 className="text-2xl font-bold text-charcoal font-editorial">{template.label}</h2>
+   650→              <p className="text-sm text-charcoal/50 mt-1">{template.description}</p>
+   651→
+   652→              <div className="mt-6 space-y-2">
+   653→                <p className="text-[10px] uppercase tracking-wider text-charcoal/30 font-semibold">Style Details</p>
+   654→                <div className="grid grid-cols-2 gap-2">
+   655→                  <div className="px-3 py-2 rounded-lg bg-smoke/80">
+   656→                    <p className="text-[10px] text-charcoal/40">Background</p>
+   657→                    <div className="flex items-center gap-1.5 mt-0.5">
+   658→                      <div className="w-3 h-3 rounded-sm border border-charcoal/10" style={{ background: template.style.bg }} />
+   659→                      <span className="text-[11px] font-medium text-charcoal/70">{template.style.bg}</span>
+   660→                    </div>
+   661→                  </div>
+   662→                  <div className="px-3 py-2 rounded-lg bg-smoke/80">
+   663→                    <p className="text-[10px] text-charcoal/40">Accent</p>
+   664→                    <div className="flex items-center gap-1.5 mt-0.5">
+   665→                      <div className="w-3 h-3 rounded-sm" style={{ background: template.style.accentColor }} />
+   666→                      <span className="text-[11px] font-medium text-charcoal/70">{template.style.accentColor}</span>
+   667→                    </div>
+   668→                  </div>
+   669→                  <div className="px-3 py-2 rounded-lg bg-smoke/80">
+   670→                    <p className="text-[10px] text-charcoal/40">Typography</p>
+   671→                    <p className="text-[11px] font-medium text-charcoal/70 mt-0.5 capitalize">{template.style.titleFont}</p>
+   672→                  </div>
+   673→                  <div className="px-3 py-2 rounded-lg bg-smoke/80">
+   674→                    <p className="text-[10px] text-charcoal/40">Layout</p>
+   675→                    <p className="text-[11px] font-medium text-charcoal/70 mt-0.5 capitalize">{template.style.coverImagePosition}</p>
+   676→                  </div>
+   677→                </div>
+   678→              </div>
+   679→
+   680→              <div className="mt-6">
+   681→                <p className="text-[10px] uppercase tracking-wider text-charcoal/30 font-semibold mb-2">Recommended For</p>
+   682→                <div className="flex flex-wrap gap-1.5">
+   683→                  {template.recommendedFor.map((biz) => (
+   684→                    <Badge key={biz} variant="outline" className="text-[10px] font-normal">
+   685→                      {biz}
+   686→                    </Badge>
+   687→                  ))}
+   688→                </div>
+   689→              </div>
+   690→
+   691→              <p className="mt-6 text-[10px] text-charcoal/30 italic">
+   692→                Tap &quot;Tap to Open&quot; on the preview to see the book opening animation.
+   693→              </p>
+   694→            </div>
+   695→
+   696→            <div className="mt-6 flex gap-2">
+   697→              <Button
+   698→                variant="outline"
+   699→                onClick={onClose}
+   700→                className="flex-1"
+   701→              >
+   702→                Close
+   703→              </Button>
+   704→              {isApplied ? (
+   705→                <Button className="flex-1 bg-gold/10 text-gold hover:bg-gold/20 border-gold/20" variant="outline">
+   706→                  <Check className="w-3.5 h-3.5 mr-1" />
+   707→                  Applied
+   708→                </Button>
+   709→              ) : (
+   710→                <Button
+   711→                  onClick={onApply}
+   712→                  disabled={isApplying}
+   713→                  className="flex-1 bg-charcoal hover:bg-charcoal-light text-white"
+   714→                >
+   715→                  {isApplying ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+   716→                  Apply This Cover
+   717→                </Button>
+   718→              )}
+   719→            </div>
+   720→          </div>
+   721→        </div>
+   722→      </DialogContent>
+   723→    </Dialog>
+   724→  );
+   725→}
+   726→
+   727→// ═══════════════════════════════════════════════════════
+   728→// MAIN DESIGN STUDIO COMPONENT
+   729→// ═══════════════════════════════════════════════════════
+   730→
+   731→export default function DesignStudio() {
+   732→  const token = useAuthStore((s) => s.token);
+   733→  const currentBusiness = useAppStore((s) => s.currentBusiness);
+   734→  const activeCoverTemplate = useAppStore((s) => s.activeCoverTemplate);
+   735→  const coverTemplateAppliedAt = useAppStore((s) => s.coverTemplateAppliedAt);
+   736→  const coverCustomization = useAppStore((s) => s.coverCustomization);
+   737→  const coverFavorites = useAppStore((s) => s.coverFavorites);
+   738→  const setActiveCoverTemplate = useAppStore((s) => s.setActiveCoverTemplate);
+   739→  const setCoverCustomization = useAppStore((s) => s.setCoverCustomization);
+   740→  const toggleCoverFavorite = useAppStore((s) => s.toggleCoverFavorite);
+   741→
+   742→  const [activeTab, setActiveTab] = useState<string>('cover-templates');
+   743→  const [searchQuery, setSearchQuery] = useState('');
+   744→  const [selectedCategory, setSelectedCategory] = useState<CoverCategory | 'all'>('all');
+   745→  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+   746→  const [applyingTemplate, setApplyingTemplate] = useState<string | null>(null);
+   747→  const [previewTemplate, setPreviewTemplate] = useState<CoverTemplateStyle | null>(null);
+   748→  const [showCustomization, setShowCustomization] = useState(false);
+   749→  const [customizing, setCustomizing] = useState(false);
+   750→  const [bizCategory, setBizCategory] = useState<string | null>(null);
+   751→
+   752→  // Fetch business category for recommendations
+   753→  React.useEffect(() => {
+   754→    if (!currentBusiness?.id || !token) return;
+   755→    fetch(`/api/businesses/${currentBusiness.id}`, {
+   756→      headers: { Authorization: `Bearer ${token}` },
+   757→    })
+   758→      .then((r) => r.json())
+   759→      .then((d) => {
+   760→        if (d.business?.category) setBizCategory(d.business.category);
+   761→      })
+   762→      .catch(() => {});
+   763→  }, [currentBusiness?.id, token]);
+   764→
+   765→  // Load saved cover template on mount
+   766→  React.useEffect(() => {
+   767→    if (!currentBusiness?.id || !token) return;
+   768→    fetch(`/api/businesses/${currentBusiness.id}/cover-template`, {
+   769→      headers: { Authorization: `Bearer ${token}` },
+   770→    })
+   771→      .then((r) => r.json())
+   772→      .then((d) => {
+   773→        if (d.coverTemplate) {
+   774→          setActiveCoverTemplate(d.coverTemplate.coverTemplateId);
+   775→          setCoverCustomization({
+   776→            coverImage: d.coverTemplate.coverImage,
+   777→            coverTagline: d.coverTemplate.coverTagline || '',
+   778→            coverAccent: d.coverTemplate.coverAccent || '#C9A84C',
+   779→          });
+   780→        }
+   781→      })
+   782→      .catch(() => {});
+   783→  }, [currentBusiness?.id, token]);
+   784→
+   785→  const businessName = currentBusiness?.name || 'Your Business';
+   786→  const businessLogo = currentBusiness?.logo || null;
+   787→
+   788→  // Recommended covers
+   789→  const recommendedCovers = useMemo(() => {
+   790→    if (!bizCategory) return [];
+   791→    return getRecommendedCovers(bizCategory);
+   792→  }, [bizCategory]);
+   793→
+   794→  // Filtered templates
+   795→  const filteredTemplates = useMemo(() => {
+   796→    let templates = searchCovers(searchQuery);
+   797→    if (selectedCategory !== 'all') {
+   798→      templates = templates.filter((t) => t.category === selectedCategory);
+   799→    }
+   800→    if (showFavoritesOnly) {
+   801→      templates = templates.filter((t) => coverFavorites.includes(t.id));
+   802→    }
+   803→    return templates;
+   804→  }, [searchQuery, selectedCategory, showFavoritesOnly, coverFavorites]);
+   805→
+   806→  // Apply template (optimistic)
+   807→  const applyTemplate = useCallback(async (templateId: string) => {
+   808→    if (!currentBusiness?.id || !token) return;
+   809→    const previousTemplate = activeCoverTemplate;
+   810→
+   811→    setApplyingTemplate(templateId);
+   812→    // Instant UI update
+   813→    setActiveCoverTemplate(templateId);
+   814→
+   815→    try {
+   816→      const res = await fetch(`/api/businesses/${currentBusiness.id}/cover-template`, {
+   817→        method: 'PUT',
+   818→        headers: {
+   819→          'Content-Type': 'application/json',
+   820→          Authorization: `Bearer ${token}`,
+   821→        },
+   822→        body: JSON.stringify({
+   823→          coverTemplateId: templateId,
+   824→          coverImage: coverCustomization.coverImage,
+   825→          coverTagline: coverCustomization.coverTagline,
+   826→          coverAccent: coverCustomization.coverAccent,
+   827→        }),
+   828→      });
+   829→
+   830→      if (!res.ok) {
+   831→        setActiveCoverTemplate(previousTemplate);
+   832→        toast.error('Failed to apply cover template');
+   833→      } else {
+   834→        toast.success(`Cover template applied`, {
+   835→          description: `"${COVER_TEMPLATES.find(t => t.id === templateId)?.label}" is now active.`,
+   836→        });
+   837→      }
+   838→    } catch {
+   839→      setActiveCoverTemplate(previousTemplate);
+   840→      toast.error('Failed to apply cover template');
+   841→    } finally {
+   842→      setApplyingTemplate(null);
+   843→    }
+   844→  }, [currentBusiness?.id, token, activeCoverTemplate, coverCustomization]);
+   845→
+   846→  // Save customization
+   847→  const saveCustomization = useCallback(async (field: string, value: string | null) => {
+   848→    setCustomizing(true);
+   849→    setCoverCustomization({ [field]: value } as any);
+   850→
+   851→    if (currentBusiness?.id && token && activeCoverTemplate) {
+   852→      try {
+   853→        const newCustom = { ...coverCustomization, [field]: value };
+   854→        await fetch(`/api/businesses/${currentBusiness.id}/cover-template`, {
+   855→          method: 'PUT',
+   856→          headers: {
+   857→            'Content-Type': 'application/json',
+   858→            Authorization: `Bearer ${token}`,
+   859→          },
+   860→          body: JSON.stringify({
+   861→            coverTemplateId: activeCoverTemplate,
+   862→            coverImage: newCustom.coverImage,
+   863→            coverTagline: newCustom.coverTagline,
+   864→            coverAccent: newCustom.coverAccent,
+   865→          }),
+   866→        });
+   867→      } catch {
+   868→        // Non-critical
+   869→      }
+   870→    }
+   871→    setCustomizing(false);
+   872→  }, [currentBusiness?.id, token, activeCoverTemplate, coverCustomization]);
+   873→
+   874→  // ═══════════════════════════════════════════════════════
+   875→  // RENDER
+   876→  // ═══════════════════════════════════════════════════════
+   877→
+   878→  return (
+   879→    <div className="space-y-6">
+   880→      {/* Header */}
+   881→      <div className="flex items-center justify-between">
+   882→        <div>
+   883→          <h1 className="text-xl font-bold text-charcoal tracking-tight font-editorial">Design Studio</h1>
+   884→          <p className="text-sm text-charcoal/40 mt-0.5">Customize your menu and book cover design</p>
+   885→        </div>
+   886→      </div>
+   887→
+   888→      {/* Tabs */}
+   889→      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+   890→        <TabsList className="bg-white border border-charcoal/10 p-1 h-auto">
+   891→          <TabsTrigger value="menu-templates" className="data-[state=active]:bg-charcoal data-[state=active]:text-white text-charcoal/60 px-4 py-2 text-sm font-medium rounded-lg transition-all">
+   892→            <Palette className="w-4 h-4 mr-2" />
+   893→            Menu Templates
+   894→          </TabsTrigger>
+   895→          <TabsTrigger value="cover-templates" className="data-[state=active]:bg-charcoal data-[state=active]:text-white text-charcoal/60 px-4 py-2 text-sm font-medium rounded-lg transition-all">
+   896→            <BookOpen className="w-4 h-4 mr-2" />
+   897→            Book Cover Templates
+   898→          </TabsTrigger>
+   899→        </TabsList>
+   900→
+   901→        {/* Menu Templates Tab — Shows the original Templates component content */}
+   902→        <TabsContent value="menu-templates" className="mt-6">
+   903→          <div className="text-center py-16">
+   904→            <Palette className="w-12 h-12 text-charcoal/10 mx-auto mb-3" />
+   905→            <h3 className="text-lg font-semibold text-charcoal/60">Menu Templates</h3>
+   906→            <p className="text-sm text-charcoal/30 max-w-md mx-auto mt-1">
+   907→              Choose a design for your menu/catalog interior pages. These templates control how your menu items, categories, and prices are displayed to customers.
+   908→            </p>
+   909→            <Button
+   910→              onClick={() => {
+   911→                if (typeof window !== 'undefined') window.location.hash = '#/templates';
+   912→              }}
+   913→              className="mt-4 bg-charcoal hover:bg-charcoal-light text-white"
+   914→            >
+   915→              Go to Menu Templates
+   916→            </Button>
+   917→          </div>
+   918→        </TabsContent>
+   919→
+   920→        {/* Book Cover Templates Tab */}
+   921→        <TabsContent value="cover-templates" className="mt-0 space-y-6">
+   922→          {/* Draft indicator */}
+   923→          {activeCoverTemplate && currentBusiness?.status !== 'published' && (
+   924→            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200/60">
+   925→              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+   926→              <p className="text-xs text-amber-700">
+   927→                <span className="font-semibold">Draft Mode</span> — Your cover changes are saved locally but not yet visible to customers.{' '}
+   928→                <button onClick={() => { if (typeof window !== 'undefined') window.location.hash = '#/business-settings'; }} className="underline font-semibold">
+   929→                  Publish
+   930→                </button>{' '}
+   931→                to make them public.
+   932→              </p>
+   933→            </div>
+   934→          )}
+   935→
+   936→          {/* Recommended section */}
+   937→          {recommendedCovers.length > 0 && !searchQuery && selectedCategory === 'all' && !showFavoritesOnly && (
+   938→            <div>
+   939→              <div className="flex items-center gap-2 mb-4">
+   940→                <Sparkles className="w-4 h-4 text-gold" />
+   941→                <h2 className="text-sm font-semibold text-charcoal">Recommended for Your Business</h2>
+   942→                {bizCategory && (
+   943→                  <Badge variant="secondary" className="text-[10px] font-normal">{bizCategory}</Badge>
+   944→                )}
+   945→              </div>
+   946→              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+   947→                {recommendedCovers.slice(0, 5).map((template) => (
+   948→                  <CoverTemplateCard
+   949→                    key={template.id}
+   950→                    template={template}
+   951→                    isActive={activeCoverTemplate === template.id}
+   952→                    isApplying={applyingTemplate === template.id}
+   953→                    isFavorite={coverFavorites.includes(template.id)}
+   954→                    businessName={businessName}
+   955→                    logo={businessLogo}
+   956→                    coverImage={coverCustomization.coverImage}
+   957→                    tagline={coverCustomization.coverTagline}
+   958→                    accent={coverCustomization.coverAccent}
+   959→                    onApply={() => applyTemplate(template.id)}
+   960→                    onPreview={() => setPreviewTemplate(template)}
+   961→                    onToggleFavorite={() => toggleCoverFavorite(template.id)}
+   962→                  />
+   963→                ))}
+   964→              </div>
+   965→            </div>
+   966→          )}
+   967→
+   968→          {/* Search and Filters */}
+   969→          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+   970→            <div className="relative flex-1 w-full sm:max-w-xs">
+   971→              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal/30" />
+   972→              <Input
+   973→                value={searchQuery}
+   974→                onChange={(e) => setSearchQuery(e.target.value)}
+   975→                placeholder="Search templates..."
+   976→                className="pl-9 h-9 text-sm bg-white"
+   977→              />
+   978→            </div>
+   979→            <div className="flex items-center gap-2 flex-wrap">
+   980→              <button
+   981→                onClick={() => setSelectedCategory('all')}
+   982→                className={`px-3 py-1.5 text-[11px] font-medium rounded-lg transition-colors ${
+   983→                  selectedCategory === 'all'
+   984→                    ? 'bg-charcoal text-white'
+   985→                    : 'bg-white text-charcoal/50 hover:bg-charcoal/5 border border-charcoal/10'
+   986→                }`}
+   987→              >
+   988→                All
+   989→              </button>
+   990→              {COVER_CATEGORIES.map((cat) => (
+   991→                <button
+   992→                  key={cat.id}
+   993→                  onClick={() => setSelectedCategory(cat.id)}
+   994→                  className={`px-3 py-1.5 text-[11px] font-medium rounded-lg transition-colors flex items-center gap-1 ${
+   995→                    selectedCategory === cat.id
+   996→                      ? 'bg-charcoal text-white'
+   997→                      : 'bg-white text-charcoal/50 hover:bg-charcoal/5 border border-charcoal/10'
+   998→                  }`}
+   999→                >
+  1000→                  <span className="text-[10px]">{cat.icon}</span>
+  1001→                  {cat.label}
+  1002→                </button>
+  1003→              ))}
+  1004→            </div>
+  1005→            <button
+  1006→              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+  1007→              className={`px-3 py-1.5 text-[11px] font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+  1008→                showFavoritesOnly
+  1009→                  ? 'bg-red-50 text-red-600 border border-red-200'
+  1010→                  : 'bg-white text-charcoal/50 hover:bg-charcoal/5 border border-charcoal/10'
+  1011→              }`}
+  1012→            >
+  1013→              <Heart className={`w-3 h-3 ${showFavoritesOnly ? 'fill-red-500' : ''}`} />
+  1014→              Favorites {coverFavorites.length > 0 && `(${coverFavorites.length})`}
+  1015→            </button>
+  1016→            <button
+  1017→              onClick={() => setShowCustomization(!showCustomization)}
+  1018→              className={`px-3 py-1.5 text-[11px] font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+  1019→                showCustomization
+  1020→                  ? 'bg-gold/10 text-gold-dark border border-gold/20'
+  1021→                  : 'bg-white text-charcoal/50 hover:bg-charcoal/5 border border-charcoal/10'
+  1022→              }`}
+  1023→            >
+  1024→              <SlidersHorizontal className="w-3 h-3" />
+  1025→              Customize
+  1026→            </button>
+  1027→          </div>
+  1028→
+  1029→          {/* Main content area */}
+  1030→          <div className="flex gap-6">
+  1031→            {/* Template gallery */}
+  1032→            <div className="flex-1 min-w-0">
+  1033→              {filteredTemplates.length === 0 ? (
+  1034→                <div className="text-center py-16">
+  1035→                  <Search className="w-10 h-10 text-charcoal/10 mx-auto mb-3" />
+  1036→                  <h3 className="text-base font-semibold text-charcoal/40">No templates found</h3>
+  1037→                  <p className="text-sm text-charcoal/25 mt-1">Try adjusting your search or filters.</p>
+  1038→                </div>
+  1039→              ) : (
+  1040→                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4">
+  1041→                  {filteredTemplates.map((template) => (
+  1042→                    <CoverTemplateCard
+  1043→                      key={template.id}
+  1044→                      template={template}
+  1045→                      isActive={activeCoverTemplate === template.id}
+  1046→                      isApplying={applyingTemplate === template.id}
+  1047→                      isFavorite={coverFavorites.includes(template.id)}
+  1048→                      businessName={businessName}
+  1049→                      logo={businessLogo}
+  1050→                      coverImage={coverCustomization.coverImage}
+  1051→                      tagline={coverCustomization.coverTagline}
+  1052→                      accent={coverCustomization.coverAccent}
+  1053→                      onApply={() => applyTemplate(template.id)}
+  1054→                      onPreview={() => setPreviewTemplate(template)}
+  1055→                      onToggleFavorite={() => toggleCoverFavorite(template.id)}
+  1056→                    />
+  1057→                  ))}
+  1058→                </div>
+  1059→              )}
+  1060→            </div>
+  1061→
+  1062→            {/* Customization sidebar */}
+  1063→            <AnimatePresence>
+  1064→              {showCustomization && (
+  1065→                <motion.div
+  1066→                  initial={{ width: 0, opacity: 0 }}
+  1067→                  animate={{ width: 280, opacity: 1 }}
+  1068→                  exit={{ width: 0, opacity: 0 }}
+  1069→                  transition={{ duration: 0.2 }}
+  1070→                  className="shrink-0 overflow-hidden"
+  1071→                >
+  1072→                  <div className="w-[280px] p-4 rounded-xl bg-white border border-charcoal/10 shadow-premium">
+  1073→                    <div className="flex items-center justify-between mb-4">
+  1074→                      <h3 className="text-sm font-semibold text-charcoal">Cover Settings</h3>
+  1075→                      <button onClick={() => setShowCustomization(false)} className="text-charcoal/30 hover:text-charcoal/60">
+  1076→                        <X className="w-4 h-4" />
+  1077→                      </button>
+  1078→                    </div>
+  1079→                    {activeCoverTemplate ? (
+  1080→                      <CoverCustomizationPanel
+  1081→                        coverImage={coverCustomization.coverImage}
+  1082→                        coverTagline={coverCustomization.coverTagline}
+  1083→                        coverAccent={coverCustomization.coverAccent}
+  1084→                        onChangeImage={(url) => saveCustomization('coverImage', url)}
+  1085→                        onChangeTagline={(val) => saveCustomization('coverTagline', val)}
+  1086→                        onChangeAccent={(val) => saveCustomization('coverAccent', val)}
+  1087→                        onRemoveImage={() => saveCustomization('coverImage', null)}
+  1088→                      />
+  1089→                    ) : (
+  1090→                      <div className="text-center py-8">
+  1091→                        <BookOpen className="w-8 h-8 text-charcoal/10 mx-auto mb-2" />
+  1092→                        <p className="text-xs text-charcoal/30">Apply a cover template first to customize it.</p>
+  1093→                      </div>
+  1094→                    )}
+  1095→                  </div>
+  1096→                </motion.div>
+  1097→              )}
+  1098→            </AnimatePresence>
+  1099→          </div>
+  1100→        </TabsContent>
+  1101→      </Tabs>
+  1102→
+  1103→      {/* Preview Modal */}
+  1104→      {previewTemplate && (
+  1105→        <CoverPreviewModal
+  1106→          template={previewTemplate}
+  1107→          businessName={businessName}
+  1108→          logo={businessLogo}
+  1109→          coverImage={coverCustomization.coverImage}
+  1110→          tagline={coverCustomization.coverTagline}
+  1111→          accent={coverCustomization.coverAccent}
+  1112→          isOpen={!!previewTemplate}
+  1113→          onClose={() => setPreviewTemplate(null)}
+  1114→          onApply={() => {
+  1115→            applyTemplate(previewTemplate.id);
+  1116→            setPreviewTemplate(null);
+  1117→          }}
+  1118→          isApplied={activeCoverTemplate === previewTemplate.id}
+  1119→          isApplying={applyingTemplate === previewTemplate.id}
+  1120→        />
+  1121→      )}
+  1122→    </div>
+  1123→  );
+  1124→}
+  1125→

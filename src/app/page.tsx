@@ -27,6 +27,11 @@ import CreateBusinessDialog from '@/components/dashboard/create-business-dialog'
 // Public menu
 import PublicMenuView from '@/components/public-menu/public-menu-view';
 
+// Marketplace
+import Marketplace from '@/components/marketplace/marketplace';
+import DesignerPortal from '@/components/designer-portal/designer-portal';
+import CreateTemplate from '@/components/designer-portal/create-template';
+
 import { Loader2, BookOpen } from 'lucide-react';
 
 export default function Home() {
@@ -142,6 +147,7 @@ export default function Home() {
         case 'login':
           return <LoginPage />;
         case 'register':
+        case 'designer-register':
           return <RegisterPage />;
         default:
           return <LandingPage />;
@@ -176,13 +182,16 @@ export default function Home() {
     // Dashboard pages
     const dashboardContent = getDashboardContent(page);
     return (
-      <DashboardLayout activePage={page}>
+      <DashboardLayout activePage={currentRoute}>
         {dashboardContent}
       </DashboardLayout>
     );
   };
 
   const getDashboardContent = (pageName: string) => {
+    // Handle sub-routes
+    if (currentRoute === '/designer-portal/create') return <CreateTemplate />;
+
     switch (pageName) {
       case 'dashboard':
         return <Overview />;
@@ -196,6 +205,10 @@ export default function Home() {
         return <Templates />;
       case 'design-studio':
         return <BookCoverTemplates />;
+      case 'marketplace':
+        return <Marketplace />;
+      case 'designer-portal':
+        return <DesignerPortal />;
       case 'qr-code':
         return <QRCode />;
       case 'preview':

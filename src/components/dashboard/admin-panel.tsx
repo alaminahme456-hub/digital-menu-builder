@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
   Shield,
   Loader2,
+  Store,
 } from 'lucide-react';
 import {
   Card,
@@ -53,6 +54,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/lib/store';
 import { toast } from 'sonner';
+import AdminMarketplace from './admin-marketplace';
 
 interface AdminStats {
   totalUsers: number;
@@ -325,6 +327,10 @@ export default function AdminPanel() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="businesses">Businesses</TabsTrigger>
+          <TabsTrigger value="marketplace" className="gap-1.5">
+            <Store className="h-3.5 w-3.5" />
+            Marketplace
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -613,6 +619,11 @@ export default function AdminPanel() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Marketplace Tab */}
+        <TabsContent value="marketplace" className="mt-6">
+          <AdminMarketplace />
         </TabsContent>
       </Tabs>
     </div>

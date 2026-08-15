@@ -1,0 +1,773 @@
+     1→'use client';
+     2→
+     3→import React, { useState, useEffect, useCallback } from 'react';
+     4→import { motion, AnimatePresence } from 'framer-motion';
+     5→import {
+     6→  Search, Heart, Star, Eye, Store, Palette, BookOpen, Grid,
+     7→  Filter, ChevronRight, ArrowRight, Sparkles, TrendingUp,
+     8→  Clock, Users, Loader2, Check,
+     9→} from 'lucide-react';
+    10→import { toast } from 'sonner';
+    11→import { useAppStore, useAuthStore } from '@/lib/store';
+    12→import { Button } from '@/components/ui/button';
+    13→import { Input } from '@/components/ui/input';
+    14→import { Badge } from '@/components/ui/badge';
+    15→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    16→import { Skeleton } from '@/components/ui/skeleton';
+    17→import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+    18→import {
+    19→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    20→} from '@/components/ui/select';
+    21→
+    22→// ──────────────────────────────────────────────
+    23→// Types
+    24→// ──────────────────────────────────────────────
+    25→interface MarketplaceTemplate {
+    26→  id: string;
+    27→  name: string;
+    28→  description?: string;
+    29→  template_type: 'book_cover' | 'menu';
+    30→  category: string;
+    31→  style?: string;
+    32→  designer_id: string;
+    33→  designer_name: string;
+    34→  designer_username?: string;
+    35→  preview_images?: string[];
+    36→  rating: number;
+    37→  uses_count: number;
+    38→  featured: boolean;
+    39→  config?: Record<string, unknown>;
+    40→  created_at?: string;
+    41→}
+    42→
+    43→interface MarketplaceDesigner {
+    44→  id: string;
+    45→  display_name: string;
+    46→  username: string;
+    47→  avatar_url?: string;
+    48→  specialty?: string[];
+    49→  template_count: number;
+    50→  rating: number;
+    51→}
+    52→
+    53→const CATEGORIES = ['All', 'Luxury', 'Minimal', 'Modern', 'Editorial', 'Classic', 'Creative'];
+    54→const SORT_OPTIONS = [
+    55→  { value: 'popular', label: 'Popular' },
+    56→  { value: 'newest', label: 'Newest' },
+    57→  { value: 'highest_rated', label: 'Highest Rated' },
+    58→  { value: 'featured', label: 'Featured' },
+    59→];
+    60→
+    61→const CATEGORY_GRADIENTS: Record<string, string> = {
+    62→  luxury: 'linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 40%, #C9A84C 100%)',
+    63→  minimal: 'linear-gradient(135deg, #FAF9F6 0%, #F0EDE6 100%)',
+    64→  modern: 'linear-gradient(135deg, #1A1A1A 0%, #374151 100%)',
+    65→  editorial: 'linear-gradient(135deg, #FAF9F6 0%, #E8D5A3 50%, #1A1A1A 100%)',
+    66→  classic: 'linear-gradient(135deg, #2C1810 0%, #8B6914 100%)',
+    67→  creative: 'linear-gradient(135deg, #1E3A5F 0%, #C9A84C 100%)',
+    68→};
+    69→
+    70→// ──────────────────────────────────────────────
+    71→// Skeleton Cards
+    72→// ──────────────────────────────────────────────
+    73→function TemplateCardSkeleton() {
+    74→  return (
+    75→    <div className="bg-white rounded-xl border border-black/[0.06] overflow-hidden">
+    76→      <Skeleton className="w-full aspect-[4/3]" />
+    77→      <div className="p-4 space-y-3">
+    78→        <Skeleton className="h-4 w-3/4" />
+    79→        <Skeleton className="h-3 w-1/2" />
+    80→        <div className="flex items-center justify-between">
+    81→          <Skeleton className="h-3 w-20" />
+    82→          <Skeleton className="h-8 w-20 rounded-lg" />
+    83→        </div>
+    84→      </div>
+    85→    </div>
+    86→  );
+    87→}
+    88→
+    89→function DesignerCardSkeleton() {
+    90→  return (
+    91→    <div className="bg-white rounded-xl border border-black/[0.06] p-6 flex flex-col items-center gap-3">
+    92→      <Skeleton className="w-16 h-16 rounded-full" />
+    93→      <Skeleton className="h-4 w-28" />
+    94→      <Skeleton className="h-3 w-20" />
+    95→      <Skeleton className="h-3 w-24" />
+    96→    </div>
+    97→  );
+    98→}
+    99→
+   100→// ──────────────────────────────────────────────
+   101→// Template Preview Image
+   102→// ──────────────────────────────────────────────
+   103→function TemplatePreview({ template }: { template: MarketplaceTemplate }) {
+   104→  const imageUrl = template.preview_images?.[0];
+   105→  const gradient = CATEGORY_GRADIENTS[template.category?.toLowerCase()] || CATEGORY_GRADIENTS.modern;
+   106→
+   107→  return (
+   108→    <div className="relative w-full aspect-[4/3] overflow-hidden bg-ivory">
+   109→      {imageUrl ? (
+   110→        <img
+   111→          src={imageUrl}
+   112→          alt={template.name}
+   113→          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+   114→        />
+   115→      ) : (
+   116→        <div
+   117→          className="w-full h-full flex items-center justify-center"
+   118→          style={{ background: gradient }}
+   119→        >
+   120→          <span className="text-white/40 text-3xl font-editorial font-light tracking-tight">
+   121→            {template.name.charAt(0).toUpperCase()}
+   122→          </span>
+   123→        </div>
+   124→      )}
+   125→      {template.featured && (
+   126→        <div className="absolute top-3 left-3">
+   127→          <Badge className="bg-gold/90 text-white text-[10px] px-2 py-0.5 rounded-full border-0 font-medium">
+   128→            <Sparkles className="w-3 h-3 mr-1" />
+   129→            Featured
+   130→          </Badge>
+   131→        </div>
+   132→      )}
+   133→    </div>
+   134→  );
+   135→}
+   136→
+   137→// ──────────────────────────────────────────────
+   138→// Template Card
+   139→// ──────────────────────────────────────────────
+   140→function TemplateCard({
+   141→  template, isApplied, isApplying, onApply, onToggleFavorite, isFavorited, onViewDesigner,
+   142→}: {
+   143→  template: MarketplaceTemplate;
+   144→  isApplied: boolean;
+   145→  isApplying: boolean;
+   146→  onApply: (t: MarketplaceTemplate) => void;
+   147→  onToggleFavorite: (id: string) => void;
+   148→  isFavorited: boolean;
+   149→  onViewDesigner: (id: string) => void;
+   150→}) {
+   151→  return (
+   152→    <motion.div
+   153→      layout
+   154→      initial={{ opacity: 0, y: 12 }}
+   155→      animate={{ opacity: 1, y: 0 }}
+   156→      exit={{ opacity: 0, y: -12 }}
+   157→      transition={{ duration: 0.25 }}
+   158→      className="group bg-white rounded-xl border border-black/[0.06] shadow-premium overflow-hidden hover:shadow-premium-lg hover:border-black/[0.12] transition-all duration-300"
+   159→    >
+   160→      <TemplatePreview template={template} />
+   161→      <div className="p-4 space-y-3">
+   162→        <div className="flex items-start justify-between gap-2">
+   163→          <h3 className="font-editorial text-sm font-semibold text-charcoal leading-snug line-clamp-1">
+   164→            {template.name}
+   165→          </h3>
+   166→          <button
+   167→            onClick={(e) => { e.stopPropagation(); onToggleFavorite(template.id); }}
+   168→            className="flex-shrink-0 p-1 -mr-1 -mt-1 rounded-full hover:bg-black/[0.04] transition-colors"
+   169→            aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+   170→          >
+   171→            <Heart
+   172→              className={`w-4 h-4 transition-all duration-200 ${
+   173→                isFavorited
+   174→                  ? 'fill-red-500 text-red-500 scale-110'
+   175→                  : 'text-black/25 group-hover:text-black/50'
+   176→              }`}
+   177→            />
+   178→          </button>
+   179→        </div>
+   180→        <button
+   181→          onClick={() => onViewDesigner(template.designer_id)}
+   182→          className="text-xs text-black/45 hover:text-gold-dark transition-colors truncate block"
+   183→        >
+   184→          by {template.designer_name}
+   185→        </button>
+   186→        <div className="flex items-center gap-2 flex-wrap">
+   187→          <Badge
+   188→            variant="secondary"
+   189→            className="bg-gold/10 text-gold-dark text-[10px] px-2 py-0.5 rounded-full border-0 font-medium uppercase tracking-wider"
+   190→          >
+   191→            {template.category}
+   192→          </Badge>
+   193→          {template.template_type === 'book_cover' && (
+   194→            <Badge
+   195→              variant="secondary"
+   196→              className="bg-charcoal/5 text-charcoal/60 text-[10px] px-2 py-0.5 rounded-full border-0 font-medium"
+   197→            >
+   198→              <BookOpen className="w-2.5 h-2.5 mr-1" />
+   199→              Cover
+   200→            </Badge>
+   201→          )}
+   202→        </div>
+   203→        <div className="flex items-center justify-between pt-1">
+   204→          <div className="flex items-center gap-3 text-xs text-black/40">
+   205→            <span className="flex items-center gap-1">
+   206→              <Star className="w-3 h-3 text-gold fill-gold" />
+   207→              <span className="font-medium text-black/60">{template.rating.toFixed(1)}</span>
+   208→            </span>
+   209→            <span className="flex items-center gap-1">
+   210→              <Eye className="w-3 h-3" />
+   211→              {template.uses_count}
+   212→            </span>
+   213→          </div>
+   214→          <Button
+   215→            size="sm"
+   216→            disabled={isApplying || isApplied}
+   217→            onClick={() => onApply(template)}
+   218→            className={
+   219→              isApplied
+   220→                ? 'bg-gold/10 text-gold-dark hover:bg-gold/15 border-0 h-8 text-xs px-3 rounded-lg'
+   221→                : 'bg-charcoal hover:bg-charcoal-light text-white h-8 text-xs px-3 rounded-lg'
+   222→            }
+   223→          >
+   224→            {isApplying ? (
+   225→              <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+   226→            ) : isApplied ? (
+   227→              <Check className="w-3.5 h-3.5 mr-1.5" />
+   228→            ) : null}
+   229→            {isApplied ? 'Applied' : 'Apply'}
+   230→          </Button>
+   231→        </div>
+   232→      </div>
+   233→    </motion.div>
+   234→  );
+   235→}
+   236→
+   237→// ──────────────────────────────────────────────
+   238→// Featured Horizontal Scroll
+   239→// ──────────────────────────────────────────────
+   240→function FeaturedSection({
+   241→  templates, onApply, onToggleFavorite, appliedId, applyingId, favorites, onViewDesigner,
+   242→}: {
+   243→  templates: MarketplaceTemplate[];
+   244→  onApply: (t: MarketplaceTemplate) => void;
+   245→  onToggleFavorite: (id: string) => void;
+   246→  appliedId: string | null;
+   247→  applyingId: string | null;
+   248→  favorites: string[];
+   249→  onViewDesigner: (id: string) => void;
+   250→}) {
+   251→  if (templates.length === 0) return null;
+   252→
+   253→  return (
+   254→    <section className="mb-10">
+   255→      <div className="flex items-center justify-between mb-5">
+   256→        <div className="flex items-center gap-3">
+   257→          <div className="w-8 h-8 rounded-lg bg-gold/10 flex items-center justify-center">
+   258→            <Sparkles className="w-4 h-4 text-gold" />
+   259→          </div>
+   260→          <h2 className="font-editorial text-xl font-semibold text-charcoal">
+   261→            Featured This Week
+   262→          </h2>
+   263→        </div>
+   264→        <button className="text-xs text-black/40 hover:text-gold-dark flex items-center gap-1 transition-colors">
+   265→          View all <ChevronRight className="w-3.5 h-3.5" />
+   266→        </button>
+   267→      </div>
+   268→      <div className="flex gap-5 overflow-x-auto no-scrollbar pb-2 -mx-1 px-1">
+   269→        {templates.map((t) => (
+   270→          <div key={t.id} className="flex-shrink-0 w-[260px] sm:w-[280px]">
+   271→            <TemplateCard
+   272→              template={t}
+   273→              isApplied={appliedId === t.id}
+   274→              isApplying={applyingId === t.id}
+   275→              onApply={onApply}
+   276→              onToggleFavorite={onToggleFavorite}
+   277→              isFavorited={favorites.includes(t.id)}
+   278→              onViewDesigner={onViewDesigner}
+   279→            />
+   280→          </div>
+   281→        ))}
+   282→      </div>
+   283→    </section>
+   284→  );
+   285→}
+   286→
+   287→// ──────────────────────────────────────────────
+   288→// Designer Card
+   289→// ──────────────────────────────────────────────
+   290→function DesignerCard({
+   291→  designer, onViewProfile,
+   292→}: {
+   293→  designer: MarketplaceDesigner;
+   294→  onViewProfile: (username: string) => void;
+   295→}) {
+   296→  return (
+   297→    <motion.div
+   298→      layout
+   299→      initial={{ opacity: 0, y: 12 }}
+   300→      animate={{ opacity: 1, y: 0 }}
+   301→      className="bg-white rounded-xl border border-black/[0.06] shadow-premium p-6 flex flex-col items-center text-center hover:shadow-premium-lg hover:border-black/[0.12] transition-all duration-300"
+   302→    >
+   303→      <Avatar className="w-16 h-16 mb-3 ring-2 ring-black/[0.04]">
+   304→        <AvatarImage src={designer.avatar_url} alt={designer.display_name} />
+   305→        <AvatarFallback className="bg-charcoal text-white font-editorial text-lg">
+   306→          {designer.display_name.charAt(0).toUpperCase()}
+   307→        </AvatarFallback>
+   308→      </Avatar>
+   309→      <h3 className="font-editorial text-sm font-semibold text-charcoal">{designer.display_name}</h3>
+   310→      <p className="text-xs text-black/40 mb-3">@{designer.username}</p>
+   311→      <div className="flex flex-wrap gap-1.5 justify-center mb-4">
+   312→        {designer.specialty?.slice(0, 3).map((s) => (
+   313→          <Badge
+   314→            key={s}
+   315→            variant="secondary"
+   316→            className="bg-gold/10 text-gold-dark text-[10px] px-2 py-0.5 rounded-full border-0 font-medium"
+   317→          >
+   318→            {s}
+   319→          </Badge>
+   320→        ))}
+   321→      </div>
+   322→      <div className="flex items-center gap-4 text-xs text-black/40 mb-4">
+   323→        <span className="flex items-center gap-1">
+   324→          <Grid className="w-3 h-3" />
+   325→          <span className="font-medium text-black/60">{designer.template_count}</span> templates
+   326→        </span>
+   327→        <span className="flex items-center gap-1">
+   328→          <Star className="w-3 h-3 text-gold fill-gold" />
+   329→          <span className="font-medium text-black/60">{designer.rating.toFixed(1)}</span>
+   330→        </span>
+   331→      </div>
+   332→      <Button
+   333→        variant="outline"
+   334→        size="sm"
+   335→        onClick={() => onViewProfile(designer.username)}
+   336→        className="w-full border-black/[0.08] hover:bg-charcoal/5 h-8 text-xs rounded-lg"
+   337→      >
+   338→        View Profile <ArrowRight className="w-3 h-3 ml-1.5" />
+   339→      </Button>
+   340→    </motion.div>
+   341→  );
+   342→}
+   343→
+   344→// ──────────────────────────────────────────────
+   345→// Empty State
+   346→// ──────────────────────────────────────────────
+   347→function EmptyState({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) {
+   348→  return (
+   349→    <div className="flex flex-col items-center justify-center py-20 text-center">
+   350→      <div className="w-14 h-14 rounded-2xl bg-ivory flex items-center justify-center mb-4">
+   351→        <Icon className="w-6 h-6 text-black/20" />
+   352→      </div>
+   353→      <h3 className="font-editorial text-base font-semibold text-charcoal/70 mb-1.5">{title}</h3>
+   354→      <p className="text-sm text-black/35 max-w-xs">{description}</p>
+   355→    </div>
+   356→  );
+   357→}
+   358→
+   359→// ═══════════════════════════════════════════
+   360→// MAIN MARKETPLACE COMPONENT
+   361→// ═══════════════════════════════════════════
+   362→export default function Marketplace() {
+   363→  const { token, user } = useAuthStore();
+   364→  const {
+   365→    currentBusiness, marketplaceFavorites, toggleMarketplaceFavorite,
+   366→    appliedMarketplaceTemplate, appliedMarketplaceCoverTemplate,
+   367→    setAppliedMarketplaceTemplate, setAppliedMarketplaceCoverTemplate,
+   368→    navigate,
+   369→  } = useAppStore();
+   370→
+   371→  // Tab & UI state
+   372→  const [activeTab, setActiveTab] = useState('discover');
+   373→  const [search, setSearch] = useState('');
+   374→  const [filterType, setFilterType] = useState('all');
+   375→  const [filterCategory, setFilterCategory] = useState('All');
+   376→  const [sortBy, setSortBy] = useState('popular');
+   377→  const [page, setPage] = useState(1);
+   378→  const [hasMore, setHasMore] = useState(true);
+   379→
+   380→  // Data state
+   381→  const [templates, setTemplates] = useState<MarketplaceTemplate[]>([]);
+   382→  const [featured, setFeatured] = useState<MarketplaceTemplate[]>([]);
+   383→  const [designers, setDesigners] = useState<MarketplaceDesigner[]>([]);
+   384→  const [favorites, setFavorites] = useState<MarketplaceTemplate[]>([]);
+   385→  const [loading, setLoading] = useState(true);
+   386→  const [loadingMore, setLoadingMore] = useState(false);
+   387→  const [designersLoading, setDesignersLoading] = useState(false);
+   388→  const [favoritesLoading, setFavoritesLoading] = useState(false);
+   389→  const [applyingId, setApplyingId] = useState<string | null>(null);
+   390→
+   391→  // ── Fetch Templates ──
+   392→  const fetchTemplates = useCallback(async (append = false) => {
+   393→    if (!append) setLoading(true);
+   394→    else setLoadingMore(true);
+   395→
+   396→    try {
+   397→      const params = new URLSearchParams();
+   398→      if (activeTab === 'book_covers') params.set('type', 'book_cover');
+   399→      else if (activeTab === 'menu') params.set('type', 'menu');
+   400→      else if (filterType !== 'all') params.set('type', filterType);
+   401→      if (filterCategory !== 'All') params.set('category', filterCategory);
+   402→      if (search.trim()) params.set('search', search.trim());
+   403→      params.set('sort', sortBy);
+   404→      params.set('page', String(append ? page : 1));
+   405→      params.set('limit', '20');
+   406→
+   407→      const res = await fetch(`/api/marketplace/templates?${params}`, {
+   408→        headers: token ? { Authorization: `Bearer ${token}` } : {},
+   409→      });
+   410→      if (res.ok) {
+   411→        const data = await res.json();
+   412→        const list = data.templates || data || [];
+   413→        setTemplates(append ? (prev) => [...prev, ...list] : list);
+   414→        setHasMore(list.length >= 20);
+   415→        if (!append) setPage(2);
+   416→        else setPage((p) => p + 1);
+   417→      }
+   418→    } catch {
+   419→      toast.error('Failed to load templates');
+   420→    } finally {
+   421→      setLoading(false);
+   422→      setLoadingMore(false);
+   423→    }
+   424→  }, [activeTab, filterType, filterCategory, search, sortBy, page, token]);
+   425→
+   426→  // ── Fetch Featured ──
+   427→  const fetchFeatured = useCallback(async () => {
+   428→    try {
+   429→      const res = await fetch('/api/marketplace/templates?featured=true&limit=10', {
+   430→        headers: token ? { Authorization: `Bearer ${token}` } : {},
+   431→      });
+   432→      if (res.ok) {
+   433→        const data = await res.json();
+   434→        setFeatured(data.templates || data || []);
+   435→      }
+   436→    } catch { /* silent */ }
+   437→  }, [token]);
+   438→
+   439→  // ── Fetch Designers ──
+   440→  const fetchDesigners = useCallback(async (searchQuery = '') => {
+   441→    setDesignersLoading(true);
+   442→    try {
+   443→      const params = new URLSearchParams({ limit: '50' });
+   444→      if (searchQuery) params.set('search', searchQuery);
+   445→      const res = await fetch(`/api/marketplace/designers?${params}`, {
+   446→        headers: token ? { Authorization: `Bearer ${token}` } : {},
+   447→      });
+   448→      if (res.ok) {
+   449→        const data = await res.json();
+   450→        setDesigners(data.designers || data || []);
+   451→      }
+   452→    } catch {
+   453→      toast.error('Failed to load designers');
+   454→    } finally {
+   455→      setDesignersLoading(false);
+   456→    }
+   457→  }, [token]);
+   458→
+   459→  // ── Fetch Favorites ──
+   460→  const fetchFavorites = useCallback(async () => {
+   461→    setFavoritesLoading(true);
+   462→    try {
+   463→      const res = await fetch('/api/marketplace/favorites', {
+   464→        headers: token ? { Authorization: `Bearer ${token}` } : {},
+   465→      });
+   466→      if (res.ok) {
+   467→        const data = await res.json();
+   468→        setFavorites(data.templates || data || []);
+   469→      }
+   470→    } catch {
+   471→      toast.error('Failed to load favorites');
+   472→    } finally {
+   473→      setFavoritesLoading(false);
+   474→    }
+   475→  }, [token]);
+   476→
+   477→  // ── Effects ──
+   478→  useEffect(() => { fetchFeatured(); }, [fetchFeatured]);
+   479→
+   480→  useEffect(() => {
+   481→    setPage(1);
+   482→    fetchTemplates(false);
+   483→  }, [activeTab, filterType, filterCategory, search, sortBy]);
+   484→
+   485→  useEffect(() => {
+   486→    if (activeTab === 'designers') fetchDesigners(search);
+   487→  }, [activeTab, search, fetchDesigners]);
+   488→
+   489→  useEffect(() => {
+   490→    if (activeTab === 'favorites') fetchFavorites();
+   491→  }, [activeTab, fetchFavorites]);
+   492→
+   493→  // ── Toggle Favorite ──
+   494→  const handleToggleFavorite = useCallback(async (id: string) => {
+   495→    const wasFav = marketplaceFavorites.includes(id);
+   496→    toggleMarketplaceFavorite(id);
+   497→    try {
+   498→      await fetch('/api/marketplace/favorites', {
+   499→        method: 'POST',
+   500→        headers: {
+   501→          'Content-Type': 'application/json',
+   502→          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+   503→        },
+   504→        body: JSON.stringify({ templateId: id, action: wasFav ? 'remove' : 'add' }),
+   505→      });
+   506→      if (activeTab === 'favorites') fetchFavorites();
+   507→    } catch {
+   508→      toggleMarketplaceFavorite(id);
+   509→      toast.error('Failed to update favorites');
+   510→    }
+   511→  }, [marketplaceFavorites, toggleMarketplaceFavorite, token, activeTab, fetchFavorites]);
+   512→
+   513→  // ── Apply Template ──
+   514→  const handleApply = useCallback(async (template: MarketplaceTemplate) => {
+   515→    if (!currentBusiness?.id) {
+   516→      toast.error('Please select a business first');
+   517→      return;
+   518→    }
+   519→
+   520→    setApplyingId(template.id);
+   521→    const prevMenu = appliedMarketplaceTemplate;
+   522→    const prevCover = appliedMarketplaceCoverTemplate;
+   523→
+   524→    // Optimistic
+   525→    if (template.template_type === 'menu') setAppliedMarketplaceTemplate(template.id);
+   526→    else setAppliedMarketplaceCoverTemplate(template.id);
+   527→
+   528→    try {
+   529→      const res = await fetch(`/api/marketplace/templates/${template.id}/apply`, {
+   530→        method: 'POST',
+   531→        headers: {
+   532→          'Content-Type': 'application/json',
+   533→          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+   534→        },
+   535→        body: JSON.stringify({
+   536→          businessId: currentBusiness.id,
+   537→          templateType: template.template_type,
+   538→        }),
+   539→      });
+   540→      if (!res.ok) throw new Error('Apply failed');
+   541→
+   542→      // Also update the business record
+   543→      if (template.template_type === 'menu') {
+   544→        await fetch(`/api/businesses/${currentBusiness.id}`, {
+   545→          method: 'PUT',
+   546→          headers: {
+   547→            'Content-Type': 'application/json',
+   548→            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+   549→          },
+   550→          body: JSON.stringify({ templateConfig: template.config }),
+   551→        });
+   552→      } else {
+   553→        await fetch(`/api/businesses/${currentBusiness.id}/cover-template`, {
+   554→          method: 'PUT',
+   555→          headers: {
+   556→            'Content-Type': 'application/json',
+   557→            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+   558→          },
+   559→          body: JSON.stringify({ coverConfig: template.config }),
+   560→        });
+   561→      }
+   562→
+   563→      toast.success(`"${template.name}" applied successfully`);
+   564→    } catch {
+   565→      // Revert
+   566→      if (template.template_type === 'menu') setAppliedMarketplaceTemplate(prevMenu);
+   567→      else setAppliedMarketplaceCoverTemplate(prevCover);
+   568→      toast.error('Failed to apply template');
+   569→    } finally {
+   570→      setApplyingId(null);
+   571→    }
+   572→  }, [currentBusiness, token, appliedMarketplaceTemplate, appliedMarketplaceCoverTemplate, setAppliedMarketplaceTemplate, setAppliedMarketplaceCoverTemplate]);
+   573→
+   574→  // ── View Designer ──
+   575→  const handleViewDesigner = useCallback((designerId: string) => {
+   576→    navigate('/designer-profile', { designerId });
+   577→  }, [navigate]);
+   578→
+   579→  const handleViewDesignerProfile = useCallback((username: string) => {
+   580→    navigate('/designer-profile', { username });
+   581→  }, [navigate]);
+   582→
+   583→  // ── Load More ──
+   584→  const handleLoadMore = () => { fetchTemplates(true); };
+   585→
+   586→  // ── Determine applied state for a template ──
+   587→  const isTemplateApplied = (t: MarketplaceTemplate) =>
+   588→    t.template_type === 'menu'
+   589→      ? appliedMarketplaceTemplate === t.id
+   590→      : appliedMarketplaceCoverTemplate === t.id;
+   591→
+   592→  // ── Filtered favorites for display ──
+   593→  const displayedFavorites = favorites;
+   594→
+   595→  // ═══════════════════════════════════════════
+   596→  // RENDER
+   597→  // ═══════════════════════════════════════════
+   598→  return (
+   599→    <div className="min-h-screen bg-background">
+   600→      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+   601→        {/* ── Header ── */}
+   602→        <div className="mb-8">
+   603→          <h1 className="font-editorial text-3xl sm:text-4xl font-semibold text-charcoal tracking-tight mb-2">
+   604→            Marketplace
+   605→          </h1>
+   606→          <p className="text-sm text-black/40 max-w-md">
+   607→            Discover premium templates crafted by world-class designers. Apply instantly to elevate your brand.
+   608→          </p>
+   609→        </div>
+   610→
+   611→        {/* ── Search & Filters Bar ── */}
+   612→        <div className="bg-white rounded-xl border border-black/[0.06] shadow-premium p-4 mb-8">
+   613→          <div className="flex flex-col sm:flex-row gap-3">
+   614→            <div className="relative flex-1">
+   615→              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/25" />
+   616→              <Input
+   617→                placeholder="Search templates, designers, styles..."
+   618→                value={search}
+   619→                onChange={(e) => setSearch(e.target.value)}
+   620→                className="pl-10 h-10 bg-ivory/50 border-black/[0.06] rounded-lg text-sm focus-visible:ring-gold/30"
+   621→              />
+   622→            </div>
+   623→            <div className="flex gap-2 flex-wrap">
+   624→              <Select value={filterType} onValueChange={setFilterType}>
+   625→                <SelectTrigger className="w-[140px] h-10 bg-ivory/50 border-black/[0.06] rounded-lg text-xs">
+   626→                  <Filter className="w-3.5 h-3.5 mr-1.5 text-black/35" />
+   627→                  <SelectValue />
+   628→                </SelectTrigger>
+   629→                <SelectContent>
+   630→                  <SelectItem value="all">All Types</SelectItem>
+   631→                  <SelectItem value="book_cover">Book Covers</SelectItem>
+   632→                  <SelectItem value="menu">Menu Templates</SelectItem>
+   633→                </SelectContent>
+   634→              </Select>
+   635→              <Select value={filterCategory} onValueChange={setFilterCategory}>
+   636→                <SelectTrigger className="w-[130px] h-10 bg-ivory/50 border-black/[0.06] rounded-lg text-xs">
+   637→                  <Palette className="w-3.5 h-3.5 mr-1.5 text-black/35" />
+   638→                  <SelectValue />
+   639→                </SelectTrigger>
+   640→                <SelectContent>
+   641→                  {CATEGORIES.map((c) => (
+   642→                    <SelectItem key={c} value={c}>{c}</SelectItem>
+   643→                  ))}
+   644→                </SelectContent>
+   645→              </Select>
+   646→              <Select value={sortBy} onValueChange={setSortBy}>
+   647→                <SelectTrigger className="w-[140px] h-10 bg-ivory/50 border-black/[0.06] rounded-lg text-xs">
+   648→                  {sortBy === 'popular' && <TrendingUp className="w-3.5 h-3.5 mr-1.5 text-black/35" />}
+   649→                  {sortBy === 'newest' && <Clock className="w-3.5 h-3.5 mr-1.5 text-black/35" />}
+   650→                  {sortBy === 'highest_rated' && <Star className="w-3.5 h-3.5 mr-1.5 text-black/35" />}
+   651→                  {sortBy === 'featured' && <Sparkles className="w-3.5 h-3.5 mr-1.5 text-black/35" />}
+   652→                  <SelectValue />
+   653→                </SelectTrigger>
+   654→                <SelectContent>
+   655→                  {SORT_OPTIONS.map((o) => (
+   656→                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+   657→                  ))}
+   658→                </SelectContent>
+   659→              </Select>
+   660→            </div>
+   661→          </div>
+   662→        </div>
+   663→
+   664→        {/* ── Tabs ── */}
+   665→        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+   666→          <TabsList className="bg-white border border-black/[0.06] rounded-xl p-1 h-auto gap-1">
+   667→            <TabsTrigger
+   668→              value="discover"
+   669→              className="rounded-lg px-4 py-2.5 text-xs font-medium data-[state=active]:bg-charcoal data-[state=active]:text-white data-[state=inactive]:text-black/45 transition-all"
+   670→            >
+   671→              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+   672→              Discover
+   673→            </TabsTrigger>
+   674→            <TabsTrigger
+   675→              value="book_covers"
+   676→              className="rounded-lg px-4 py-2.5 text-xs font-medium data-[state=active]:bg-charcoal data-[state=active]:text-white data-[state=inactive]:text-black/45 transition-all"
+   677→            >
+   678→              <BookOpen className="w-3.5 h-3.5 mr-1.5" />
+   679→              Book Covers
+   680→            </TabsTrigger>
+   681→            <TabsTrigger
+   682→              value="menu"
+   683→              className="rounded-lg px-4 py-2.5 text-xs font-medium data-[state=active]:bg-charcoal data-[state=active]:text-white data-[state=inactive]:text-black/45 transition-all"
+   684→            >
+   685→              <Grid className="w-3.5 h-3.5 mr-1.5" />
+   686→              Menus
+   687→            </TabsTrigger>
+   688→            <TabsTrigger
+   689→              value="favorites"
+   690→              className="rounded-lg px-4 py-2.5 text-xs font-medium data-[state=active]:bg-charcoal data-[state=active]:text-white data-[state=inactive]:text-black/45 transition-all"
+   691→            >
+   692→              <Heart className="w-3.5 h-3.5 mr-1.5" />
+   693→              My Favorites
+   694→            </TabsTrigger>
+   695→            <TabsTrigger
+   696→              value="designers"
+   697→              className="rounded-lg px-4 py-2.5 text-xs font-medium data-[state=active]:bg-charcoal data-[state=active]:text-white data-[state=inactive]:text-black/45 transition-all"
+   698→            >
+   699→              <Users className="w-3.5 h-3.5 mr-1.5" />
+   700→              Designers
+   701→            </TabsTrigger>
+   702→          </TabsList>
+   703→
+   704→          {/* ── DISCOVER TAB ── */}
+   705→          <TabsContent value="discover" className="mt-0">
+   706→            <FeaturedSection
+   707→              templates={featured}
+   708→              onApply={handleApply}
+   709→              onToggleFavorite={handleToggleFavorite}
+   710→              appliedId={null}
+   711→              applyingId={applyingId}
+   712→              favorites={marketplaceFavorites}
+   713→              onViewDesigner={handleViewDesigner}
+   714→            />
+   715→            <div className="flex items-center gap-3 mb-5">
+   716→              <h2 className="font-editorial text-lg font-semibold text-charcoal">All Templates</h2>
+   717→              <span className="text-xs text-black/30">{templates.length} results</span>
+   718→            </div>
+   719→            {loading ? (
+   720→              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+   721→                {Array.from({ length: 8 }).map((_, i) => <TemplateCardSkeleton key={i} />)}
+   722→              </div>
+   723→            ) : templates.length === 0 ? (
+   724→              <EmptyState icon={Search} title="No templates found" description="Try adjusting your search or filters to find what you're looking for." />
+   725→            ) : (
+   726→              <>
+   727→                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+   728→                  <AnimatePresence mode="popLayout">
+   729→                    {templates.map((t) => (
+   730→                      <TemplateCard
+   731→                        key={t.id}
+   732→                        template={t}
+   733→                        isApplied={isTemplateApplied(t)}
+   734→                        isApplying={applyingId === t.id}
+   735→                        onApply={handleApply}
+   736→                        onToggleFavorite={handleToggleFavorite}
+   737→                        isFavorited={marketplaceFavorites.includes(t.id)}
+   738→                        onViewDesigner={handleViewDesigner}
+   739→                      />
+   740→                    ))}
+   741→                  </AnimatePresence>
+   742→                </div>
+   743→                {hasMore && (
+   744→                  <div className="flex justify-center mt-8">
+   745→                    <Button
+   746→                      variant="outline"
+   747→                      onClick={handleLoadMore}
+   748→                      disabled={loadingMore}
+   749→                      className="border-black/[0.08] hover:bg-charcoal/5 rounded-lg"
+   750→                    >
+   751→                      {loadingMore ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+   752→                      Load More
+   753→                    </Button>
+   754→                  </div>
+   755→                )}
+   756→              </>
+   757→            )}
+   758→          </TabsContent>
+   759→
+   760→          {/* ── BOOK COVERS TAB ── */}
+   761→          <TabsContent value="book_covers" className="mt-0">
+   762→            <div className="flex items-center gap-3 mb-5">
+   763→              <div className="w-8 h-8 rounded-lg bg-charcoal/5 flex items-center justify-center">
+   764→                <BookOpen className="w-4 h-4 text-charcoal/60" />
+   765→              </div>
+   766→              <h2 className="font-editorial text-lg font-semibold text-charcoal">Book Cover Templates</h2>
+   767→            </div>
+   768→            {loading ? (
+   769→              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+   770→                {Array.from({ length: 8 }).map((_, i) => <TemplateCardSkeleton key={i} />)}
+   771→              </div>
+   772→            ) : templates.length === 0 ? (
+   773→              <EmptyState icon={BookOpen} title="No book cover templates" description="We're curating new book covers. Check back soon.

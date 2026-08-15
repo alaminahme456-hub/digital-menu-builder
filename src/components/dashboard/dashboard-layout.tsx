@@ -23,6 +23,7 @@ import {
   Loader2,
   BookOpen,
   Paintbrush,
+  Store,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +62,7 @@ const navItems: NavItem[] = [
   { label: 'AI Scanner', href: '#/ai-scanner', icon: Camera },
   { label: 'Design Studio', href: '#/design-studio', icon: Paintbrush },
   { label: 'Templates', href: '#/templates', icon: Palette },
+  { label: 'Marketplace', href: '#/marketplace', icon: Store },
   { label: 'QR Code', href: '#/qr-code', icon: QrCode },
   { label: 'Preview', href: '#/preview', icon: Eye },
   { label: 'Analytics', href: '#/analytics', icon: BarChart3 },
@@ -75,6 +77,10 @@ function getPageName(route: string): string {
     const target = n.href.replace('#', '');
     return normalized === target || normalized.startsWith(target + '/');
   });
+  // Handle marketplace sub-routes
+  if (normalized === '/marketplace') return 'Marketplace';
+  if (normalized === '/designer-portal') return 'Designer Portal';
+  if (normalized === '/designer-portal/create') return 'Create Template';
   // Map legacy routes to their new names
   if (normalized === '/design-studio') return 'Design Studio';
   return item?.label || 'Dashboard';

@@ -586,6 +586,15 @@ export default function LandingPage() {
               &copy; {new Date().getFullYear()} BizFlip. All rights reserved.
             </p>
           </div>
+          <div className="flex items-center justify-center gap-4 mt-4">
+            <button onClick={() => navigate('/login')} className="text-[11px] text-charcoal/40 hover:text-charcoal transition-colors">
+              Login as Designer
+            </button>
+            <span className="text-charcoal/20">|</span>
+            <button onClick={() => navigate('/designer-register')} className="text-[11px] text-charcoal/40 hover:text-charcoal transition-colors">
+              Create Account as Designer
+            </button>
+          </div>
         </div>
       </footer>
     </div>
