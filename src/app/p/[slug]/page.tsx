@@ -1,15 +1,20 @@
 import type { Metadata } from 'next';
-import { createServiceClient } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
 import { toCamel } from '@/lib/supabase';
 import PublicMenuClient from './public-menu-client';
 import { notFound } from 'next/navigation';
 
 /* ------------------------------------------------------------------ */
-/*  Static params (ISR)                                                */
+/*  Force dynamic rendering — never serve stale cached pages            */
+/* ------------------------------------------------------------------ */
+export const dynamic = 'force-dynamic';
+
+/* ------------------------------------------------------------------ */
+/*  Static params (ISR) — used by Next.js for pre-generation          */
 /* ------------------------------------------------------------------ */
 export async function generateStaticParams() {
   try {
-    const supabase = createServiceClient();
+    const supabase = createServerClient();
     const { data: businesses } = await supabase
       .from('businesses')
       .select('slug')
@@ -33,7 +38,7 @@ export async function generateMetadata({
   const publicUrl = `${appUrl}/p/${slug}`;
 
   try {
-    const supabase = createServiceClient();
+    const supabase = createServerClient();
     const { data: business } = await supabase
       .from('businesses')
       .select('name, description, logo, status, seo_enabled')
@@ -88,9 +93,14 @@ export async function generateMetadata({
 
 /* ------------------------------------------------------------------ */
 /*  Page component — server component that fetches data               */
+/*                                                                     */
+/*  Uses supabase.rpc('get_public_menu') which calls a SECURITY       */
+/*  DEFINER function — this bypasses RLS so anonymous QR code          */
+/*  scanners can always read published menu data.                      */
+/*                                                                     */
+/*  Falls back to direct queries if the RPC function doesn't exist     */
+/*  (in which case RLS policies must allow anon reads).               */
 /* ------------------------------------------------------------------ */
-export const revalidate = 60; // ISR: revalidate every 60 seconds
-
 export default async function PublicBusinessPage({
   params,
 }: {
@@ -98,48 +108,63 @@ export default async function PublicBusinessPage({
 }) {
   const { slug } = await params;
 
-  const supabase = createServiceClient();
+  const supabase = createServerClient();
 
-  // Fetch business data
-  const { data: bizRow, error: bizError } = await supabase
-    .from('businesses')
-    .select('*')
-    .eq('slug', slug)
-    .single();
+  let business: Record<string, unknown> | null = null;
+  let categories: Record<string, unknown>[] = [];
+  let items: Record<string, unknown>[] = [];
+  let uploads: Record<string, unknown>[] = [];
 
-  if (bizError || !bizRow) {
-    notFound();
+  // Strategy 1: Use the SECURITY DEFINER RPC function (bypasses RLS)
+  try {
+    const { data, error } = await supabase.rpc('get_public_menu', { p_slug: slug });
+
+    if (!error && data && !data.error) {
+      business = typeof data.business === 'object' ? toCamel(data.business as Record<string, unknown>) : null;
+      categories = Array.isArray(data.categories) ? (data.categories as Record<string, unknown>[]).map(toCamel) : [];
+      items = Array.isArray(data.items) ? (data.items as Record<string, unknown>[]).map(toCamel) : [];
+      uploads = Array.isArray(data.uploads) ? (data.uploads as Record<string, unknown>[]).map(toCamel) : [];
+    }
+  } catch {
+    // RPC function may not exist — fall through to Strategy 2
   }
 
-  const business = toCamel(bizRow) as Record<string, unknown>;
+  // Strategy 2: Direct queries (requires RLS policies that allow anon reads)
+  if (!business) {
+    const { data: bizRow, error: bizError } = await supabase
+      .from('businesses')
+      .select('*')
+      .eq('slug', slug)
+      .single();
 
-  // Fetch categories
-  const { data: catRows } = await supabase
-    .from('menu_categories')
-    .select('*')
-    .eq('business_id', bizRow.id)
-    .order('sort_order', { ascending: true });
+    if (bizError || !bizRow) {
+      notFound();
+    }
 
-  const categories = (catRows ?? []).map(toCamel);
+    business = toCamel(bizRow);
 
-  // Fetch items
-  const { data: itemRows } = await supabase
-    .from('menu_items')
-    .select('*')
-    .eq('business_id', bizRow.id)
-    .order('sort_order', { ascending: true });
+    const { data: catRows } = await supabase
+      .from('menu_categories')
+      .select('*')
+      .eq('business_id', bizRow.id)
+      .order('sort_order', { ascending: true });
+    categories = (catRows ?? []).map(toCamel);
 
-  const items = (itemRows ?? []).map(toCamel);
+    const { data: itemRows } = await supabase
+      .from('menu_items')
+      .select('*')
+      .eq('business_id', bizRow.id)
+      .order('sort_order', { ascending: true });
+    items = (itemRows ?? []).map(toCamel);
 
-  // Fetch published uploads
-  const { data: uploadRows } = await supabase
-    .from('menu_uploads')
-    .select('*')
-    .eq('business_id', bizRow.id)
-    .eq('published', true)
-    .order('created_at', { ascending: false });
-
-  const uploads = (uploadRows ?? []).map(toCamel);
+    const { data: uploadRows } = await supabase
+      .from('menu_uploads')
+      .select('*')
+      .eq('business_id', bizRow.id)
+      .eq('published', true)
+      .order('created_at', { ascending: false });
+    uploads = (uploadRows ?? []).map(toCamel);
+  }
 
   return (
     <PublicMenuClient
