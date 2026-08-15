@@ -89,10 +89,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Business not found' }, { status: 404 });
     }
 
-    // Once ownership is verified with the user's JWT, read menu content with
-    // the server-side client. This keeps the dashboard resilient if table-level
-    // RLS policies for menu_categories/menu_items drift or are not yet applied.
-    const supabase = createServiceClient();
+    // Use the authenticated client (user's JWT) so RLS recognizes the owner
+    const supabase = authSupabase;
 
     const { data: catRows, error: catError } = await supabase
       .from('menu_categories')
