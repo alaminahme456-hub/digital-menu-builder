@@ -76,19 +76,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const authSupabase = createServerClient(authUser.token);
-    const { data: business, error: businessError } = await authSupabase
-      .from('businesses')
-      .select('id')
-      .eq('id', businessId)
-      .eq('owner_id', authUser.userId)
-      .single();
-
-    if (businessError || !business) {
-      return NextResponse.json({ error: 'Business not found' }, { status: 404 });
-    }
-
-    const supabase = createServiceClient();
+    const supabase = createServerClient(authUser.token);
 
     const { data: catRows, error: catError } = await supabase
       .from('menu_categories')
@@ -98,7 +86,7 @@ export async function GET(request: NextRequest) {
 
     if (catError) {
       console.error('Get categories error:', catError);
-      return NextResponse.json({ error: 'Failed to get categories' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to get categories', detail: catError.message }, { status: 500 });
     }
 
     const categories = toCamelList(catRows ?? []);

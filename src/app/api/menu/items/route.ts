@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const categoryId = request.nextUrl.searchParams.get('categoryId');
     const slug = request.nextUrl.searchParams.get('slug');
 
-    let supabase = slug ? createServiceClient() : createServerClient();
+    let supabase: ReturnType<typeof createServerClient>;
 
     let resolvedBusinessId = businessId;
 
@@ -17,18 +17,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
-      const authSupabase = createServerClient(authUser.token);
-      const { data: business, error: businessError } = await authSupabase
-        .from('businesses')
-        .select('id')
-        .eq('id', businessId)
-        .eq('owner_id', authUser.userId)
-        .single();
-
-      if (businessError || !business) {
-        return NextResponse.json({ error: 'Business not found' }, { status: 404 });
-      }
-
+      supabase = createServerClient(authUser.token);
+    } else {
       supabase = createServiceClient();
     }
 
