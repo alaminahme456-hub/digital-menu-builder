@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient, getAuthUser, toCamel, toCamelList, toSnake } from '@/lib/supabase';
+import { createServerClient, createServiceClient, getAuthUser, toCamel, toCamelList, toSnake } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
     if (publicSlug) {
       // Public access by business slug — fetch business, then categories + available items
-      const supabase = createServerClient();
+      const supabase = createServiceClient();
 
       const { data: bizRow, error: bizError } = await supabase
         .from('businesses')
@@ -76,7 +76,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient(authUser.token);
+    const authSupabase = createServerClient(authUser.token);
+    const { data: business, error: businessError } = await authSupabase
+      .from('businesses')
+      .select('id')
+      .eq('id', businessId)
+      .eq('owner_id', authUser.userId)
+      .single();
+
+    if (businessError || !business) {
+      return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+    }
+
+    const supabase = createServiceClient();
 
     const { data: catRows, error: catError } = await supabase
       .from('menu_categories')

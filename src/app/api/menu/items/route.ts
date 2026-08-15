@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient, getAuthUser, toCamel, toCamelList, toSnake } from '@/lib/supabase';
+import { createServerClient, createServiceClient, getAuthUser, toCamel, toCamelList, toSnake } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,9 +7,30 @@ export async function GET(request: NextRequest) {
     const categoryId = request.nextUrl.searchParams.get('categoryId');
     const slug = request.nextUrl.searchParams.get('slug');
 
-    const supabase = createServerClient();
+    let supabase = slug ? createServiceClient() : createServerClient();
 
     let resolvedBusinessId = businessId;
+
+    if (businessId && !slug) {
+      const authUser = await getAuthUser(request);
+      if (!authUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const authSupabase = createServerClient(authUser.token);
+      const { data: business, error: businessError } = await authSupabase
+        .from('businesses')
+        .select('id')
+        .eq('id', businessId)
+        .eq('owner_id', authUser.userId)
+        .single();
+
+      if (businessError || !business) {
+        return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+      }
+
+      supabase = createServiceClient();
+    }
 
     if (slug) {
       const { data: bizRow, error: bizError } = await supabase
@@ -39,6 +60,9 @@ export async function GET(request: NextRequest) {
     }
     if (categoryId) {
       query = query.eq('category_id', categoryId);
+    }
+    if (slug) {
+      query = query.eq('available', true);
     }
 
     const { data, error } = await query;
