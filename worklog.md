@@ -19,9 +19,28 @@ Work Log:
 - Added designer-register route handling
 - Build verified: next build passes cleanly with all 18 new API routes registered
 
+---
+Task ID: 2
+Agent: Main
+Task: Fix public QR code not showing published menu
+
+Work Log:
+- Investigated full QR code → public menu flow: QR code encodes `{APP_URL}/p/{slug}`, customer scans → server component fetches business/categories/items/uploads from Supabase
+- Root cause identified: RLS policies on `businesses`, `menu_categories`, `menu_uploads` only allowed `owner_id = auth.uid() OR is_admin()` — anonymous QR code scanners (no auth) were blocked by RLS
+- Added `createServiceClient()` to `src/lib/supabase.ts` — uses `SUPABASE_SERVICE_ROLE_KEY` to bypass RLS for server-side public reads, with anon key fallback
+- Updated `src/app/p/[slug]/page.tsx` — all three Supabase calls (generateStaticParams, generateMetadata, page component) now use `createServiceClient()` instead of `createServerClient()`
+- Updated `supabase/fix-rls-public.sql` — comprehensive policies for businesses, menu_categories, menu_items, menu_uploads, and analytics (all allow anon read when business is published)
+- Updated `.env.example` with `SUPABASE_SERVICE_ROLE_KEY` documentation
+- Build verified: `npx next build` passes cleanly
+
 Stage Summary:
-- SQL migration saved at: supabase/create-marketplace.sql (run in Supabase SQL Editor)
-- 18 new API routes under /api/marketplace/ and /api/admin/marketplace/
+- Two-part fix: (1) Code changes deployed with `createServiceClient()` for reliable server-side reads, (2) User must run `fix-rls-public.sql` in Supabase SQL Editor AND add `SUPABASE_SERVICE_ROLE_KEY` to their env vars
+- Files changed: `src/lib/supabase.ts`, `src/app/p/[slug]/page.tsx`, `supabase/fix-rls-public.sql`, `.env.example`
+
+---
+Task ID: 3 (from previous session)
+Agent: Main
+Task: Marketplace build summary
 - 3 new UI components: marketplace.tsx, designer-portal.tsx, create-template.tsx
 - 1 admin component: admin-marketplace.tsx
 - Zero build errors, all routes registered

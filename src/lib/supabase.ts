@@ -27,6 +27,30 @@ export function createServerClient(token?: string): SupabaseClient {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Server-side Supabase client using SERVICE ROLE KEY (bypasses RLS)   */
+/*  Use for server components that need to read data without auth,    */
+/*  e.g. the public menu page served to anonymous QR-code scanners.    */
+/* ------------------------------------------------------------------ */
+export function createServiceClient(): SupabaseClient {
+  const { url } = getSupabaseConfig();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  // Prefer service role key (bypasses RLS entirely)
+  if (serviceKey) {
+    return createClient(url, serviceKey, {
+      global: {
+        headers: { Authorization: `Bearer ${serviceKey}` },
+      },
+    });
+  }
+
+  // Fallback: if no service role key, use anon key (RLS still applies —
+  // public-read policies must exist on the tables)
+  const { anonKey } = getSupabaseConfig();
+  return createClient(url, anonKey);
+}
+
+/* ------------------------------------------------------------------ */
 /*  Verify user from request — returns user metadata + raw token       */
 /* ------------------------------------------------------------------ */
 export interface AuthUser {

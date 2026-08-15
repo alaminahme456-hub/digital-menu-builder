@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { createServerClient } from '@/lib/supabase';
+import { createServiceClient } from '@/lib/supabase';
 import { toCamel } from '@/lib/supabase';
 import PublicMenuClient from './public-menu-client';
 import { notFound } from 'next/navigation';
@@ -9,7 +9,7 @@ import { notFound } from 'next/navigation';
 /* ------------------------------------------------------------------ */
 export async function generateStaticParams() {
   try {
-    const supabase = createServerClient();
+    const supabase = createServiceClient();
     const { data: businesses } = await supabase
       .from('businesses')
       .select('slug')
@@ -33,7 +33,7 @@ export async function generateMetadata({
   const publicUrl = `${appUrl}/p/${slug}`;
 
   try {
-    const supabase = createServerClient();
+    const supabase = createServiceClient();
     const { data: business } = await supabase
       .from('businesses')
       .select('name, description, logo, status, seo_enabled')
@@ -98,7 +98,7 @@ export default async function PublicBusinessPage({
 }) {
   const { slug } = await params;
 
-  const supabase = createServerClient();
+  const supabase = createServiceClient();
 
   // Fetch business data
   const { data: bizRow, error: bizError } = await supabase
