@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient, getAuthUser, toCamel, toSnake } from '@/lib/supabase';
+import { createServerClient, createServiceClient, getAuthUser, toCamel, toSnake } from '@/lib/supabase';
 
 async function getCounts(supabase: ReturnType<typeof createServerClient>, businessId: string) {
   const [catCount, itemCount, analyticsCount] = await Promise.all([
@@ -18,16 +18,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
 
-    // Public access by slug (no auth required)
-    const publicClient = createServerClient();
-    const { data: slugRow, error: slugError } = await publicClient
+    // Public access by slug (no auth required) — use service client to bypass RLS
+    const serviceClient = createServiceClient();
+    const { data: slugRow, error: slugError } = await serviceClient
       .from('businesses')
       .select('*')
       .eq('slug', id)
       .single();
 
     if (!slugError && slugRow) {
-      const counts = await getCounts(publicClient, slugRow.id);
+      const counts = await getCounts(serviceClient, slugRow.id);
       return NextResponse.json({ business: { ...toCamel(slugRow), _count: counts } });
     }
 

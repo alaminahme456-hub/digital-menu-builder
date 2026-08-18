@@ -1,0 +1,582 @@
+     1→'use client';
+     2→
+     3→import React, { useEffect, useState, useCallback } from 'react';
+     4→import {
+     5→  LayoutDashboard, FileCode2, BarChart3, Wallet, ArrowDownToLine,
+     6→  User, Settings, Plus, Eye, Star, EyeOff, Edit, X,
+     7→  TrendingUp, ImageIcon, Heart, Layers, CheckCircle2, Clock, ArrowRight,
+     8→  PenTool, Globe, Link2, Briefcase, Loader2, ChevronLeft, ChevronRight,
+     9→} from 'lucide-react';
+    10→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    11→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+    12→import { Button } from '@/components/ui/button';
+    13→import { Badge } from '@/components/ui/badge';
+    14→import { Input } from '@/components/ui/input';
+    15→import { Label } from '@/components/ui/label';
+    16→import { Textarea } from '@/components/ui/textarea';
+    17→import { Skeleton } from '@/components/ui/skeleton';
+    18→import { Separator } from '@/components/ui/separator';
+    19→import {
+    20→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    21→} from '@/components/ui/table';
+    22→import { Switch } from '@/components/ui/switch';
+    23→import {
+    24→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+    25→} from '@/components/ui/dialog';
+    26→import {
+    27→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    28→} from '@/components/ui/select';
+    29→import { useAuthStore, useAppStore } from '@/lib/store';
+    30→import { toast } from 'sonner';
+    31→
+    32→// ─── Stat Card (matches overview.tsx pattern) ─────────────────────
+    33→interface StatCardProps {
+    34→  icon: React.ElementType;
+    35→  label: string;
+    36→  value: string | number;
+    37→  colorClass: string;
+    38→  bgColorClass: string;
+    39→  loading?: boolean;
+    40→  extra?: React.ReactNode;
+    41→}
+    42→
+    43→function StatCard({ icon: Icon, label, value, colorClass, bgColorClass, loading, extra }: StatCardProps) {
+    44→  return (
+    45→    <Card className="relative overflow-hidden">
+    46→      <CardContent className="p-5">
+    47→        <div className="flex items-start justify-between">
+    48→          <div className="space-y-2">
+    49→            <p className="text-sm font-medium text-slate-500">{label}</p>
+    50→            {loading ? <Skeleton className="h-8 w-20" /> : (
+    51→              <p className="text-3xl font-bold tracking-tight text-slate-900">{value}</p>
+    52→            )}
+    53→            {extra}
+    54→          </div>
+    55→          <div className={`flex size-12 items-center justify-center rounded-xl ${bgColorClass}`}>
+    56→            <Icon className={`size-6 ${colorClass}`} />
+    57→          </div>
+    58→        </div>
+    59→      </CardContent>
+    60→    </Card>
+    61→  );
+    62→}
+    63→
+    64→// ─── Become a Designer Form ────────────────────────────────────────
+    65→function BecomeDesignerForm({ onSubmitted }: { onSubmitted: () => void }) {
+    66→  const { token, user } = useAuthStore();
+    67→  const [form, setForm] = useState({
+    68→    fullName: '', displayName: '', username: '', email: user?.email || '',
+    69→    bio: '', country: '', portfolioLink: '', profileImage: '',
+    70→    specialties: [] as string[], socialLinks: {}, agreedTerms: false,
+    71→  });
+    72→  const [loading, setLoading] = useState(false);
+    73→  const [appStatus, setAppStatus] = useState<'idle' | 'pending'>('idle');
+    74→
+    75→  const specialtyOptions = ['Book Cover Design', 'Menu Design', 'Branding', 'UI/UX', 'Print Design', 'Illustration'];
+    76→
+    77→  const update = (k: string, v: string | boolean | string[]) => setForm((p) => ({ ...p, [k]: v }));
+    78→  const toggleSpec = (s: string) => {
+    79→    setForm((p) => ({
+    80→      ...p,
+    81→      specialties: p.specialties.includes(s) ? p.specialties.filter((x) => x !== s) : [...p.specialties, s],
+    82→    }));
+    83→  };
+    84→
+    85→  const handleSubmit = async (e: React.FormEvent) => {
+    86→    e.preventDefault();
+    87→    if (!form.agreedTerms) { toast.error('You must agree to the terms'); return; }
+    88→    setLoading(true);
+    89→    try {
+    90→      const res = await fetch('/api/marketplace/designers', {
+    91→        method: 'POST',
+    92→        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    93→        body: JSON.stringify(form),
+    94→      });
+    95→      const data = await res.json();
+    96→      if (!res.ok) throw new Error(data.error || 'Failed');
+    97→      toast.success('Application submitted!');
+    98→      setAppStatus('pending');
+    99→      onSubmitted();
+   100→    } catch (err: any) {
+   101→      toast.error(err.message);
+   102→    } finally { setLoading(false); }
+   103→  };
+   104→
+   105→  if (appStatus === 'pending') {
+   106→    return (
+   107→      <Card className="border-gold/20 bg-champagne/20">
+   108→        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+   109→          <div className="flex size-16 items-center justify-center rounded-full bg-gold/10">
+   110→            <Clock className="size-8 text-gold" />
+   111→          </div>
+   112→          <h3 className="mt-4 text-xl font-bold text-charcoal">Application Pending Review</h3>
+   113→          <p className="mt-2 max-w-md text-sm text-slate-600">
+   114→            Your designer application is being reviewed. We'll notify you once it's approved.
+   115→          </p>
+   116→        </CardContent>
+   117→      </Card>
+   118→    );
+   119→  }
+   120→
+   121→  return (
+   122→    <Card className="border-gold/15 bg-gradient-to-br from-champagne/20 to-ivory">
+   123→      <CardHeader>
+   124→        <div className="flex items-center gap-3">
+   125→          <div className="flex size-12 items-center justify-center rounded-xl bg-charcoal">
+   126→            <PenTool className="size-6 text-gold" />
+   127→          </div>
+   128→          <div>
+   129→            <CardTitle className="text-charcoal">Become a Designer</CardTitle>
+   130→            <CardDescription>Share your design talent with the BizFlip community</CardDescription>
+   131→          </div>
+   132→        </div>
+   133→      </CardHeader>
+   134→      <CardContent>
+   135→        <form onSubmit={handleSubmit} className="space-y-4">
+   136→          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+   137→            <div><Label>Full Name *</Label><Input value={form.fullName} onChange={(e) => update('fullName', e.target.value)} required /></div>
+   138→            <div><Label>Display Name *</Label><Input value={form.displayName} onChange={(e) => update('displayName', e.target.value)} required /></div>
+   139→            <div><Label>Username *</Label><Input value={form.username} onChange={(e) => update('username', e.target.value)} required /></div>
+   140→            <div><Label>Email *</Label><Input type="email" value={form.email} onChange={(e) => update('email', e.target.value)} required /></div>
+   141→            <div className="sm:col-span-2"><Label>Country *</Label><Input value={form.country} onChange={(e) => update('country', e.target.value)} required /></div>
+   142→          </div>
+   143→          <div><Label>Bio *</Label><Textarea value={form.bio} onChange={(e) => update('bio', e.target.value)} rows={3} required /></div>
+   144→          <div><Label>Portfolio Link</Label><Input placeholder="https://..." value={form.portfolioLink} onChange={(e) => update('portfolioLink', e.target.value)} /></div>
+   145→          <div>
+   146→            <Label className="mb-2 block">Design Specialties</Label>
+   147→            <div className="flex flex-wrap gap-2">
+   148→              {specialtyOptions.map((s) => (
+   149→                <Badge key={s} variant={form.specialties.includes(s) ? 'default' : 'outline'}
+   150→                  className={`cursor-pointer transition-colors ${form.specialties.includes(s) ? 'bg-charcoal text-white hover:bg-charcoal-light' : 'border-gold/20 text-slate-600 hover:bg-gold/10'}`}
+   151→                  onClick={() => toggleSpec(s)}>{s}</Badge>
+   152→              ))}
+   153→            </div>
+   154→          </div>
+   155→          <div className="flex items-center gap-2">
+   156→            <Switch checked={form.agreedTerms} onCheckedChange={(v) => update('agreedTerms', v)} id="terms" />
+   157→            <Label htmlFor="terms" className="text-sm text-slate-600">I agree to the Designer Terms of Service</Label>
+   158→          </div>
+   159→          <Button type="submit" disabled={loading} className="w-full bg-charcoal hover:bg-charcoal-light text-white">
+   160→            {loading && <Loader2 className="size-4 animate-spin" />}Submit Application
+   161→          </Button>
+   162→        </form>
+   163→      </CardContent>
+   164→    </Card>
+   165→  );
+   166→}
+   167→
+   168→// ─── Status Badge ─────────────────────────────────────────────────
+   169→function StatusBadge({ status }: { status: string }) {
+   170→  const map: Record<string, string> = {
+   171→    published: 'bg-emerald-100 text-emerald-700', pending: 'bg-amber-100 text-amber-700',
+   172→    rejected: 'bg-red-100 text-red-700', approved: 'bg-emerald-100 text-emerald-700',
+   173→    available: 'bg-emerald-100 text-emerald-700', paid: 'bg-blue-100 text-blue-700',
+   174→    reversed: 'bg-red-100 text-red-700', processing: 'bg-amber-100 text-amber-700',
+   175→  };
+   176→  return <Badge className={`${map[status] || 'bg-slate-100 text-slate-600'} text-xs`}>{status}</Badge>;
+   177→}
+   178→
+   179→// ─── Main Component ────────────────────────────────────────────────
+   180→export default function DesignerPortal() {
+   181→  const { token } = useAuthStore();
+   182→  const { navigate } = useAppStore();
+   183→  const [designerData, setDesignerData] = useState<any>(null);
+   184→  const [loading, setLoading] = useState(true);
+   185→  const [isDesigner, setIsDesigner] = useState(false);
+   186→  const [activeTab, setActiveTab] = useState('overview');
+   187→  const [wdOpen, setWdOpen] = useState(false);
+   188→  const [wdForm, setWdForm] = useState({ amount: '', bankName: '', accountName: '', accountNumber: '' });
+   189→  const [wdLoading, setWdLoading] = useState(false);
+   190→
+   191→  // Tab-specific data
+   192→  const [earnings, setEarnings] = useState<any[]>([]);
+   193→  const [earningsPage, setEarningsPage] = useState(1);
+   194→  const [earningsTotal, setEarningsTotal] = useState(0);
+   195→  const [withdrawals, setWithdrawals] = useState<any[]>([]);
+   196→  const [wdPage, setWdPage] = useState(1);
+   197→  const [wdTotal, setWdTotal] = useState(0);
+   198→  const [analytics, setAnalytics] = useState<any>(null);
+   199→  const [templates, setTemplates] = useState<any[]>([]);
+   200→
+   201→  const fetchDesignerData = useCallback(async () => {
+   202→    if (!token) { setLoading(false); return; }
+   203→    try {
+   204→      const res = await fetch('/api/marketplace/designers/me', { headers: { Authorization: `Bearer ${token}` } });
+   205→      if (res.ok) {
+   206→        const data = await res.json();
+   207→        setDesignerData(data);
+   208→        setIsDesigner(true);
+   209→        setTemplates(data.recentTemplates || []);
+   210→      } else if (res.status === 404) {
+   211→        setIsDesigner(false);
+   212→      }
+   213→    } catch { /* */ } finally { setLoading(false); }
+   214→  }, [token]);
+   215→
+   216→  const fetchEarnings = useCallback(async (page: number) => {
+   217→    try {
+   218→      const res = await fetch(`/api/marketplace/earnings?page=${page}&limit=10`, { headers: { Authorization: `Bearer ${token}` } });
+   219→      const data = await res.json();
+   220→      setEarnings(data.earnings || []);
+   221→      setEarningsTotal(data.pagination?.total || 0);
+   222→    } catch { /* */ }
+   223→  }, [token]);
+   224→
+   225→  const fetchWithdrawals = useCallback(async (page: number) => {
+   226→    try {
+   227→      const res = await fetch(`/api/marketplace/withdrawals?page=${page}&limit=10`, { headers: { Authorization: `Bearer ${token}` } });
+   228→      const data = await res.json();
+   229→      setWithdrawals(data.withdrawals || []);
+   230→      setWdTotal(data.pagination?.total || 0);
+   231→    } catch { /* */ }
+   232→  }, [token]);
+   233→
+   234→  const fetchAnalytics = useCallback(async () => {
+   235→    try {
+   236→      const res = await fetch('/api/marketplace/analytics', { headers: { Authorization: `Bearer ${token}` } });
+   237→      const data = await res.json();
+   238→      setAnalytics(data.designer ? data : null);
+   239→    } catch { /* */ }
+   240→  }, [token]);
+   241→
+   242→  useEffect(() => { fetchDesignerData(); }, [fetchDesignerData]);
+   243→  useEffect(() => {
+   244→    if (isDesigner) { fetchEarnings(earningsPage); fetchWithdrawals(wdPage); fetchAnalytics(); }
+   245→  }, [isDesigner, earningsPage, wdPage, fetchEarnings, fetchWithdrawals, fetchAnalytics]);
+   246→
+   247→  const handleWithdrawal = async () => {
+   248→    if (!wdForm.amount || !wdForm.bankName || !wdForm.accountName || !wdForm.accountNumber) {
+   249→      toast.error('All fields are required'); return;
+   250→    }
+   251→    setWdLoading(true);
+   252→    try {
+   253→      const res = await fetch('/api/marketplace/withdrawals', {
+   254→        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+   255→        body: JSON.stringify({ amount: Number(wdForm.amount), ...wdForm }),
+   256→      });
+   257→      const data = await res.json();
+   258→      if (!res.ok) throw new Error(data.error || 'Failed');
+   259→      toast.success('Withdrawal requested!');
+   260→      setWdOpen(false);
+   261→      setWdForm({ amount: '', bankName: '', accountName: '', accountNumber: '' });
+   262→      fetchDesignerData();
+   263→      fetchWithdrawals(1);
+   264→    } catch (err: any) { toast.error(err.message); } finally { setWdLoading(false); }
+   265→  };
+   266→
+   267→  const stats = designerData?.stats || {};
+   268→
+   269→  // Loading state
+   270→  if (loading) {
+   271→    return (
+   272→      <div className="space-y-6">
+   273→        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+   274→          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
+   275→        </div>
+   276→        <Skeleton className="h-96 rounded-xl" />
+   277→      </div>
+   278→    );
+   279→  }
+   280→
+   281→  // Not a designer → show CTA
+   282→  if (!isDesigner) {
+   283→    return (
+   284→      <div className="space-y-6">
+   285→        <div className="flex items-center gap-3">
+   286→          <div className="flex size-10 items-center justify-center rounded-xl bg-charcoal"><PenTool className="size-5 text-gold" /></div>
+   287→          <div><h2 className="text-2xl font-bold text-charcoal">Designer Portal</h2><p className="text-sm text-slate-500">Create and sell templates on the BizFlip marketplace</p></div>
+   288→        </div>
+   289→        <BecomeDesignerForm onSubmitted={() => setActiveTab('overview')} />
+   290→      </div>
+   291→    );
+   292→  }
+   293→
+   294→  const fmtNaira = (v: number) => `₦${(v || 0).toLocaleString('en-NG')}`;
+   295→  const Paginate = ({ page, total, limit = 10, onPage }: { page: number; total: number; limit?: number; onPage: (p: number) => void }) => {
+   296→    const pages = Math.ceil(total / limit);
+   297→    if (pages <= 1) return null;
+   298→    return (
+   299→      <div className="flex items-center justify-between pt-4">
+   300→        <p className="text-sm text-slate-500">Showing {Math.min(page * limit, total)} of {total}</p>
+   301→        <div className="flex gap-1">
+   302→          <Button size="icon" variant="outline" disabled={page <= 1} onClick={() => onPage(page - 1)}><ChevronLeft className="size-4" /></Button>
+   303→          <Button size="icon" variant="outline" disabled={page >= pages} onClick={() => onPage(page + 1)}><ChevronRight className="size-4" /></Button>
+   304→        </div>
+   305→      </div>
+   306→    );
+   307→  };
+   308→
+   309→  return (
+   310→    <div className="space-y-6">
+   311→      {/* Header */}
+   312→      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+   313→        <div className="flex items-center gap-3">
+   314→          <div className="flex size-10 items-center justify-center rounded-xl bg-charcoal"><PenTool className="size-5 text-gold" /></div>
+   315→          <div>
+   316→            <h2 className="text-2xl font-bold text-charcoal">Designer Portal</h2>
+   317→            <p className="text-sm text-slate-500">Welcome, {designerData?.designer?.displayName || 'Designer'}</p>
+   318→          </div>
+   319→        </div>
+   320→        <Button onClick={() => navigate('#/create-template')} className="bg-charcoal hover:bg-charcoal-light text-white">
+   321→          <Plus className="size-4" />Create Template
+   322→        </Button>
+   323→      </div>
+   324→
+   325→      <Tabs value={activeTab} onValueChange={setActiveTab}>
+   326→        <TabsList className="flex-wrap h-auto gap-1 bg-slate-100">
+   327→          {[
+   328→            { val: 'overview', label: 'Overview', icon: LayoutDashboard },
+   329→            { val: 'templates', label: 'My Templates', icon: FileCode2 },
+   330→            { val: 'analytics', label: 'Analytics', icon: BarChart3 },
+   331→            { val: 'earnings', label: 'Earnings', icon: Wallet },
+   332→            { val: 'withdrawals', label: 'Withdrawals', icon: ArrowDownToLine },
+   333→            { val: 'profile', label: 'Profile', icon: User },
+   334→            { val: 'settings', label: 'Settings', icon: Settings },
+   335→          ].map((t) => (
+   336→            <TabsTrigger key={t.val} value={t.val} className="gap-1.5 text-xs sm:text-sm">
+   337→              <t.icon className="size-4" />{t.label}
+   338→            </TabsTrigger>
+   339→          ))}
+   340→        </TabsList>
+   341→
+   342→        {/* ─── Overview ─── */}
+   343→        <TabsContent value="overview" className="space-y-6">
+   344→          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+   345→            <StatCard icon={Wallet} label="Total Earnings" value={fmtNaira(stats.totalEarnings)} colorClass="text-gold" bgColorClass="bg-gold/10" />
+   346→            <StatCard icon={Wallet} label="Available Balance" value={fmtNaira(stats.availableBalance)} colorClass="text-emerald-600" bgColorClass="bg-emerald-50" />
+   347→            <StatCard icon={Clock} label="Pending Earnings" value={fmtNaira(stats.pendingEarnings)} colorClass="text-amber-600" bgColorClass="bg-amber-50" />
+   348→            <StatCard icon={FileCode2} label="Templates" value={stats.totalTemplates || 0} colorClass="text-charcoal" bgColorClass="bg-ivory" />
+   349→          </div>
+   350→          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+   351→            <StatCard icon={Eye} label="Total Uses" value={stats.totalUses || 0} colorClass="text-blue-600" bgColorClass="bg-blue-50" />
+   352→            <StatCard icon={TrendingUp} label="Premium Uses" value={(designerData?.designer?.totalPremiumUses || 0)} colorClass="text-purple-600" bgColorClass="bg-purple-50" />
+   353→            <StatCard icon={Star} label="Rating" colorClass="text-amber-500" bgColorClass="bg-amber-50" extra={
+   354→              <div className="flex items-center gap-1">
+   355→                <Star className="size-4 fill-amber-400 text-amber-400" />
+   356→                <span className="text-sm font-medium text-slate-700">{designerData?.designer?.rating || 0}</span>
+   357→              </div>
+   358→            } value="" />
+   359→          </div>
+   360→          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+   361→            <Card className="cursor-pointer border-gold/15 bg-gradient-to-r from-champagne/20 to-ivory transition-shadow hover:shadow-md" onClick={() => navigate('#/create-template')}>
+   362→              <CardContent className="flex items-center gap-4 p-6">
+   363→                <div className="flex size-12 items-center justify-center rounded-xl bg-charcoal"><Plus className="size-6 text-gold" /></div>
+   364→                <div className="flex-1"><p className="font-semibold text-charcoal">Create Template</p><p className="text-sm text-slate-500">Design a new book cover or menu template</p></div>
+   365→                <ArrowRight className="size-5 text-slate-400" />
+   366→              </CardContent>
+   367→            </Card>
+   368→            <Card className="cursor-pointer border-gold/15 bg-gradient-to-r from-champagne/20 to-ivory transition-shadow hover:shadow-md" onClick={() => setActiveTab('templates')}>
+   369→              <CardContent className="flex items-center gap-4 p-6">
+   370→                <div className="flex size-12 items-center justify-center rounded-xl bg-charcoal"><Eye className="size-6 text-gold" /></div>
+   371→                <div className="flex-1"><p className="font-semibold text-charcoal">View My Templates</p><p className="text-sm text-slate-500">Manage and track your published templates</p></div>
+   372→                <ArrowRight className="size-5 text-slate-400" />
+   373→              </CardContent>
+   374→            </Card>
+   375→          </div>
+   376→        </TabsContent>
+   377→
+   378→        {/* ─── My Templates ─── */}
+   379→        <TabsContent value="templates" className="space-y-6">
+   380→          {templates.length === 0 ? (
+   381→            <Card><CardContent className="flex flex-col items-center justify-center py-16"><Layers className="size-12 text-slate-300" /><p className="mt-4 text-lg font-medium text-slate-600">No templates yet</p><Button onClick={() => navigate('#/create-template')} className="mt-4 bg-charcoal hover:bg-charcoal-light text-white"><Plus className="size-4" />Create Your First Template</Button></CardContent></Card>
+   382→          ) : (
+   383→            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+   384→              {templates.map((t: any) => (
+   385→                <Card key={t.id} className="overflow-hidden">
+   386→                  <div className="relative h-40 bg-slate-100">
+   387→                    {t.previewImages?.[0] ? <img src={t.previewImages[0]} alt={t.name} className="size-full object-cover" /> : <div className="flex h-full items-center justify-center"><ImageIcon className="size-10 text-slate-300" /></div>}
+   388→                    <div className="absolute top-2 right-2"><StatusBadge status={t.status} /></div>
+   389→                    <Badge className="absolute top-2 left-2 bg-charcoal/80 text-white text-[10px]">{t.templateType?.replace('_', ' ')}</Badge>
+   390→                  </div>
+   391→                  <CardContent className="space-y-3 p-4">
+   392→                    <div><p className="font-semibold text-charcoal truncate">{t.name}</p><p className="text-xs text-slate-500">{t.category || 'Uncategorized'}</p></div>
+   393→                    <div className="flex items-center gap-4 text-xs text-slate-500">
+   394→                      <span className="flex items-center gap-1"><Eye className="size-3" />{t.totalViews || 0}</span>
+   395→                      <span className="flex items-center gap-1"><Layers className="size-3" />{t.totalUses || 0}</span>
+   396→                      <span className="flex items-center gap-1"><Heart className="size-3" />{t.totalFavorites || 0}</span>
+   397→                      <span className="flex items-center gap-1"><Star className="size-3" />{t.rating || 0}</span>
+   398→                    </div>
+   399→                    <div className="flex gap-2">
+   400→                      {t.status === 'pending' && <Button size="sm" variant="outline" className="flex-1 border-gold/20 text-charcoal hover:bg-gold/10"><Edit className="size-3" />Edit</Button>}
+   401→                      {t.status === 'published' && <Button size="sm" variant="outline" className="flex-1 border-gold/20 text-charcoal hover:bg-gold/10"><Eye className="size-3" />View</Button>}
+   402→                    </div>
+   403→                  </CardContent>
+   404→                </Card>
+   405→              ))}
+   406→            </div>
+   407→          )}
+   408→        </TabsContent>
+   409→
+   410→        {/* ─── Analytics ─── */}
+   411→        <TabsContent value="analytics" className="space-y-6">
+   412→          <Card>
+   413→            <CardHeader><CardTitle className="text-base">Template Performance</CardTitle></CardHeader>
+   414→            <CardContent>
+   415→              {analytics?.templateBreakdown?.length > 0 ? (
+   416→                <div className="max-h-96 overflow-y-auto">
+   417→                  <Table>
+   418→                    <TableHeader><TableRow>
+   419→                      <TableHead>Template</TableHead><TableHead className="text-center">Views</TableHead><TableHead className="text-center">Applies</TableHead><TableHead className="text-center">Uses</TableHead><TableHead className="text-center">Favorites</TableHead><TableHead className="text-center">Rating</TableHead>
+   420→                    </TableRow></TableHeader>
+   421→                    <TableBody>
+   422→                      {analytics.templateBreakdown.map((t: any) => (
+   423→                        <TableRow key={t.id}><TableCell className="font-medium">{t.name}</TableCell><TableCell className="text-center">{t.totalViews || 0}</TableCell><TableCell className="text-center">{t.totalApplications || 0}</TableCell><TableCell className="text-center">{t.totalUses || 0}</TableCell><TableCell className="text-center">{t.totalFavorites || 0}</TableCell><TableCell className="text-center"><div className="flex items-center justify-center gap-1"><Star className="size-3 fill-amber-400 text-amber-400" />{t.rating || 0}</div></TableCell></TableRow>
+   424→                      ))}
+   425→                    </TableBody>
+   426→                  </Table>
+   427→                </div>
+   428→              ) : <p className="py-8 text-center text-sm text-slate-400">No analytics data yet</p>}
+   429→            </CardContent>
+   430→          </Card>
+   431→          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+   432→            <StatCard icon={Eye} label="Total Views" value={analytics?.totalViews || 0} colorClass="text-blue-600" bgColorClass="bg-blue-50" />
+   433→            <StatCard icon={Layers} label="Applications" value={analytics?.totalApplications || 0} colorClass="text-charcoal" bgColorClass="bg-ivory" />
+   434→            <StatCard icon={TrendingUp} label="Total Uses" value={analytics?.totalUses || 0} colorClass="text-emerald-600" bgColorClass="bg-emerald-50" />
+   435→            <StatCard icon={Heart} label="Favorites" value={analytics?.totalFavorites || 0} colorClass="text-rose-600" bgColorClass="bg-rose-50" />
+   436→          </div>
+   437→        </TabsContent>
+   438→
+   439→        {/* ─── Earnings ─── */}
+   440→        <TabsContent value="earnings" className="space-y-6">
+   441→          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+   442→            <StatCard icon={Wallet} label="Total Earnings" value={fmtNaira(stats.totalEarnings)} colorClass="text-gold" bgColorClass="bg-gold/10" />
+   443→            <StatCard icon={CheckCircle2} label="Available" value={fmtNaira(stats.availableBalance)} colorClass="text-emerald-600" bgColorClass="bg-emerald-50" />
+   444→            <StatCard icon={Clock} label="Pending" value={fmtNaira(stats.pendingEarnings)} colorClass="text-amber-600" bgColorClass="bg-amber-50" />
+   445→          </div>
+   446→          <Card>
+   447→            <CardHeader><CardTitle className="text-base">Earnings Ledger</CardTitle></CardHeader>
+   448→            <CardContent>
+   449→              {earnings.length > 0 ? (
+   450→                <>
+   451→                  <div className="max-h-96 overflow-y-auto">
+   452→                    <Table>
+   453→                      <TableHeader><TableRow>
+   454→                        <TableHead>Date</TableHead><TableHead>Template</TableHead><TableHead>Event</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Status</TableHead>
+   455→                      </TableRow></TableHeader>
+   456→                      <TableBody>
+   457→                        {earnings.map((e: any) => (
+   458→                          <TableRow key={e.id}>
+   459→                            <TableCell className="text-sm text-slate-600">{new Date(e.createdAt).toLocaleDateString()}</TableCell>
+   460→                            <TableCell className="font-medium text-sm">{e.marketplaceTemplates?.name || '—'}</TableCell>
+   461→                            <TableCell className="text-sm text-slate-500">{e.eventType || '—'}</TableCell>
+   462→                            <TableCell className="text-right font-semibold text-sm">{fmtNaira(e.amount)}</TableCell>
+   463→                            <TableCell><StatusBadge status={e.status} /></TableCell>
+   464→                          </TableRow>
+   465→                        ))}
+   466→                      </TableBody>
+   467→                    </Table>
+   468→                  </div>
+   469→                  <Paginate page={earningsPage} total={earningsTotal} onPage={setEarningsPage} />
+   470→                </>
+   471→              ) : <p className="py-8 text-center text-sm text-slate-400">No earnings yet</p>}
+   472→            </CardContent>
+   473→          </Card>
+   474→        </TabsContent>
+   475→
+   476→        {/* ─── Withdrawals ─── */}
+   477→        <TabsContent value="withdrawals" className="space-y-6">
+   478→          <Card className="border-gold/15 bg-gradient-to-r from-champagne/20 to-ivory">
+   479→            <CardContent className="flex items-center justify-between p-6">
+   480→              <div><p className="text-sm text-slate-500">Available Balance</p><p className="text-3xl font-bold text-charcoal">{fmtNaira(stats.availableBalance)}</p></div>
+   481→              <Button onClick={() => setWdOpen(true)} className="bg-charcoal hover:bg-charcoal-light text-white"><ArrowDownToLine className="size-4" />Request Withdrawal</Button>
+   482→            </CardContent>
+   483→          </Card>
+   484→          <Card>
+   485→            <CardHeader><CardTitle className="text-base">Withdrawal History</CardTitle></CardHeader>
+   486→            <CardContent>
+   487→              {withdrawals.length > 0 ? (
+   488→                <>
+   489→                  <div className="max-h-96 overflow-y-auto">
+   490→                    <Table>
+   491→                      <TableHeader><TableRow>
+   492→                        <TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Bank</TableHead><TableHead>Account</TableHead><TableHead>Status</TableHead>
+   493→                      </TableRow></TableHeader>
+   494→                      <TableBody>
+   495→                        {withdrawals.map((w: any) => (
+   496→                          <TableRow key={w.id}>
+   497→                            <TableCell className="text-sm text-slate-600">{new Date(w.createdAt).toLocaleDateString()}</TableCell>
+   498→                            <TableCell className="text-right font-semibold text-sm">{fmtNaira(w.amount)}</TableCell>
+   499→                            <TableCell className="text-sm">{w.bankName}</TableCell>
+   500→                            <TableCell className="text-sm text-slate-500">{w.accountName} • {w.accountNumber}</TableCell>
+   501→                            <TableCell><StatusBadge status={w.status} /></TableCell>
+   502→                          </TableRow>
+   503→                        ))}
+   504→                      </TableBody>
+   505→                    </Table>
+   506→                  </div>
+   507→                  <Paginate page={wdPage} total={wdTotal} onPage={setWdPage} />
+   508→                </>
+   509→              ) : <p className="py-8 text-center text-sm text-slate-400">No withdrawals yet</p>}
+   510→            </CardContent>
+   511→          </Card>
+   512→        </TabsContent>
+   513→
+   514→        {/* ─── Profile ─── */}
+   515→        <TabsContent value="profile" className="space-y-6">
+   516→          <Card>
+   517→            <CardHeader><CardTitle className="text-base">Designer Profile</CardTitle></CardHeader>
+   518→            <CardContent className="space-y-4">
+   519→              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+   520→                <div><Label>Display Name</Label><Input defaultValue={designerData?.designer?.displayName || ''} /></div>
+   521→                <div><Label>Username</Label><Input defaultValue={designerData?.designer?.username || ''} /></div>
+   522→              </div>
+   523→              <div><Label>Bio</Label><Textarea defaultValue={designerData?.designer?.bio || ''} rows={3} /></div>
+   524→              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+   525→                <div><Label>Country</Label><Input defaultValue={designerData?.designer?.country || ''} /></div>
+   526→                <div><Label>Specialties</Label><Input defaultValue={designerData?.designer?.specialties?.join(', ') || ''} /></div>
+   527→              </div>
+   528→              <div><Label>Portfolio Link</Label><Input defaultValue={designerData?.designer?.portfolioLink || ''} /></div>
+   529→              <div><Label>Social Links</Label><Input defaultValue={designerData?.designer?.socialLinks ? JSON.stringify(designerData.designer.socialLinks) : ''} /></div>
+   530→              <Separator />
+   531→              <Button className="bg-charcoal hover:bg-charcoal-light text-white" onClick={() => toast.success('Profile saved!')}>Save Profile</Button>
+   532→            </CardContent>
+   533→          </Card>
+   534→        </TabsContent>
+   535→
+   536→        {/* ─── Settings ─── */}
+   537→        <TabsContent value="settings" className="space-y-6">
+   538→          <Card>
+   539→            <CardHeader><CardTitle className="text-base">Payout Information</CardTitle><CardDescription>Your bank details for withdrawals</CardDescription></CardHeader>
+   540→            <CardContent className="space-y-4">
+   541→              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+   542→                <div><Label>Bank Name</Label><Input placeholder="e.g. Access Bank" /></div>
+   543→                <div><Label>Account Name</Label><Input placeholder="Account holder name" /></div>
+   544→                <div><Label>Account Number</Label><Input placeholder="10-digit account number" /></div>
+   545→              </div>
+   546→              <Button className="bg-charcoal hover:bg-charcoal-light text-white" onClick={() => toast.success('Payout info saved!')}>Save Payout Info</Button>
+   547→            </CardContent>
+   548→          </Card>
+   549→          <Card>
+   550→            <CardHeader><CardTitle className="text-base">Notification Preferences</CardTitle><CardDescription>Manage how you receive notifications</CardDescription></CardHeader>
+   551→            <CardContent className="space-y-4">
+   552→              {['Template sales', 'Withdrawal updates', 'New reviews', 'Application status'].map((label) => (
+   553→                <div key={label} className="flex items-center justify-between">
+   554→                  <Label className="text-sm text-slate-700">{label}</Label>
+   555→                  <Switch defaultChecked />
+   556→                </div>
+   557→              ))}
+   558→            </CardContent>
+   559→          </Card>
+   560→        </TabsContent>
+   561→      </Tabs>
+   562→
+   563→      {/* Withdrawal Dialog */}
+   564→      <Dialog open={wdOpen} onOpenChange={setWdOpen}>
+   565→        <DialogContent>
+   566→          <DialogHeader><DialogTitle>Request Withdrawal</DialogTitle><DialogDescription>Withdraw funds to your bank account</DialogDescription></DialogHeader>
+   567→          <div className="space-y-4 py-2">
+   568→            <div><Label>Amount (₦)</Label><Input type="number" placeholder="Enter amount" value={wdForm.amount} onChange={(e) => setWdForm((p) => ({ ...p, amount: e.target.value }))} /></div>
+   569→            <div><Label>Bank Name</Label><Input placeholder="e.g. GTBank" value={wdForm.bankName} onChange={(e) => setWdForm((p) => ({ ...p, bankName: e.target.value }))} /></div>
+   570→            <div><Label>Account Name</Label><Input placeholder="Account holder" value={wdForm.accountName} onChange={(e) => setWdForm((p) => ({ ...p, accountName: e.target.value }))} /></div>
+   571→            <div><Label>Account Number</Label><Input placeholder="Account number" value={wdForm.accountNumber} onChange={(e) => setWdForm((p) => ({ ...p, accountNumber: e.target.value }))} /></div>
+   572→          </div>
+   573→          <DialogFooter>
+   574→            <Button variant="outline" onClick={() => setWdOpen(false)}>Cancel</Button>
+   575→            <Button onClick={handleWithdrawal} disabled={wdLoading} className="bg-charcoal hover:bg-charcoal-light text-white">{wdLoading && <Loader2 className="size-4 animate-spin" />}Submit Request</Button>
+   576→          </DialogFooter>
+   577→        </DialogContent>
+   578→      </Dialog>
+   579→    </div>
+   580→  );
+   581→}
+   582→
