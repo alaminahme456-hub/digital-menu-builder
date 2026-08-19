@@ -9,7 +9,7 @@ import LandingPage from '@/components/landing/landing-page';
 import LoginPage from '@/components/auth/login-page';
 import RegisterPage from '@/components/auth/register-page';
 
-// Dashboard components
+// Dashboard components (user/restaurant)
 import DashboardLayout from '@/components/dashboard/dashboard-layout';
 import Overview from '@/components/dashboard/overview';
 import MenuManager from '@/components/dashboard/menu-manager';
@@ -31,6 +31,17 @@ import PublicMenuView from '@/components/public-menu/public-menu-view';
 import Marketplace from '@/components/marketplace/marketplace';
 import DesignerPortal from '@/components/designer-portal/designer-portal';
 import CreateTemplate from '@/components/designer-portal/create-template';
+
+// Designer Dashboard components
+import DesignerDashboardLayout from '@/components/designer-dashboard/designer-dashboard-layout';
+import DesignerOverview from '@/components/designer-dashboard/designer-overview';
+import DesignerMyDesigns from '@/components/designer-dashboard/designer-my-designs';
+import DesignerCreateDesign from '@/components/designer-dashboard/designer-create-design';
+import DesignerMyTemplates from '@/components/designer-dashboard/designer-my-templates';
+import DesignerEarnings from '@/components/designer-dashboard/designer-earnings';
+import DesignerWithdrawals from '@/components/designer-dashboard/designer-withdrawals';
+import DesignerProfile from '@/components/designer-dashboard/designer-profile';
+import DesignerSettings from '@/components/designer-dashboard/designer-settings';
 
 import { Loader2, BookOpen } from 'lucide-react';
 
@@ -62,8 +73,19 @@ export default function Home() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [navigate]);
 
+  // Auto-redirect designers to their dashboard
+  useEffect(() => {
+    if (!isAuthenticated || !user || initializing) return;
+    if (user.role === 'designer') {
+      const hash = window.location.hash.slice(1) || '/';
+      // Only redirect if not already on a designer route
+      if (!hash.startsWith('/designer/')) {
+        navigate('/designer/dashboard');
+      }
+    }
+  }, [isAuthenticated, user, initializing, navigate]);
+
   // Fetch user data and businesses on mount if authenticated
-  // Use initRef to prevent duplicate initialization from the login page calling setAuth
   useEffect(() => {
     if (!isAuthenticated || !token || initRef.current) {
       if (!isAuthenticated) setInitializing(false);
@@ -83,31 +105,31 @@ export default function Home() {
           useAuthStore.getState().setAuth(token, profile);
         }
 
-        // Fetch businesses
-        const bizRes = await fetch('/api/businesses', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
-        if (bizRes.ok) {
-          const { businesses: bizList } = await bizRes.json();
-          const bizData = bizList.map((b: { id: string; slug: string; name: string; logo: string | null; status: string }) => ({
-            id: b.id,
-            slug: b.slug,
-            name: b.name,
-            logo: b.logo,
-            status: b.status,
-          }));
-          setBusinesses(bizData);
+        // Fetch businesses (only for non-designer roles)
+        if (profile?.role !== 'designer') {
+          const bizRes = await fetch('/api/businesses', {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          if (bizRes.ok) {
+            const { businesses: bizList } = await bizRes.json();
+            const bizData = bizList.map((b: { id: string; slug: string; name: string; logo: string | null; status: string }) => ({
+              id: b.id,
+              slug: b.slug,
+              name: b.name,
+              logo: b.logo,
+              status: b.status,
+            }));
+            setBusinesses(bizData);
 
-          // Auto-select first business using latest state
-          const currentBiz = useAppStore.getState().currentBusiness;
-          if (!currentBiz && bizData.length > 0) {
-            setCurrentBusiness(bizData[0]);
-          }
-          // Show create business dialog if no businesses
-          if (bizData.length === 0) {
-            const hash = window.location.hash.slice(1);
-            if (!hash.startsWith('/register') && !hash.startsWith('/login')) {
-              setShowCreateBusiness(true);
+            const currentBiz = useAppStore.getState().currentBusiness;
+            if (!currentBiz && bizData.length > 0) {
+              setCurrentBusiness(bizData[0]);
+            }
+            if (bizData.length === 0) {
+              const hash = window.location.hash.slice(1);
+              if (!hash.startsWith('/register') && !hash.startsWith('/login')) {
+                setShowCreateBusiness(true);
+              }
             }
           }
         }
@@ -118,7 +140,7 @@ export default function Home() {
       }
     };
     init();
-  }, [isAuthenticated, token]); // Only depend on auth state changes
+  }, [isAuthenticated, token]);
 
   // Route parser
   const parseRoute = useCallback((route: string) => {
@@ -129,9 +151,11 @@ export default function Home() {
 
   const { page } = useMemo(() => parseRoute(currentRoute), [currentRoute, parseRoute]);
 
+  const isDesignerRoute = currentRoute.startsWith('/designer/');
+
   // Determine which view to show
   const renderView = () => {
-    // Public menu routes — support both /menu/{slug} (legacy) and /p/{slug} (new)
+    // Public menu routes
     if (currentRoute.startsWith('/menu/')) {
       const slug = currentRoute.replace('/menu/', '');
       return <PublicMenuView slug={slug} />;
@@ -155,13 +179,23 @@ export default function Home() {
       }
     }
 
-    // Still initializing — show loading
+    // Still initializing
     if (initializing) {
-      return null; // The loading state below handles this
+      return null;
     }
 
-    // Authenticated routes - show dashboard
-      if (businesses.length === 0) {
+    // Designer routes — completely separate dashboard
+    if (user?.role === 'designer' || isDesignerRoute) {
+      const designerContent = getDesignerContent(page);
+      return (
+        <DesignerDashboardLayout>
+          {designerContent}
+        </DesignerDashboardLayout>
+      );
+    }
+
+    // Authenticated user/restaurant routes
+    if (businesses.length === 0) {
       return (
         <DashboardLayout activePage="">
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
@@ -180,7 +214,6 @@ export default function Home() {
       );
     }
 
-    // Dashboard pages
     const dashboardContent = getDashboardContent(page);
     return (
       <DashboardLayout activePage={currentRoute}>
@@ -189,8 +222,36 @@ export default function Home() {
     );
   };
 
+  const getDesignerContent = (pageName: string) => {
+    switch (pageName) {
+      case 'designer':
+        return <DesignerOverview />;
+      case 'dashboard':
+        // Only show dashboard overview if on designer route
+        if (isDesignerRoute) return <DesignerOverview />;
+        return <Overview />;
+      case 'my-designs':
+        return <DesignerMyDesigns />;
+      case 'create':
+        return <DesignerCreateDesign />;
+      case 'my-templates':
+        return <DesignerMyTemplates />;
+      case 'earnings':
+        return <DesignerEarnings />;
+      case 'withdrawals':
+        return <DesignerWithdrawals />;
+      case 'profile':
+        return <DesignerProfile />;
+      case 'settings':
+        return <DesignerSettings />;
+      case 'marketplace':
+        return <Marketplace />;
+      default:
+        return <DesignerOverview />;
+    }
+  };
+
   const getDashboardContent = (pageName: string) => {
-    // Handle sub-routes
     if (currentRoute === '/designer-portal/create') return <CreateTemplate />;
 
     switch (pageName) {

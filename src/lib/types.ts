@@ -1,4 +1,4 @@
-export type UserRole = 'user' | 'admin';
+export type UserRole = 'user' | 'admin' | 'designer';
 export type BusinessStatus = 'draft' | 'published' | 'unpublished';
 export type MenuPublishStatus = 'draft' | 'published' | 'unpublished';
 export type Eventype = 'view' | 'qr_scan' | 'item_view';
